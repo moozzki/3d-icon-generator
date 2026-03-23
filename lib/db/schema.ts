@@ -13,6 +13,10 @@ export const user = pgTable("user", {
   image: text("image"),
   createdAt: timestamp("createdAt").notNull(),
   updatedAt: timestamp("updatedAt").notNull(),
+  role: text("role").default("user"),
+  banned: boolean("banned"),
+  banReason: text("banReason"),
+  banExpires: timestamp("banExpires"),
 });
 
 export const session = pgTable("session", {
@@ -24,6 +28,7 @@ export const session = pgTable("session", {
   ipAddress: text("ipAddress"),
   userAgent: text("userAgent"),
   userId: text("userId").notNull().references(() => user.id),
+  impersonatedBy: text("impersonatedBy"),
 });
 
 export const account = pgTable("account", {

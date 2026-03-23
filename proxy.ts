@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { betterFetch } from "@better-fetch/fetch";
+import { getSessionCookie } from "better-auth/cookies";
 
 export async function proxy(request: NextRequest) {
   const isAuthRoute = request.nextUrl.pathname.startsWith("/api/auth");
@@ -25,8 +26,20 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Same logic can be applied if we want strict page level auth protection
-  // However Better Auth provides client side and server side helpers too.
+  const isAuthPage = request.nextUrl.pathname === "/sign-in" || request.nextUrl.pathname === "/sign-up";
+  const isProtectedPage = request.nextUrl.pathname === "/";
+
+  if (isAuthPage || isProtectedPage) {
+    const sessionCookie = getSessionCookie(request);
+
+    if (sessionCookie && isAuthPage) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+
+    if (!sessionCookie && isProtectedPage) {
+      return NextResponse.redirect(new URL("/sign-in", request.url));
+    }
+  }
 
   return NextResponse.next();
 }

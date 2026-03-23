@@ -11,13 +11,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Sparkles,
   Download,
   Wand2,
@@ -46,6 +39,8 @@ export default function StudioPage() {
   );
   const [position, setPosition] = useState("Isometric");
   const [isPositionOpen, setIsPositionOpen] = useState(false);
+  const [quality, setQuality] = useState("2K");
+  const [isQualityOpen, setIsQualityOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleGenerate = () => {
@@ -224,20 +219,39 @@ export default function StudioPage() {
                   </PopoverContent>
                 </Popover>
 
-                {/* Quality select */}
-                <Select defaultValue="2K">
-                  <SelectTrigger className="h-8 text-xs gap-1 border-border/50 bg-muted/40 hover:bg-muted/60 transition-colors w-auto px-2.5 rounded-lg">
-                    <SelectValue />
-                    <ChevronDown className="h-3 w-3 opacity-50" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {QUALITIES.map((q) => (
-                      <SelectItem key={q} value={q} className="text-xs">
-                        {q}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {/* Quality popover */}
+                <Popover open={isQualityOpen} onOpenChange={setIsQualityOpen}>
+                  <PopoverTrigger asChild>
+                    <button className="h-8 text-xs flex items-center gap-1 border border-border/50 bg-muted/40 hover:bg-muted/60 transition-colors w-auto px-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                      {quality}
+                      <ChevronDown className="h-3 w-3 opacity-50" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-36 p-2 rounded-xl" align="start" sideOffset={8}>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
+                      Quality
+                    </p>
+                    <div className="flex flex-col gap-1">
+                      {QUALITIES.map((q) => (
+                        <button
+                          key={q}
+                          onClick={() => {
+                            setQuality(q);
+                            setIsQualityOpen(false);
+                          }}
+                          className={cn(
+                            "text-xs text-left px-2.5 py-1.5 rounded-md transition-colors focus:outline-none",
+                            quality === q
+                              ? "bg-primary/10 text-primary font-medium"
+                              : "text-foreground hover:bg-muted"
+                          )}
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
 
                 {/* Upload reference */}
                 <button className="h-8 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg border border-border/50 flex items-center gap-1.5 transition-colors">
