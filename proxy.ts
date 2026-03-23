@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { betterFetch } from "@better-fetch/fetch";
-import { getSessionCookie } from "better-auth/cookies";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export async function proxy(request: NextRequest) {
   const isAuthRoute = request.nextUrl.pathname.startsWith("/api/auth");
@@ -14,11 +14,8 @@ export async function proxy(request: NextRequest) {
                               request.nextUrl.pathname.startsWith("/api/gallery");
 
   if (isProtectedApiRoute) {
-    const { data: session } = await betterFetch<any>("/api/auth/get-session", {
-      baseURL: request.nextUrl.origin,
-      headers: {
-        cookie: request.headers.get("cookie") || "",
-      },
+    const session = await auth.api.getSession({
+      headers: await headers()
     });
 
     if (!session) {
@@ -30,13 +27,15 @@ export async function proxy(request: NextRequest) {
   const isProtectedPage = request.nextUrl.pathname === "/";
 
   if (isAuthPage || isProtectedPage) {
-    const sessionCookie = getSessionCookie(request);
+    const session = await auth.api.getSession({
+      headers: await headers()
+    });
 
-    if (sessionCookie && isAuthPage) {
+    if (session && isAuthPage) {
       return NextResponse.redirect(new URL("/", request.url));
     }
 
-    if (!sessionCookie && isProtectedPage) {
+    if (!session && isProtectedPage) {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
   }
@@ -45,6 +44,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
+  runtime: "nodejs", // Required for auth.api calls
   matcher: [
     /*
      * Match all request paths except for the ones starting with:

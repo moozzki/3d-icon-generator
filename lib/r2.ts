@@ -25,3 +25,18 @@ export async function getDownloadPresignedUrl(key: string) {
   });
   return getSignedUrl(r2Client, command, { expiresIn: 3600 });
 }
+
+export async function uploadToR2(key: string, body: Buffer | Uint8Array | Blob | string, contentType: string) {
+  const command = new PutObjectCommand({
+    Bucket: process.env.R2_BUCKET_NAME || "dummy_bucket",
+    Key: key,
+    Body: body,
+    ContentType: contentType,
+  });
+  
+  await r2Client.send(command);
+  
+  // Return the public URL or presigned URL. 
+  // Assuming public URL structure based on a custom domain, or fallback to presigned download URL.
+  return `https://${process.env.R2_PUBLIC_DOMAIN_OR_BUCKET_URL}/${key}`;
+}

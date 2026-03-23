@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { Toaster } from "@/components/ui/sonner";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-heading' });
@@ -22,7 +23,10 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn("h-full", "antialiased", spaceGrotesk.variable, inter.variable)}
     >
-      <body className="font-sans min-h-full flex flex-col bg-background text-foreground">{children}</body>
+      <body className="font-sans min-h-full flex flex-col bg-background text-foreground">
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }

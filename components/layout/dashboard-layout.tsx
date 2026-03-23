@@ -55,12 +55,19 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       setCredits(null);
       return;
     }
-    fetch("/api/credits")
-      .then((r) => r.json())
-      .then((data) => {
-        if (typeof data.balance === "number") setCredits(data.balance);
-      })
-      .catch(() => {});
+    const fetchCredits = () => {
+      fetch("/api/credits")
+        .then((r) => r.json())
+        .then((data) => {
+          if (typeof data.balance === "number") setCredits(data.balance);
+        })
+        .catch(() => {});
+    };
+
+    fetchCredits();
+    
+    window.addEventListener("credits-updated", fetchCredits);
+    return () => window.removeEventListener("credits-updated", fetchCredits);
   }, [session]);
 
   const navItems = [

@@ -16,10 +16,19 @@ export async function GET(request: Request) {
     }
 
     const currentCredits = await db.select().from(userCredits).where(eq(userCredits.userId, session.user.id)).limit(1);
-    
-    // Default config per PRD is 2 credits for new users. 
-    // Usually we initialize this row when user signs up via better-auth hooks
-    const balance = currentCredits.length > 0 ? currentCredits[0].balance : 2; 
+
+    let balance = 0;
+
+    if (currentCredits.length === 0) {
+      // Initialize with 2 credits for new user
+      await db.insert(userCredits).values({
+        userId: session.user.id,
+        balance: 2,
+      });
+      balance = 2;
+    } else {
+      balance = currentCredits[0].balance;
+    }
 
     return NextResponse.json({ balance });
   } catch (error) {

@@ -18,6 +18,7 @@ import {
   ChevronDown,
   ImageIcon,
 } from "lucide-react";
+import { toast } from "sonner";
 
 const POSITIONS = [
   "Isometric",
@@ -43,17 +44,40 @@ export default function StudioPage() {
   const [isQualityOpen, setIsQualityOpen] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!prompt.trim()) return;
     setIsGenerating(true);
     setResultImage(null);
 
-    setTimeout(() => {
+    try {
+      // Convert 'Front Facing' -> 'front_facing'
+      const formattedPosition = position.toLowerCase().replace(" ", "_");
+      
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userPrompt: prompt,
+          position: formattedPosition,
+          quality,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to generate image.");
+      }
+
+      setResultImage(data.resultUrl);
+      window.dispatchEvent(new Event("credits-updated"));
+      toast.success("Icon generated successfully!");
+    } catch (error: any) {
+      console.error("Generation error:", error);
+      toast.error(error.message || "An unexpected error occurred.");
+    } finally {
       setIsGenerating(false);
-      setResultImage(
-        "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop"
-      );
-    }, 3000);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -275,7 +299,7 @@ export default function StudioPage() {
                 ) : (
                   <>
                     <Sparkles className="w-3.5 h-3.5" />
-                    Generate · 1 Credit
+                    Generate · {quality === "2K" ? "1" : "2"} Credit{quality !== "2K" && "s"}
                   </>
                 )}
               </Button>
