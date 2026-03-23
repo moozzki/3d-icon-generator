@@ -1,65 +1,274 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Sparkles,
+  Download,
+  Wand2,
+  UploadCloud,
+  ChevronDown,
+  ImageIcon,
+} from "lucide-react";
+
+const POSITIONS = [
+  "Isometric",
+  "Front Facing",
+  "Back Facing",
+  "Side Facing",
+  "Three Quarter",
+  "Top Down",
+  "Dimetric",
+];
+
+const QUALITIES = ["2K", "4K"];
+
+export default function StudioPage() {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [resultImage, setResultImage] = useState<string | null>(null);
+  const [prompt, setPrompt] = useState(
+    "A cute red fox sitting on a wooden log, stylized 3D rendered"
+  );
+  const [position, setPosition] = useState("Isometric");
+  const [isPositionOpen, setIsPositionOpen] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleGenerate = () => {
+    if (!prompt.trim()) return;
+    setIsGenerating(true);
+    setResultImage(null);
+
+    setTimeout(() => {
+      setIsGenerating(false);
+      setResultImage(
+        "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop"
+      );
+    }, 3000);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleGenerate();
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <DashboardLayout>
+      {/* ── Full-canvas work area ───────────────────────────── */}
+      <div className="relative flex h-full min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center">
+
+        {/* ── Canvas: preview lives directly here ─────────────── */}
+        <AnimatePresence mode="wait">
+          {/* Idle empty state */}
+          {!isGenerating && !resultImage && (
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3 }}
+              className="flex flex-col items-center gap-3 select-none"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              <div className="w-20 h-20 rounded-2xl bg-muted/60 border border-border/60 flex items-center justify-center mb-1 shadow-sm">
+                <ImageIcon className="w-8 h-8 text-muted-foreground/50" />
+              </div>
+              <p className="text-sm font-medium text-muted-foreground/70">
+                Your 3D icon will appear here
+              </p>
+              <p className="text-xs text-muted-foreground/40">
+                Type a prompt below and press Generate
+              </p>
+            </motion.div>
+          )}
+
+          {/* Generating state */}
+          {isGenerating && (
+            <motion.div
+              key="generating"
+              initial={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.05 }}
+              transition={{ duration: 0.3 }}
+              className="flex flex-col items-center gap-5"
             >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+              <div className="relative w-28 h-28">
+                {/* Outer spinning ring */}
+                <motion.div
+                  className="absolute inset-0 rounded-full border-2 border-primary/20 border-t-primary"
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1.4, ease: "linear" }}
+                />
+                {/* Inner spinning ring */}
+                <motion.div
+                  className="absolute inset-3 rounded-full border-2 border-primary/10 border-b-primary/60"
+                  animate={{ rotate: -360 }}
+                  transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                />
+                {/* Center icon */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Wand2 className="w-7 h-7 text-primary/70" />
+                </div>
+              </div>
+
+              <motion.p
+                className="text-sm font-medium text-muted-foreground"
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ repeat: Infinity, duration: 2.2 }}
+              >
+                Crafting your 3D icon...
+              </motion.p>
+            </motion.div>
+          )}
+
+          {/* Result image */}
+          {resultImage && !isGenerating && (
+            <motion.div
+              key="result"
+              initial={{ opacity: 0, scale: 0.88, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+              className="relative group flex flex-col items-center gap-4"
+            >
+              <div className="relative">
+                <img
+                  src={resultImage}
+                  alt="Generated 3D icon"
+                  className="max-h-[420px] max-w-[420px] w-auto h-auto object-contain drop-shadow-2xl rounded-2xl"
+                />
+                {/* Hover download overlay */}
+                <div className="absolute inset-0 rounded-2xl bg-black/0 group-hover:bg-black/10 transition-colors duration-200" />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="absolute top-3 right-3 gap-1.5 text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Download
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Floating prompt bar ─────────────────────────────── */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4">
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="rounded-2xl border border-border/70 bg-card/90 backdrop-blur-xl shadow-2xl shadow-black/10 overflow-hidden"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            {/* Textarea row */}
+            <div className="px-4 pt-3.5 pb-2">
+              <textarea
+                ref={textareaRef}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                onKeyDown={handleKeyDown}
+                rows={2}
+                placeholder="Describe your 3D icon... (Enter to generate)"
+                className="w-full resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none leading-relaxed"
+              />
+            </div>
+
+            {/* Controls row */}
+            <div className="flex items-center justify-between gap-3 px-3.5 pb-3 pt-1">
+              <div className="flex items-center gap-2">
+                {/* Camera angle popover */}
+                <Popover open={isPositionOpen} onOpenChange={setIsPositionOpen}>
+                  <PopoverTrigger asChild>
+                    <button className="h-8 text-xs flex items-center gap-1 border border-border/50 bg-muted/40 hover:bg-muted/60 transition-colors w-auto px-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                      {position}
+                      <ChevronDown className="h-3 w-3 opacity-50" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-2 rounded-xl" align="start" sideOffset={8}>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
+                       Camera Angle
+                    </p>
+                    <div className="grid grid-cols-2 gap-1">
+                      {POSITIONS.map((pos) => (
+                        <button
+                          key={pos}
+                          onClick={() => {
+                            setPosition(pos);
+                            setIsPositionOpen(false);
+                          }}
+                          className={cn(
+                            "text-xs text-left px-2.5 py-1.5 rounded-md transition-colors focus:outline-none",
+                            position === pos 
+                              ? "bg-primary/10 text-primary font-medium" 
+                              : "text-foreground hover:bg-muted"
+                          )}
+                        >
+                          {pos}
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Quality select */}
+                <Select defaultValue="2K">
+                  <SelectTrigger className="h-8 text-xs gap-1 border-border/50 bg-muted/40 hover:bg-muted/60 transition-colors w-auto px-2.5 rounded-lg">
+                    <SelectValue />
+                    <ChevronDown className="h-3 w-3 opacity-50" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {QUALITIES.map((q) => (
+                      <SelectItem key={q} value={q} className="text-xs">
+                        {q}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Upload reference */}
+                <button className="h-8 px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg border border-border/50 flex items-center gap-1.5 transition-colors">
+                  <UploadCloud className="h-3.5 w-3.5" />
+                  Reference
+                </button>
+              </div>
+
+              {/* Generate button */}
+              <Button
+                size="sm"
+                onClick={handleGenerate}
+                disabled={isGenerating || !prompt.trim()}
+                className="h-8 px-4 text-xs font-semibold gap-1.5 rounded-xl shadow-sm hover:shadow-primary/20 transition-all"
+              >
+                {isGenerating ? (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Generate · 1 Credit
+                  </>
+                )}
+              </Button>
+            </div>
+          </motion.div>
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
