@@ -67,7 +67,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
   const navItems = [
     { name: "Studio", href: "/", icon: Wand2 },
-    { name: "Gallery", href: "/gallery", icon: Images },
+    { name: "Library", href: "/gallery", icon: Images },
   ];
 
   const sidebarWidth = collapsed ? "w-[60px]" : "w-[200px]";
@@ -224,9 +224,6 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                   {collapsed ? "Expand sidebar" : "Collapse sidebar"}
                 </TooltipContent>
               </Tooltip>
-              <span className="text-sm font-semibold text-foreground/80">
-                {pathname === "/" ? "Studio" : pathname === "/gallery" ? "Gallery" : "Dashboard"}
-              </span>
             </div>
 
             {/* Right: Credits + CTA */}

@@ -1,12 +1,19 @@
 "use client";
 
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Download, MoreHorizontal } from "lucide-react";
+import { Download, MoreHorizontal, Trash2, Search, ImageIcon, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 const MOCK_GALLERY = [
   {
@@ -44,75 +51,153 @@ const MOCK_GALLERY = [
 ];
 
 export default function GalleryPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredGallery = MOCK_GALLERY.filter((item) =>
+    item.prompt.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <DashboardLayout>
-      <div className="flex flex-col gap-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-heading font-bold mb-2">My Gallery</h1>
-            <p className="text-muted-foreground">View all your previously generated 3D icons.</p>
+      <div className="flex flex-col h-full max-w-7xl mx-auto px-6 py-8 gap-8">
+        {/* ── Header Section ─────────────────────────────────── */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-heading font-bold tracking-tight">Library</h1>
+            <p className="text-muted-foreground text-sm">
+              Your collection of generated 3D icons.
+            </p>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {MOCK_GALLERY.map((item) => (
-            <Card key={item.id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col">
-              <div className="relative aspect-square bg-secondary/10 overflow-hidden">
-                <img 
-                  src={item.image} 
-                  alt={item.prompt} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                
-                <div className="absolute top-3 left-3 flex gap-2">
-                  <Badge variant="secondary" className="bg-background/80 backdrop-blur-md hover:bg-background/90 text-xs">
-                    {item.quality}
-                  </Badge>
-                  <Badge variant="secondary" className="bg-background/80 backdrop-blur-md hover:bg-background/90 text-xs shadow-sm">
-                    {item.position}
-                  </Badge>
-                </div>
-
-                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="secondary" size="icon" className="h-8 w-8 bg-background/80 backdrop-blur-md hover:bg-background/90">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem className="gap-2">
-                        <Download className="h-4 w-4" /> Download
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive focus:text-destructive gap-2">
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-              
-              <CardContent className="p-4 flex-1 flex flex-col justify-between">
-                <p className="text-sm font-medium line-clamp-2 leading-relaxed mb-3">
-                  {item.prompt}
-                </p>
-                <div className="text-xs text-muted-foreground font-medium">
-                  {item.date}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        
-        {MOCK_GALLERY.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 bg-muted/30 rounded-2xl border border-dashed border-border/60">
-            <h3 className="font-heading text-xl font-semibold mb-2">No icons yet</h3>
-            <p className="text-muted-foreground mb-6">Start generating your first 3D icon in the studio.</p>
-            <Button asChild>
-              <Link href="/">Go to Studio</Link>
+          <div className="flex items-center gap-3">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <input
+                type="text"
+                placeholder="Search prompt..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-10 w-full md:w-64 pl-9 pr-4 rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all placeholder:text-muted-foreground/50"
+              />
+            </div>
+            <Button asChild size="icon" className="h-10 w-10 rounded-xl shadow-lg shadow-primary/20">
+              <Link href="/">
+                <Plus className="h-5 w-5" />
+              </Link>
             </Button>
           </div>
-        )}
+        </div>
+
+        {/* ── Grid Section ───────────────────────────────────── */}
+        <AnimatePresence mode="popLayout">
+          {filteredGallery.length > 0 ? (
+            <motion.div 
+              layout
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            >
+              {filteredGallery.map((item, index) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                  className="group relative flex flex-col"
+                >
+                  <div className="relative aspect-square rounded-2xl overflow-hidden bg-muted/30 border border-border/40 group-hover:border-primary/20 group-hover:shadow-2xl group-hover:shadow-primary/5 transition-all duration-300">
+                    <img
+                      src={item.image}
+                      alt={item.prompt}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+
+                    {/* Metadata Overlay */}
+                    <div className="absolute top-3 left-3 flex flex-wrap gap-2">
+                      <Badge 
+                        variant="secondary" 
+                        className="bg-background/80 backdrop-blur-xl border-none text-[10px] h-5 px-2 shadow-sm"
+                      >
+                        {item.quality}
+                      </Badge>
+                      <Badge 
+                        variant="secondary" 
+                        className="bg-background/80 backdrop-blur-xl border-none text-[10px] h-5 px-2 shadow-sm"
+                      >
+                        {item.position}
+                      </Badge>
+                    </div>
+
+                    {/* Quick Actions Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-4">
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-[10px] text-white/90 font-medium">
+                          {item.date}
+                        </span>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="secondary" 
+                            size="icon" 
+                            className="h-8 w-8 rounded-lg bg-background/90 backdrop-blur-md hover:bg-white text-foreground shadow-lg"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button 
+                                variant="secondary" 
+                                size="icon" 
+                                className="h-8 w-8 rounded-lg bg-background/90 backdrop-blur-md hover:bg-white text-foreground shadow-lg"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="rounded-xl border-border/50">
+                              <DropdownMenuItem className="gap-2 text-sm">
+                                <Download className="h-4 w-4" /> Download
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive focus:text-destructive gap-2 text-sm">
+                                <Trash2 className="h-4 w-4" /> Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 px-1">
+                    <p className="text-sm font-medium text-foreground/80 line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+                      {item.prompt}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex flex-col items-center justify-center py-32 rounded-3xl border border-dashed border-border/60 bg-muted/10"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-muted/40 flex items-center justify-center mb-4">
+                <ImageIcon className="w-8 h-8 text-muted-foreground/30" />
+              </div>
+              <h3 className="font-heading text-lg font-semibold text-foreground/70">
+                {searchQuery ? "No matches found" : "Your library is empty"}
+              </h3>
+              <p className="text-muted-foreground text-sm mb-8 max-w-[250px] text-center">
+                {searchQuery 
+                  ? "Try searching for a different keyword or prompt." 
+                  : "Start generating unique 3D icons in the studio to see them here."}
+              </p>
+              {!searchQuery && (
+                <Button asChild className="rounded-xl shadow-lg shadow-primary/20">
+                  <Link href="/">Back to Studio</Link>
+                </Button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </DashboardLayout>
   );
