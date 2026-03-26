@@ -72,9 +72,10 @@ export default function StudioPage() {
       setResultImage(data.resultUrl);
       window.dispatchEvent(new Event("credits-updated"));
       toast.success("Icon generated successfully!");
-    } catch (error: any) {
-      console.error("Generation error:", error);
-      toast.error(error.message || "An unexpected error occurred.");
+    } catch (err) {
+      console.error("Generation error:", err);
+      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
+      toast.error(errorMessage);
     } finally {
       setIsGenerating(false);
     }

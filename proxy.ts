@@ -44,7 +44,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  runtime: "nodejs", // Required for auth.api calls
   matcher: [
     /*
      * Match all request paths except for the ones starting with:

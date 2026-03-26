@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     }
 
     // 2. Checking user credit
-    const isAdmin = (session.user as any).role === "admin";
+    const isAdmin = (session.user as { role?: string }).role === "admin";
     let balance = 0;
     const requiredCredits = QUALITY_SETTINGS[quality].cost;
 
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     }
 
     // 3. Prompt Engineering
-    const engineeredPrompt = `A high quality 3D icon of ${userPrompt}. ${POSITION_PROMPTS[position]}. rendered in a modern 3D style, soft lighting, highly detailed, clean design, isolated on a pure white background.`;
+    // const engineeredPrompt = `A high quality 3D icon of ${userPrompt}. ${POSITION_PROMPTS[position]}. rendered in a modern 3D style, soft lighting, highly detailed, clean design, isolated on a pure white background.`;
     
     // Simulate Fal APi (As this is MVP base setup)
     // Here we download a dummy image to simulate AI Generation taking some time and returning an image.
@@ -105,8 +105,8 @@ export async function POST(request: Request) {
     await db.insert(generations).values({
       userId: session.user.id,
       prompt: userPrompt,
-      position: position as any,
-      quality: quality as any,
+      position: position as "isometric" | "front_facing" | "back_facing" | "side_facing" | "three_quarter" | "top_down" | "dimetric",
+      quality: quality as "2K" | "4K",
       cost: requiredCredits,
       referenceImage,
       resultImageUrl: resultUrl

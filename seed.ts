@@ -39,7 +39,8 @@ async function main() {
     } else {
       console.error("Sign up response didn't contain user ID", result);
     }
-  } catch (error: any) {
+  } catch (err: unknown) {
+    const error = err as { message?: string; body?: { message?: string }; name?: string };
     if (error?.message === "User already exists" || error?.body?.message === "User already exists" || error?.name === "APIError") {
         console.log("Admin user might already exist. Attempting to update role...");
         const existingUser = await db.select().from(user).where(eq(user.email, "admin@example.com")).limit(1);

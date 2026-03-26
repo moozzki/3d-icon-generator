@@ -29,15 +29,14 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
   const router = useRouter();
   const [credits, setCredits] = useState<number | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("sidebar-collapsed");
-    if (saved === "true") {
-      setCollapsed(true);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sidebar-collapsed") === "true";
     }
-  }, []);
+    return false;
+  });
+
+  const isAdmin = session?.user && (session.user as { role?: string }).role === "admin";
 
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
@@ -48,11 +47,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    if (!session?.user) return;
-    // @ts-ignore – better-auth admin plugin adds role to user
-    if (session.user.role === "admin") {
-      setIsAdmin(true);
-      setCredits(null);
+    if (!session?.user || isAdmin) {
       return;
     }
     const fetchCredits = () => {
@@ -68,7 +63,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
     
     window.addEventListener("credits-updated", fetchCredits);
     return () => window.removeEventListener("credits-updated", fetchCredits);
-  }, [session]);
+  }, [session, isAdmin]);
 
   const navItems = [
     { name: "Studio", href: "/", icon: Wand2 },

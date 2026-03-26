@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Download, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import Link from "next/link";
 
 const MOCK_GALLERY = [
   {
@@ -108,7 +109,7 @@ export default function GalleryPage() {
             <h3 className="font-heading text-xl font-semibold mb-2">No icons yet</h3>
             <p className="text-muted-foreground mb-6">Start generating your first 3D icon in the studio.</p>
             <Button asChild>
-              <a href="/">Go to Studio</a>
+              <Link href="/">Go to Studio</Link>
             </Button>
           </div>
         )}
