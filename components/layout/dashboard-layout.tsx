@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
@@ -100,24 +101,31 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           {isCollapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Link href="/" onClick={() => isMobile && setMobileMenuOpen(false)} className="flex items-center gap-2.5 group">
-                  <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shadow-sm group-hover:shadow-primary/40 transition-all shrink-0">
-                    <Wand2 size={14} className="text-white" />
-                  </div>
+                <Link href="/" onClick={() => isMobile && setMobileMenuOpen(false)} className="flex items-center justify-center group">
+                  <Image 
+                    src="/assets/audora-square-logo.png" 
+                    alt="Audora Logo" 
+                    width={28} 
+                    height={28} 
+                    className="w-7 h-7 object-contain group-hover:opacity-80 transition-opacity shrink-0"
+                    priority 
+                  />
                 </Link>
               </TooltipTrigger>
               <TooltipContent side="right" sideOffset={8}>
-                IconGen AI
+                Audora
               </TooltipContent>
             </Tooltip>
           ) : (
-            <Link href="/" onClick={() => isMobile && setMobileMenuOpen(false)} className="flex items-center gap-2.5 group">
-              <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shadow-sm group-hover:shadow-primary/40 transition-all shrink-0">
-                <Wand2 size={14} className="text-white" />
-              </div>
-              <span className="font-heading font-bold text-sm tracking-tight">
-                IconGen<span className="text-primary">AI</span>
-              </span>
+            <Link href="/" onClick={() => isMobile && setMobileMenuOpen(false)} className="flex items-center group">
+              <Image 
+                src="/assets/audora-landscape-logo.png" 
+                alt="Audora Logo" 
+                width={120} 
+                height={28} 
+                className="h-7 w-auto object-contain group-hover:opacity-80 transition-opacity shrink-0"
+                priority 
+              />
             </Link>
           )}
         </div>
