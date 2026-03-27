@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       objectKey,
       fileUrl: `https://${process.env.R2_PUBLIC_DOMAIN_OR_BUCKET_URL}/${objectKey}`
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

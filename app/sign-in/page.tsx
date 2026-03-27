@@ -21,7 +21,7 @@ export default function SignInPage() {
     e.preventDefault();
     setLoading(true);
 
-    const result = await signIn.email(
+    await signIn.email(
       {
         email,
         password,

@@ -54,7 +54,7 @@ SaaS berbasis web untuk *developer*, desainer, dan *marketer* yang membutuhkan a
 * **Credit Management Engine:** Sistem *top-up*, pemotongan saldo *real-time*, dan penolakan *request* jika saldo tidak cukup.
 * **R2 Image Pipeline:** Alur *upload* gambar tanpa membebani *bandwidth server* menggunakan *Presigned URL*.
 * **AI Prompt Mapper:** Fungsi internal untuk meracik *prompt* mentah dari *user* ditambah parameter teknis kamera sebelum dikirim ke Fal.ai.
-* **Personal Gallery:** Halaman riwayat (*history*) yang menampilkan daftar ikon yang pernah di-*generate* oleh *user* tersebut.
+* **Personal Library:** Halaman riwayat (*history*) yang menampilkan daftar ikon yang pernah di-*generate* oleh *user* tersebut.
 
 ## 7. Spesifikasi 3D Icon Positions & Prompt Mapper
 Sistem akan memodifikasi *prompt* ke AI berdasarkan 7 opsi sudut pandang ini:

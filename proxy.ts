@@ -11,7 +11,7 @@ export async function proxy(request: NextRequest) {
   // Temporary checking mechanism for API routes to enforce user login
   const isProtectedApiRoute = request.nextUrl.pathname.startsWith("/api/generate") ||
                               request.nextUrl.pathname.startsWith("/api/credits") ||
-                              request.nextUrl.pathname.startsWith("/api/gallery");
+                              request.nextUrl.pathname.startsWith("/api/library");
 
   if (isProtectedApiRoute) {
     const session = await auth.api.getSession({
@@ -24,7 +24,7 @@ export async function proxy(request: NextRequest) {
   }
 
   const isAuthPage = request.nextUrl.pathname === "/sign-in" || request.nextUrl.pathname === "/sign-up";
-  const isProtectedPage = request.nextUrl.pathname === "/";
+  const isProtectedPage = request.nextUrl.pathname === "/" || request.nextUrl.pathname === "/library";
 
   if (isAuthPage || isProtectedPage) {
     const session = await auth.api.getSession({

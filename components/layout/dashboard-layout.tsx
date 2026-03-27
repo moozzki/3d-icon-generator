@@ -29,12 +29,19 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
   const router = useRouter();
   const [credits, setCredits] = useState<number | null>(null);
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("sidebar-collapsed") === "true";
+  const [collapsed, setCollapsed] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [enableTransition, setEnableTransition] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const saved = localStorage.getItem("sidebar-collapsed");
+    if (saved !== null) {
+      setCollapsed(saved === "true");
     }
-    return false;
-  });
+    const timer = setTimeout(() => setEnableTransition(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
 
   const isAdmin = session?.user && (session.user as { role?: string }).role === "admin";
 
@@ -67,7 +74,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
   const navItems = [
     { name: "Studio", href: "/", icon: Wand2 },
-    { name: "Library", href: "/gallery", icon: Images },
+    { name: "Library", href: "/library", icon: Images },
   ];
 
   const sidebarWidth = collapsed ? "w-[60px]" : "w-[200px]";
@@ -78,7 +85,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen bg-background text-foreground">
         {/* ── Sidebar ─────────────────────────────────────────── */}
         <aside className={cn(
-          "hidden md:flex flex-col border-r border-border/50 bg-card/50 backdrop-blur-sm fixed inset-y-0 left-0 z-20 transition-all duration-200",
+          "hidden md:flex flex-col border-r border-border/50 bg-card/50 backdrop-blur-sm fixed inset-y-0 left-0 z-20",
+          enableTransition ? "transition-all duration-200" : "",
           sidebarWidth
         )}>
           {/* Logo */}
@@ -206,7 +214,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         </aside>
 
         {/* ── Main area (sidebar offset) ───────────────────────── */}
-        <div className={cn("flex flex-1 flex-col transition-all duration-200", mainOffset)}>
+        <div className={cn("flex flex-1 flex-col", enableTransition ? "transition-all duration-200" : "", mainOffset)}>
           {/* ── Top Header ───────────────────────────────────────── */}
           <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border/50 bg-card/60 backdrop-blur-md px-6 shrink-0">
             {/* Left: Page breadcrumb / title */}

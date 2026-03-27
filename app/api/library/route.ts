@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { generations } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
   try {
     const session = await auth.api.getSession({
       headers: await headers()
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
       .orderBy(desc(generations.createdAt));
 
     return NextResponse.json({ data: history });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

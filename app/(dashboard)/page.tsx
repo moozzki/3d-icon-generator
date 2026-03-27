@@ -3,7 +3,6 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -89,7 +88,7 @@ export default function StudioPage() {
   };
 
   return (
-    <DashboardLayout>
+    <>
       {/* ── Full-canvas work area ───────────────────────────── */}
       <div className="relative flex h-full min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center">
 
@@ -308,6 +307,6 @@ export default function StudioPage() {
           </motion.div>
         </div>
       </div>
-    </DashboardLayout>
+    </>
   );
 }

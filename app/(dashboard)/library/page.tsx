@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Badge } from "@/components/ui/badge";
 import { Download, MoreHorizontal, Trash2, Search, ImageIcon, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,9 +12,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-const MOCK_GALLERY = [
+const MOCK_LIBRARY = [
   {
     id: 1,
     prompt: "A cute red fox sitting on a wooden log, stylized 3D rendered",
@@ -50,15 +50,15 @@ const MOCK_GALLERY = [
   },
 ];
 
-export default function GalleryPage() {
+export default function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredGallery = MOCK_GALLERY.filter((item) =>
+  const filteredLibrary = MOCK_LIBRARY.filter((item) =>
     item.prompt.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
-    <DashboardLayout>
+    <>
       <div className="flex flex-col h-full max-w-7xl mx-auto px-6 py-8 gap-8">
         {/* ── Header Section ─────────────────────────────────── */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -90,12 +90,12 @@ export default function GalleryPage() {
 
         {/* ── Grid Section ───────────────────────────────────── */}
         <AnimatePresence mode="popLayout">
-          {filteredGallery.length > 0 ? (
+          {filteredLibrary.length > 0 ? (
             <motion.div 
               layout
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
             >
-              {filteredGallery.map((item, index) => (
+              {filteredLibrary.map((item, index) => (
                 <motion.div
                   key={item.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -105,10 +105,11 @@ export default function GalleryPage() {
                   className="group relative flex flex-col"
                 >
                   <div className="relative aspect-square rounded-2xl overflow-hidden bg-muted/30 border border-border/40 group-hover:border-primary/20 group-hover:shadow-2xl group-hover:shadow-primary/5 transition-all duration-300">
-                    <img
+                    <Image
                       src={item.image}
                       alt={item.prompt}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      fill
+                      className="object-cover transition-transform duration-500 group-hover:scale-110"
                     />
 
                     {/* Metadata Overlay */}
@@ -199,6 +200,6 @@ export default function GalleryPage() {
           )}
         </AnimatePresence>
       </div>
-    </DashboardLayout>
+    </>
   );
 }
