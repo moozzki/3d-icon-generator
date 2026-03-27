@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { userCredits } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
-export async function GET(_request: Request) {
+export async function GET() {
   try {
     const session = await auth.api.getSession({
       headers: await headers()
@@ -31,7 +31,8 @@ export async function GET(_request: Request) {
     }
 
     return NextResponse.json({ balance });
-  } catch (_error) {
+  } catch (err) {
+    console.error("Credits fetch error:", err);
     return NextResponse.json({ error: "Internal Error" }, { status: 500 });
   }
 }

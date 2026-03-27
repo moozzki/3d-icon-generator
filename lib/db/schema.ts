@@ -5,6 +5,10 @@ export const positionEnum = pgEnum("position", [
   "three_quarter", "top_down", "dimetric"
 ]);
 
+export const styleEnum = pgEnum("style", [
+  "plastic", "clay", "glass", "plush", "toy_block", "metallic"
+]);
+
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -71,6 +75,7 @@ export const generations = pgTable("generations", {
   prompt: text("prompt").notNull(),
   referenceImage: text("reference_image"),
   position: positionEnum("position").notNull(),
+  style: styleEnum("style").notNull().default("plastic"),
   quality: qualityEnum("quality").notNull(),
   cost: integer("cost").notNull(),
   resultImageUrl: text("result_image_url").notNull(),

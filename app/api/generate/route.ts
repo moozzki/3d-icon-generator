@@ -17,6 +17,15 @@ const POSITION_PROMPTS: Record<string, string> = {
   dimetric: "dimetric 3D render, angled perspective showing subtle depth"
 };
 
+const STYLE_PROMPTS: Record<string, string> = {
+  plastic: "smooth plastic material, glossy finish, clean subtle reflections, solid pure color, smooth and sleek",
+  clay: "clay material, soft matte finish, rounded smooth shapes, clay render style",
+  glass: "transparent glass material, reflections, caustics, glass render style",
+  plush: "plush fabric texture, soft fluffy, stuffed toy style",
+  toy_block: "blocky voxel shapes, toy building block style, LEGO-like",
+  metallic: "metallic chrome material, reflective surface, metal render style"
+};
+
 const QUALITY_SETTINGS: Record<string, { width: number; height: number; cost: number }> = {
   "2K": { width: 2048, height: 2048, cost: 1 },
   "4K": { width: 3840, height: 3840, cost: 2 }
@@ -45,9 +54,9 @@ export async function POST(request: Request) {
       });
     }
 
-    const { userPrompt, position, quality, referenceImage = null } = await request.json();
+    const { userPrompt, position, style = "plastic", quality, referenceImage = null } = await request.json();
 
-    if (!POSITION_PROMPTS[position] || !QUALITY_SETTINGS[quality]) {
+    if (!POSITION_PROMPTS[position] || !STYLE_PROMPTS[style] || !QUALITY_SETTINGS[quality]) {
       return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
     }
 
@@ -106,6 +115,7 @@ export async function POST(request: Request) {
       userId: session.user.id,
       prompt: userPrompt,
       position: position as "isometric" | "front_facing" | "back_facing" | "side_facing" | "three_quarter" | "top_down" | "dimetric",
+      style: style as "plastic" | "clay" | "glass" | "plush" | "toy_block" | "metallic",
       quality: quality as "2K" | "4K",
       cost: requiredCredits,
       referenceImage,
