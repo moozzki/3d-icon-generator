@@ -21,7 +21,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu } from "lucide-react";
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -30,13 +36,13 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [credits, setCredits] = useState<number | null>(null);
   const [collapsed, setCollapsed] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [enableTransition, setEnableTransition] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const saved = localStorage.getItem("sidebar-collapsed");
     if (saved !== null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCollapsed(saved === "true");
     }
     const timer = setTimeout(() => setEnableTransition(true), 50);
@@ -80,168 +86,194 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const sidebarWidth = collapsed ? "w-[60px]" : "w-[200px]";
   const mainOffset = collapsed ? "md:pl-[60px]" : "md:pl-[200px]";
 
-  return (
-    <TooltipProvider>
-      <div className="flex min-h-screen bg-background text-foreground">
-        {/* ── Sidebar ─────────────────────────────────────────── */}
-        <aside className={cn(
-          "hidden md:flex flex-col border-r border-border/50 bg-card/50 backdrop-blur-sm fixed inset-y-0 left-0 z-20",
-          enableTransition ? "transition-all duration-200" : "",
-          sidebarWidth
-        )}>
-          {/* Logo */}
-          <div className={cn("flex h-14 items-center border-b border-border/40 shrink-0", collapsed ? "justify-center px-2" : "px-5")}>
-            {collapsed ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link href="/" className="flex items-center gap-2.5 group">
-                    <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shadow-sm group-hover:shadow-primary/40 transition-all shrink-0">
-                      <Wand2 size={14} className="text-white" />
-                    </div>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={8}>
-                  IconGen AI
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              <Link href="/" className="flex items-center gap-2.5 group">
-                <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shadow-sm group-hover:shadow-primary/40 transition-all shrink-0">
-                  <Wand2 size={14} className="text-white" />
-                </div>
-                <span className="font-heading font-bold text-sm tracking-tight">
-                  IconGen<span className="text-primary">AI</span>
-                </span>
-              </Link>
-            )}
-          </div>
-
-          {/* Nav */}
-          <nav className={cn("flex-1 py-5 space-y-0.5", collapsed ? "px-1.5" : "px-3")}>
-            {!collapsed && (
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 px-3 mb-3">
-                Workspace
-              </p>
-            )}
-            {navItems.map((item) => {
-              const isActive = pathname === item.href;
-              const linkContent = (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center rounded-lg text-sm font-medium transition-all duration-150",
-                    collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2",
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  )}
-                >
-                  <item.icon
-                    className={cn(
-                      "h-4 w-4 shrink-0",
-                      isActive ? "text-primary" : "text-muted-foreground"
-                    )}
-                  />
-                  {!collapsed && item.name}
+  const renderSidebarContent = (isMobile = false) => {
+    const isCollapsed = !isMobile && collapsed;
+    return (
+      <div className="flex flex-col h-full bg-card/50">
+        {/* Logo */}
+        <div className={cn("flex h-14 items-center border-b border-border/40 shrink-0", isCollapsed ? "justify-center px-2" : "px-5")}>
+          {isCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link href="/" onClick={() => isMobile && setMobileMenuOpen(false)} className="flex items-center gap-2.5 group">
+                  <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shadow-sm group-hover:shadow-primary/40 transition-all shrink-0">
+                    <Wand2 size={14} className="text-white" />
+                  </div>
                 </Link>
-              );
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>
+                IconGen AI
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Link href="/" onClick={() => isMobile && setMobileMenuOpen(false)} className="flex items-center gap-2.5 group">
+              <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center shadow-sm group-hover:shadow-primary/40 transition-all shrink-0">
+                <Wand2 size={14} className="text-white" />
+              </div>
+              <span className="font-heading font-bold text-sm tracking-tight">
+                IconGen<span className="text-primary">AI</span>
+              </span>
+            </Link>
+          )}
+        </div>
 
-              if (collapsed) {
-                return (
-                  <Tooltip key={item.href}>
-                    <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                    <TooltipContent side="right" sideOffset={8}>
-                      {item.name}
-                    </TooltipContent>
-                  </Tooltip>
-                );
-              }
+        {/* Nav */}
+        <nav className={cn("flex-1 py-5 space-y-0.5", isCollapsed ? "px-1.5" : "px-3")}>
+          {!isCollapsed && (
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 px-3 mb-3">
+              Workspace
+            </p>
+          )}
+          {navItems.map((item) => {
+            const isActive = pathname === item.href;
+            const linkContent = (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => isMobile && setMobileMenuOpen(false)}
+                className={cn(
+                  "flex items-center rounded-lg text-sm font-medium transition-all duration-150",
+                  isCollapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2",
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                <item.icon
+                  className={cn(
+                    "h-4 w-4 shrink-0",
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  )}
+                />
+                {!isCollapsed && item.name}
+              </Link>
+            );
 
-              return <div key={item.href}>{linkContent}</div>;
-            })}
-          </nav>
-
-
-
-          {/* User */}
-          {session?.user && (
-            <div className={cn("border-t border-border/40", collapsed ? "px-1.5 py-3 flex justify-center" : "px-4 pb-5 pt-4")}>
-              {collapsed ? (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={async () => { await signOut(); router.push("/sign-in"); }}
-                      className="hover:opacity-80 transition-opacity"
-                    >
-                      <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarImage src={session.user.image || ""} />
-                        <AvatarFallback className="text-[10px] uppercase">
-                          {session.user.name?.substring(0, 2) || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                    </button>
-                  </TooltipTrigger>
+            if (isCollapsed) {
+              return (
+                <Tooltip key={item.href}>
+                  <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
                   <TooltipContent side="right" sideOffset={8}>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{session.user.name}</span>
-                      <span className="text-muted-foreground text-[10px]">{session.user.email}</span>
-                      <span className="text-[10px] flex items-center gap-1 mt-1 text-red-400"><LogOut className="h-3 w-3" /> Sign out</span>
-                    </div>
+                    {item.name}
                   </TooltipContent>
                 </Tooltip>
-              ) : (
-                <div 
-                  className="cursor-pointer group"
-                  onClick={async () => { await signOut(); router.push("/sign-in"); }}
-                >
-                  <div className="flex items-center gap-2.5 hover:bg-muted/60 p-2 -mx-2 rounded-lg transition-colors">
+              );
+            }
+
+            return <div key={item.href}>{linkContent}</div>;
+          })}
+        </nav>
+
+        {/* User */}
+        {session?.user && (
+          <div className={cn("border-t border-border/40 mt-auto", isCollapsed ? "px-1.5 py-3 flex justify-center" : "px-4 pb-5 pt-4")}>
+            {isCollapsed ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={async () => { await signOut(); router.push("/sign-in"); }}
+                    className="hover:opacity-80 transition-opacity"
+                  >
                     <Avatar className="h-8 w-8 shrink-0">
                       <AvatarImage src={session.user.image || ""} />
                       <AvatarFallback className="text-[10px] uppercase">
                         {session.user.name?.substring(0, 2) || "U"}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 overflow-hidden">
-                      <p className="truncate text-xs font-semibold leading-tight group-hover:text-primary transition-colors">{session.user.name}</p>
-                      <p className="truncate text-[10px] text-muted-foreground leading-tight group-hover:text-foreground/80 transition-colors">{session.user.email}</p>
-                    </div>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{session.user.name}</span>
+                    <span className="text-muted-foreground text-[10px]">{session.user.email}</span>
+                    <span className="text-[10px] flex items-center gap-1 mt-1 text-red-400"><LogOut className="h-3 w-3" /> Sign out</span>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <div 
+                className="cursor-pointer group"
+                onClick={async () => { await signOut(); router.push("/sign-in"); }}
+              >
+                <div className="flex items-center gap-2.5 hover:bg-muted/60 p-2 -mx-2 rounded-lg transition-colors">
+                  <Avatar className="h-8 w-8 shrink-0">
+                    <AvatarImage src={session.user.image || ""} />
+                    <AvatarFallback className="text-[10px] uppercase">
+                      {session.user.name?.substring(0, 2) || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 overflow-hidden">
+                    <p className="truncate text-xs font-semibold leading-tight group-hover:text-primary transition-colors">{session.user.name}</p>
+                    <p className="truncate text-[10px] text-muted-foreground leading-tight group-hover:text-foreground/80 transition-colors">{session.user.email}</p>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <TooltipProvider>
+      <div className="flex min-h-screen bg-background text-foreground">
+        {/* ── Sidebar (Desktop) ─────────────────────────────────────────── */}
+        <aside className={cn(
+          "hidden md:flex flex-col border-r border-border/50 bg-card/50 backdrop-blur-sm fixed inset-y-0 left-0 z-20",
+          enableTransition ? "transition-all duration-200" : "",
+          sidebarWidth
+        )}>
+          {renderSidebarContent()}
         </aside>
 
         {/* ── Main area (sidebar offset) ───────────────────────── */}
-        <div className={cn("flex flex-1 flex-col", enableTransition ? "transition-all duration-200" : "", mainOffset)}>
+        <div className={cn("flex flex-1 flex-col w-full", enableTransition ? "transition-all duration-200" : "", mainOffset)}>
           {/* ── Top Header ───────────────────────────────────────── */}
-          <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border/50 bg-card/60 backdrop-blur-md px-6 shrink-0">
-            {/* Left: Page breadcrumb / title */}
+          <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border/50 bg-card/60 backdrop-blur-md px-4 md:px-6 shrink-0">
+            {/* Left: Page breadcrumb / title Add Mobile Menu Control */}
             <div className="flex items-center gap-3">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={toggleCollapsed}
-                    className="flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors w-8 h-8"
-                  >
-                    {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" sideOffset={8}>
-                  {collapsed ? "Expand sidebar" : "Collapse sidebar"}
-                </TooltipContent>
-              </Tooltip>
+              {/* Desktop toggle button */}
+              <div className="hidden md:flex">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={toggleCollapsed}
+                      className="flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors w-8 h-8"
+                    >
+                      {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" sideOffset={8}>
+                    {collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
+              {/* Mobile Menu Sheet */}
+              <div className="md:hidden flex items-center">
+                <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                  <SheetTrigger asChild>
+                    <button className="flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors w-8 h-8 -ml-1">
+                      <Menu className="h-5 w-5" />
+                    </button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-[260px] p-0 flex flex-col border-r-border/50">
+                    <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                    {renderSidebarContent(true)}
+                  </SheetContent>
+                </Sheet>
+              </div>
             </div>
 
             {/* Right: Credits + CTA */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {/* Credit badge */}
-              <div className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background/80 px-3 py-1.5 text-xs font-medium shadow-sm">
-                <Coins className="h-3.5 w-3.5 text-primary" />
+              <div className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background/80 px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-medium shadow-sm">
+                <Coins className="h-3 sm:h-3.5 w-3 sm:w-3.5 text-primary" />
                 {isAdmin ? (
                   <span className="flex items-center gap-1 text-foreground">
-                    <Infinity className="h-3.5 w-3.5 text-primary" />
+                    <Infinity className="h-3 sm:h-3.5 w-3 sm:w-3.5 text-primary" />
                     Unlimited
                   </span>
                 ) : (
@@ -256,13 +288,14 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 <DialogTrigger asChild>
                   <Button
                     size="sm"
-                    className="h-8 rounded-full text-xs font-semibold gap-1.5 shadow-sm hover:shadow-primary/25 transition-shadow px-4"
+                    className="h-7 sm:h-8 rounded-full text-[11px] sm:text-xs font-semibold gap-1 sm:gap-1.5 shadow-sm hover:shadow-primary/25 transition-shadow px-3 sm:px-4"
                   >
-                    <Zap className="h-3.5 w-3.5" />
-                    Top Up
+                    <Zap className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
+                    <span className="hidden sm:inline">Top Up</span>
+                    <span className="inline sm:hidden">Top Up</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-sm">
+                <DialogContent className="sm:max-w-sm w-[95vw] rounded-xl mx-auto">
                   <DialogHeader>
                     <DialogTitle className="font-heading text-xl">Top Up Credits</DialogTitle>
                     <DialogDescription>
@@ -287,7 +320,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           </header>
 
           {/* ── Page Content ─────────────────────────────────────── */}
-          <main className="dot-canvas flex-1 relative overflow-hidden">
+          <main className="dot-canvas flex-1 relative overflow-hidden flex flex-col">
             {children}
           </main>
         </div>
@@ -295,3 +328,4 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
     </TooltipProvider>
   );
 }
+
