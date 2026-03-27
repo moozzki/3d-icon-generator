@@ -14,6 +14,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -27,7 +32,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu } from "lucide-react";
+import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings } from "lucide-react";
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -69,11 +74,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         .then((data) => {
           if (typeof data.balance === "number") setCredits(data.balance);
         })
-        .catch(() => {});
+        .catch(() => { });
     };
 
     fetchCredits();
-    
+
     window.addEventListener("credits-updated", fetchCredits);
     return () => window.removeEventListener("credits-updated", fetchCredits);
   }, [session, isAdmin]);
@@ -166,14 +171,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
         {/* User */}
         {session?.user && (
-          <div className={cn("border-t border-border/40 mt-auto", isCollapsed ? "px-1.5 py-3 flex justify-center" : "px-4 pb-5 pt-4")}>
-            {isCollapsed ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={async () => { await signOut(); router.push("/sign-in"); }}
-                    className="hover:opacity-80 transition-opacity"
-                  >
+          <div className={cn("border-t border-border/40 mt-auto", isCollapsed ? "px-1.5 pt-3 pb-8 flex justify-center" : "px-4 pb-5 pt-4")}>
+            <Popover>
+              <PopoverTrigger asChild>
+                {isCollapsed ? (
+                  <button className="hover:opacity-80 transition-opacity">
                     <Avatar className="h-8 w-8 shrink-0">
                       <AvatarImage src={session.user.image || ""} />
                       <AvatarFallback className="text-[10px] uppercase">
@@ -181,34 +183,65 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                       </AvatarFallback>
                     </Avatar>
                   </button>
-                </TooltipTrigger>
-                <TooltipContent side="right" sideOffset={8}>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{session.user.name}</span>
-                    <span className="text-muted-foreground text-[10px]">{session.user.email}</span>
-                    <span className="text-[10px] flex items-center gap-1 mt-1 text-red-400"><LogOut className="h-3 w-3" /> Sign out</span>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              <div 
-                className="cursor-pointer group"
-                onClick={async () => { await signOut(); router.push("/sign-in"); }}
+                ) : (
+                  <button className="w-full text-left group">
+                    <div className="flex items-center gap-2.5 hover:bg-muted/60 p-2 -mx-2 rounded-lg transition-colors">
+                      <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarImage src={session.user.image || ""} />
+                        <AvatarFallback className="text-[10px] uppercase">
+                          {session.user.name?.substring(0, 2) || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 overflow-hidden">
+                        <p className="truncate text-xs font-semibold leading-tight group-hover:text-primary transition-colors">{session.user.name}</p>
+                        <p className="truncate text-[10px] text-muted-foreground leading-tight group-hover:text-foreground/80 transition-colors">{session.user.email}</p>
+                      </div>
+                    </div>
+                  </button>
+                )}
+              </PopoverTrigger>
+              <PopoverContent
+                side={isCollapsed ? "right" : "top"}
+                align={isCollapsed ? "end" : "start"}
+                sideOffset={12}
+                alignOffset={isCollapsed ? -6 : 0}
+                className="w-56 p-0"
               >
-                <div className="flex items-center gap-2.5 hover:bg-muted/60 p-2 -mx-2 rounded-lg transition-colors">
-                  <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarImage src={session.user.image || ""} />
-                    <AvatarFallback className="text-[10px] uppercase">
-                      {session.user.name?.substring(0, 2) || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 overflow-hidden">
-                    <p className="truncate text-xs font-semibold leading-tight group-hover:text-primary transition-colors">{session.user.name}</p>
-                    <p className="truncate text-[10px] text-muted-foreground leading-tight group-hover:text-foreground/80 transition-colors">{session.user.email}</p>
+                {/* User info header */}
+                <div className="px-3 py-3 border-b border-border/40">
+                  <div className="flex items-center gap-2.5">
+                    <Avatar className="h-8 w-8 shrink-0">
+                      <AvatarImage src={session.user.image || ""} />
+                      <AvatarFallback className="text-[10px] uppercase">
+                        {session.user.name?.substring(0, 2) || "U"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 overflow-hidden">
+                      <p className="truncate text-xs font-semibold leading-tight">{session.user.name}</p>
+                      <p className="truncate text-[10px] text-muted-foreground leading-tight">{session.user.email}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+                {/* Menu items */}
+                <div className="p-1">
+                  <Link
+                    href="/account"
+                    onClick={() => isMobile && setMobileMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                  >
+                    <Settings className="h-4 w-4" />
+                    Account
+                  </Link>
+                  <button
+                    onClick={async () => { await signOut(); router.push("/sign-in"); }}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign Out
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         )}
       </div>
@@ -269,15 +302,15 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             {/* Right: Credits + CTA */}
             <div className="flex items-center gap-2 sm:gap-3">
               {/* Credit badge */}
-              <div className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background/80 px-2.5 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-medium shadow-sm">
-                <Coins className="h-3 sm:h-3.5 w-3 sm:w-3.5 text-primary" />
+              <div className="flex h-7 items-center gap-1.5 rounded-full bg-primary/[0.08] dark:bg-primary/[0.15] px-3 text-[11px] sm:text-xs font-bold text-primary border border-primary/10 transition-colors">
+                <Coins className="h-3.5 w-3.5" />
                 {isAdmin ? (
-                  <span className="flex items-center gap-1 text-foreground">
-                    <Infinity className="h-3 sm:h-3.5 w-3 sm:w-3.5 text-primary" />
-                    Unlimited
+                  <span className="flex items-center gap-1">
+                    <Infinity className="h-3.5 w-3.5" />
+                    <span>Unlimited</span>
                   </span>
                 ) : (
-                  <span className="text-foreground">
+                  <span>
                     {credits === null ? "—" : `${credits} Credit${credits !== 1 ? "s" : ""}`}
                   </span>
                 )}
