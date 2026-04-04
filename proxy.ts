@@ -2,20 +2,45 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
+import { globalIpRateLimit } from "@/lib/rate-limit";
 
 export async function proxy(request: NextRequest) {
-  const isAuthRoute = request.nextUrl.pathname.startsWith("/api/auth");
-  // Skip proxy for auth endpoints
+  const { pathname } = request.nextUrl;
+
+  // Skip rate limiting and auth for auth API endpoints & static assets
+  const isAuthRoute = pathname.startsWith("/api/auth");
   if (isAuthRoute) return NextResponse.next();
 
-  // Temporary checking mechanism for API routes to enforce user login
-  const isProtectedApiRoute = request.nextUrl.pathname.startsWith("/api/generate") ||
-                              request.nextUrl.pathname.startsWith("/api/credits") ||
-                              request.nextUrl.pathname.startsWith("/api/library");
+  // ─── Layer 2: Global IP Rate Limit (DDoS / Brute Force) ────────────
+  // 50 requests per minute per IP address.
+  // Fail open: if Redis is down, don't block users.
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "127.0.0.1";
+
+  try {
+    const { success } = await globalIpRateLimit.limit(ip);
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please slow down." },
+        { status: 429 }
+      );
+    }
+  } catch {
+    // Redis down — fail open, allow request through
+    console.warn("Global rate limit check failed, allowing request through");
+  }
+
+  // ─── Auth: Protect API Routes ──────────────────────────────────────
+  const isProtectedApiRoute =
+    pathname.startsWith("/api/generate") ||
+    pathname.startsWith("/api/credits") ||
+    pathname.startsWith("/api/library");
 
   if (isProtectedApiRoute) {
     const session = await auth.api.getSession({
-      headers: await headers()
+      headers: await headers(),
     });
 
     if (!session) {
@@ -23,18 +48,21 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  const isAuthPage = request.nextUrl.pathname === "/sign-in" || request.nextUrl.pathname === "/sign-up";
-  const isProtectedPage = request.nextUrl.pathname === "/" || request.nextUrl.pathname === "/library";
+  // ─── Auth: Protect Page Routes ─────────────────────────────────────
+  const isAuthPage = pathname === "/sign-in" || pathname === "/sign-up";
+  const isProtectedPage = pathname === "/" || pathname === "/library" || pathname === "/account";
 
   if (isAuthPage || isProtectedPage) {
     const session = await auth.api.getSession({
-      headers: await headers()
+      headers: await headers(),
     });
 
+    // Redirect authenticated users away from auth pages
     if (session && isAuthPage) {
       return NextResponse.redirect(new URL("/", request.url));
     }
 
+    // Redirect unauthenticated users to sign-in
     if (!session && isProtectedPage) {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
@@ -50,7 +78,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - assets/ (public assets)
      */
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    "/((?!_next/static|_next/image|favicon.ico|assets/).*)",
   ],
 };

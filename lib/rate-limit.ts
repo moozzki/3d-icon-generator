@@ -7,10 +7,38 @@ const redis = new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN || "dummy_token",
 });
 
-// Allow 5 generation requests per 60 seconds per user
+export { redis };
+
+// ─── Layer 1: User ID Rate Limit (API Cost Protection) ──────────────
+// Target: /api/generate endpoint
+// Rule: Max 3 requests per 60 seconds per userId
+// Purpose: Prevent spam-clicking "Generate" that drains Fal.ai budget
 export const generationRateLimit = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(5, "60 s"),
+  limiter: Ratelimit.slidingWindow(3, "60 s"),
   analytics: true,
   prefix: "ratelimit:generate",
+});
+
+// ─── Layer 2: Global IP Rate Limit (DDoS / Brute Force Protection) ──
+// Target: All endpoints via Next.js Middleware
+// Rule: Max 50 requests per 60 seconds per IP address
+// Purpose: Block bots/scripts while staying safe for organic users on shared IPs
+export const globalIpRateLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(50, "60 s"),
+  analytics: true,
+  prefix: "ratelimit:global-ip",
+});
+
+// ─── Layer 3: Sybil Attack Defense (Sign-up Bonus Protection) ───────
+// Target: Credit initialization logic in /api/credits
+// Rule: Max 5 accounts per IP per day can claim free credits
+// Purpose: Prevent one person creating dozens of accounts to monopolize free tier
+// Note: Account #6+ from same IP can still sign up, but gets 0 credits
+export const sybilDefenseLimit = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(5, "86400 s"), // 24 hours
+  analytics: true,
+  prefix: "ratelimit:sybil-defense",
 });

@@ -33,7 +33,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings } from "lucide-react";
+import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X } from "lucide-react";
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -41,6 +41,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
   const router = useRouter();
   const [credits, setCredits] = useState<number | null>(null);
+  const [zeroCreditWarning, setZeroCreditWarning] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [enableTransition, setEnableTransition] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -74,6 +75,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         .then((r) => r.json())
         .then((data) => {
           if (typeof data.balance === "number") setCredits(data.balance);
+          if (data.zeroCreditByIp) setZeroCreditWarning(true);
         })
         .catch(() => { });
     };
@@ -329,6 +331,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 <DialogTrigger asChild>
                   <Button
                     size="sm"
+                    data-topup-trigger
                     className="h-7 sm:h-8 rounded-full text-[11px] sm:text-xs font-semibold gap-1 sm:gap-1.5 shadow-sm hover:shadow-primary/25 transition-shadow px-3 sm:px-4"
                   >
                     <Zap className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
@@ -359,6 +362,43 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               </Dialog>
             </div>
           </header>
+
+          {/* ── Zero-Credit Warning Banner (Sybil Defense UX) ──── */}
+          {zeroCreditWarning && credits === 0 && (
+            <div className="relative bg-amber-500/10 border-b border-amber-500/20 px-4 py-3">
+              <div className="flex items-start gap-3 max-w-3xl mx-auto">
+                <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                <div className="flex-1 text-sm">
+                  <p className="text-amber-200 leading-relaxed">
+                    <span className="font-semibold">Hai!</span> Sepertinya jaringan Wi-Fi yang kamu gunakan sudah mencapai batas maksimal klaim kredit gratis hari ini. Tapi tenang saja, akunmu sudah aktif! Kamu bisa mulai generate ikon 3D dengan melakukan{" "}
+                    <button
+                      className="underline underline-offset-2 font-semibold text-amber-400 hover:text-amber-300 transition-colors"
+                      onClick={() => {
+                        // Trigger top-up dialog by dispatching a custom event
+                        document.querySelector<HTMLButtonElement>('[data-topup-trigger]')?.click();
+                      }}
+                    >
+                      Top-up Kredit
+                    </button>
+                    {" "}atau hubungi{" "}
+                    <a
+                      href="mailto:support@useaudora.com"
+                      className="underline underline-offset-2 font-semibold text-amber-400 hover:text-amber-300 transition-colors"
+                    >
+                      Support
+                    </a>
+                    {" "}jika ini adalah sebuah kesalahan.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setZeroCreditWarning(false)}
+                  className="text-amber-500/60 hover:text-amber-400 transition-colors shrink-0 mt-0.5"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* ── Page Content ─────────────────────────────────────── */}
           <main className="dot-canvas flex-1 relative overflow-hidden flex flex-col">
