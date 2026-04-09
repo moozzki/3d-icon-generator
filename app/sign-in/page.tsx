@@ -77,7 +77,7 @@ export default function SignInPage() {
               Sign in to Audora
             </CardTitle>
             <CardDescription className="mt-1.5 text-sm">
-              Let's make some 3D magic.
+              Let&apos;s make some 3D magic.
             </CardDescription>
           </div>
         </CardHeader>

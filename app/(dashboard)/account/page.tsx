@@ -230,18 +230,10 @@ export default function AccountPage() {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-6">
         {/* Page Header */}
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <Link
-              href="/"
-              className="flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="font-heading text-2xl font-bold tracking-tight">
-              Account
-            </h1>
-          </div>
-          <p className="text-sm text-muted-foreground ml-10">
+          <h1 className="font-heading text-2xl font-bold tracking-tight">
+            Account
+          </h1>
+          <p className="text-sm text-muted-foreground">
             Manage your profile, security, and connected accounts.
           </p>
         </div>

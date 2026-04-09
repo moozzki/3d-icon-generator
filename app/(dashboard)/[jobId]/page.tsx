@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -9,6 +12,19 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +43,17 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize,
+  ArrowLeft,
+  ArrowRight,
+  Crop,
+  RefreshCcw,
+  Settings2,
+  MessageSquareText,
+  Layers,
+  Eye,
+  Coins,
+  Copy,
+  Check
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -70,13 +97,34 @@ const AI_MODELS = [
 
 type AiModelId = (typeof AI_MODELS)[number]["id"];
 
+const AI_MODEL_LABELS: Record<string, string> = {
+  "flux-2-pro": "Flux 2 Pro",
+  "nano-banana-2": "Nano Banana 2",
+};
+
 function getCreditCost(aiModel: AiModelId, quality: string): number {
   const model = AI_MODELS.find((m) => m.id === aiModel);
   if (!model) return 1;
   return model.costs[quality as "2K" | "4K"] ?? 1;
 }
 
-export default function StudioPage() {
+export default function StudioDetailPage() {
+  const { jobId } = useParams<{ jobId: string }>();
+  const searchParams = useSearchParams();
+  const isRefine = searchParams.get("action") === "refine";
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+
+  const { data: generation, isLoading } = useQuery({
+    queryKey: ["generation", jobId],
+    queryFn: async () => {
+      const res = await fetch(`/api/library/${jobId}`);
+      if (!res.ok) throw new Error("Failed to fetch generation");
+      const json = await res.json();
+      return json.data;
+    },
+    enabled: !!jobId,
+  });
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
@@ -88,6 +136,7 @@ export default function StudioPage() {
   const [isQualityOpen, setIsQualityOpen] = useState(false);
   const [aiModel, setAiModel] = useState<AiModelId>("flux-2-pro");
   const [isModelOpen, setIsModelOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const selectedModel = AI_MODELS.find((m) => m.id === aiModel)!;
   const creditCost = getCreditCost(aiModel, quality);
@@ -101,6 +150,29 @@ export default function StudioPage() {
   const handleZoomIn = () => setZoomScale(prev => Math.min(prev + 0.2, 5));
   const handleZoomOut = () => setZoomScale(prev => Math.max(prev - 0.2, 0.1));
   const handleZoomToFit = () => setZoomScale(1);
+
+  const hasInitialized = useRef(false);
+
+  useEffect(() => {
+    if (generation && !hasInitialized.current) {
+      if (!isRefine) {
+        setPrompt(generation.prompt || "");
+      } else {
+        setPrompt("");
+      }
+      const formattedPos = generation.position || "isometric";
+      const matchedPos = POSITIONS.find(p => p.toLowerCase().replace(" ", "_") === formattedPos) || "Isometric";
+      setPosition(matchedPos);
+      setStyle(generation.style || "plastic");
+      setQuality(generation.quality || "2K");
+      setResultImage(generation.resultImageUrl || null);
+      
+      // Auto-open sheet if this is view mode (not refine mode) and image exists
+      // Wait, let's strictly follow the instruction: "trigger side sheet menu muncul ketika user meng klik image yang berhasil di generate pada dashboard"
+      // So no auto-open here, leave it closed.
+      hasInitialized.current = true;
+    }
+  }, [generation, isRefine]);
 
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
@@ -125,7 +197,7 @@ export default function StudioPage() {
   }, []);
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (document.activeElement?.tagName === "TEXTAREA" || document.activeElement?.tagName === "INPUT") {
         return;
       }
@@ -144,8 +216,8 @@ export default function StudioPage() {
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, []);
 
   const handleGenerate = async () => {
@@ -209,10 +281,29 @@ export default function StudioPage() {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleGenerate();
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!resultImage) return;
+    try {
+      const filename = `audora-${jobId}.png`;
+      const downloadUrl = `/api/download?url=${encodeURIComponent(resultImage)}&filename=${filename}`;
+      
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success("Download started!");
+    } catch {
+      toast.error("Failed to download image.");
     }
   };
 
@@ -303,42 +394,22 @@ export default function StudioPage() {
                   transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                   className="relative group flex flex-col items-center gap-6 mt-10"
                 >
-                  <div className="relative pointer-events-auto">
+                  <button
+                    className="relative pointer-events-auto cursor-pointer focus:outline-none rounded-2xl ring-offset-background transition-shadow hover:ring-2 hover:ring-primary/20 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    onClick={() => !isGenerating && setIsSheetOpen(true)}
+                  >
                     <img
                       src={resultImage}
                       alt="Generated 3D icon"
                       className="max-h-[300px] sm:max-h-[420px] w-auto max-w-[85vw] sm:max-w-none h-auto object-contain drop-shadow-2xl rounded-2xl"
                     />
                     <div className="absolute inset-0 rounded-2xl pointer-events-none bg-black/0 group-hover:bg-black/10 transition-colors duration-200" />
-                  </div>
-                  
-                  {/* Download button under image */}
-                  <div className="flex flex-wrap justify-center items-center gap-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        fetch(resultImage).then(r => r.blob()).then(b => {
-                          const url = window.URL.createObjectURL(b);
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = `audora-generation.png`;
-                          a.click();
-                          window.URL.revokeObjectURL(url);
-                        });
-                      }}
-                      className="h-9 px-4 text-xs font-semibold gap-2 rounded-xl shadow-sm border-border/60 hover:bg-muted/50"
-                    >
-                      <Download className="h-4 w-4" />
-                      Download .png
-                    </Button>
-                  </div>
+                  </button>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
         </div>
-
         {/* ── Extracted Floating Zoom Controls ────────────────── */}
         <div className="absolute top-4 right-4 z-10">
           <DropdownMenu>
@@ -585,6 +656,101 @@ export default function StudioPage() {
           </motion.div>
         </div>
       </div>
+
+      {/* ── Detail Side Sheet ────────────────── */}
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen} modal={false}>
+        <SheetContent 
+          side="right" 
+          showCloseButton={false}
+          hideOverlay={true}
+          className="!inset-y-auto !right-4 !top-20 !bottom-4 !h-auto w-[260px] sm:w-[280px] rounded-2xl border border-border/50 bg-background/95 backdrop-blur-xl shadow-2xl p-0 flex flex-col overflow-hidden"
+        >
+          <SheetTitle className="sr-only">Generation Details</SheetTitle>
+          <SheetDescription className="sr-only">View icon generation settings and actions.</SheetDescription>
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto no-scrollbar p-5 pb-0 space-y-5">
+             {/* Info list */}
+             <div className="flex flex-col text-[13px]">
+               <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                 <span className="text-muted-foreground font-medium">Model</span>
+                 <span className="font-semibold text-foreground">{generation?.aiModel ? (AI_MODEL_LABELS[generation.aiModel] || generation.aiModel) : "Flux 2 Pro"}</span>
+               </div>
+               <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                 <span className="text-muted-foreground font-medium">Style</span>
+                 <span className="font-semibold text-foreground">
+                   {STYLES.find(s => s.id === style)?.label || "Plastic"}
+                 </span>
+               </div>
+               <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                 <span className="text-muted-foreground font-medium">Camera Angle</span>
+                 <span className="font-semibold text-foreground">
+                   {generation?.position ? generation.position.split("_").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : "Isometric"}
+                 </span>
+               </div>
+               <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                 <span className="text-muted-foreground font-medium">Quality</span>
+                 <span className="font-semibold text-foreground">{generation?.quality || "2K"}</span>
+               </div>
+               <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                 <span className="text-muted-foreground font-medium">Size</span>
+                 <span className="font-semibold text-foreground">
+                   {generation?.quality === "4K" ? "4096 × 4096px" : "2048 × 2048px"}
+                 </span>
+               </div>
+             </div>
+
+             {/* Prompt Section */}
+             <div className="space-y-2 pt-1">
+               <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground/70 uppercase tracking-widest px-1">
+                 <div className="flex items-center gap-2">
+                   <MessageSquareText className="h-3.5 w-3.5" /> Prompt
+                 </div>
+                 <button 
+                   onClick={() => {
+                     navigator.clipboard.writeText(generation?.prompt || "");
+                     setCopied(true);
+                     setTimeout(() => setCopied(false), 2000);
+                     toast.success("Prompt copied!");
+                   }}
+                   className="p-1 hover:bg-muted/80 rounded-md transition-colors text-muted-foreground/50 hover:text-foreground"
+                   title="Copy Prompt"
+                 >
+                   {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                 </button>
+               </div>
+               <div className="text-[12px] leading-relaxed text-foreground/90 bg-muted/30 p-3 rounded-xl border border-border/40 font-medium italic">
+                 &quot;{generation?.prompt}&quot;
+               </div>
+             </div>
+
+             {/* Actions Accordion */}
+             <Accordion type="single" collapsible defaultValue="actions" className="w-full">
+               <AccordionItem value="actions" className="border-b-0 border-t border-border/40 pt-1">
+                 <AccordionTrigger className="text-[15px] font-bold hover:no-underline py-3 px-1 text-foreground">
+                   Actions
+                 </AccordionTrigger>
+                 <AccordionContent className="pb-4 pt-1">
+                   <div className="flex flex-col gap-0.5">
+                     <Button variant="ghost" className="w-full justify-start h-9 px-2 text-[13px] font-medium gap-3 hover:bg-muted/60" disabled>
+                       <Crop className="w-4 h-4 text-muted-foreground" /> Remove background
+                     </Button>
+                     <Button variant="ghost" className="w-full justify-start h-9 px-2 text-[13px] font-medium gap-3 hover:bg-muted/60" disabled>
+                       <Maximize className="w-4 h-4 text-muted-foreground" /> Upscale
+                     </Button>
+                   </div>
+                 </AccordionContent>
+               </AccordionItem>
+             </Accordion>
+          </div>
+
+          {/* Export at bottom */}
+          <div className="p-4 pt-3 border-t border-border/50 bg-background mt-auto">
+            <Button className="w-full font-semibold rounded-xl h-10 shadow-sm text-sm" onClick={handleDownload}>
+              Download Image
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

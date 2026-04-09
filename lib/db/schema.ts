@@ -62,6 +62,11 @@ export const verification = pgTable("verification", {
 
 export const qualityEnum = pgEnum("quality", ["2K", "4K"]);
 
+export const statusEnum = pgEnum("status", ["pending", "completed", "failed"]);
+
+export const aiModelEnum = pgEnum("ai_model", ["flux-2-pro", "nano-banana-2"]);
+
+
 export const userCredits = pgTable("user_credits", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull().unique(), // References better-auth users id
@@ -72,13 +77,17 @@ export const userCredits = pgTable("user_credits", {
 export const generations = pgTable("generations", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull(), // References better-auth users id
+  jobId: text("job_id"),
+  status: statusEnum("status").default("pending"),
+  aiModel: aiModelEnum("ai_model").notNull().default("flux-2-pro"),
   prompt: text("prompt").notNull(),
   referenceImage: text("reference_image"),
   position: positionEnum("position").notNull(),
   style: styleEnum("style").notNull().default("plastic"),
   quality: qualityEnum("quality").notNull(),
   cost: integer("cost").notNull(),
-  resultImageUrl: text("result_image_url").notNull(),
+  creditCost: integer("credit_cost").notNull().default(1),
+  resultImageUrl: text("result_image_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -90,4 +99,11 @@ export const transactions = pgTable("transactions", {
   paymentStatus: text("payment_status").notNull(), // 'pending', 'success', 'failed'
   paymentProviderRef: text("payment_provider_ref"),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const waitlist = pgTable("waitlist", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  status: text("status").default("waitlisted"),
+  joinedAt: timestamp("joined_at").defaultNow(),
 });

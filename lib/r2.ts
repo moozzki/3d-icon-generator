@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 export const r2Client = new S3Client({
@@ -39,4 +39,12 @@ export async function uploadToR2(key: string, body: Buffer | Uint8Array | Blob |
   // Return the public URL or presigned URL. 
   // Assuming public URL structure based on a custom domain, or fallback to presigned download URL.
   return `https://${process.env.R2_PUBLIC_DOMAIN_OR_BUCKET_URL}/${key}`;
+}
+
+export async function deleteFromR2(key: string) {
+  const command = new DeleteObjectCommand({
+    Bucket: process.env.R2_BUCKET_NAME || "dummy_bucket",
+    Key: key,
+  });
+  await r2Client.send(command);
 }

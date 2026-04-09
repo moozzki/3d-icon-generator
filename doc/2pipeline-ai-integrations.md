@@ -5,7 +5,7 @@
 ### Phase 0: Request Ingestion & Queuing (Synchronous)
 Fase ini adalah satu-satunya bagian yang ditunggu oleh *browser user* secara langsung untuk memastikan UX terasa cepat (kurang dari 1 detik).
 1. **Validation:** *Frontend* memanggil `/api/generate`. Route handler memvalidasi Auth, Rate Limit (Upstash Redis), dan kecukupan saldo kredit (Neon DB).
-2. **Event Dispatch:** Jika validasi lolos, sistem tidak memanggil Fal.ai, melainkan menembakkan *event* ke Inngest (contoh: `audora/icon.generate`) dengan *payload* *prompt* yang sudah diracik oleh Prompt Mapper, ID *user*, dan pilihan kualitas.
+2. **Event Dispatch:** Jika validasi lolos, sistem tidak memanggil Fal.ai, melainkan menembakkan *event* ke Inngest (contoh: `audora/icon.generate`) dengan *payload* *prompt* yang sudah diracik oleh Prompt Mapper, ID *user*, Style, Posisi Kamera, dan pilihan kualitas.
 3. **Immediate Response:** Route handler langsung mengembalikan `jobId` ke *frontend*.
 4. **Frontend Polling:** *Frontend* menampilkan animasi *loading* (Framer Motion) sambil melakukan *polling* ringan ke *endpoint* `/api/job-status?jobId=...` setiap 2 detik untuk mengecek apakah proses *background* sudah selesai.
 
@@ -14,7 +14,7 @@ Inngest mengambil alih eksekusi di *background*. Fase ini murni bertugas membent
 * **AI Model:** `fal-ai/recraft-v3`
 * **Inngest Step:** Menggunakan `step.run()` agar proses pemanggilan API ini dilacak. Jika Fal.ai mengalami *downtime* atau *timeout*, Inngest akan otomatis melakukan *retry*.
 * **Input Parameters:**
-  * `prompt`: Hasil racikan spesifik (User Input + Posisi Kamera + *White Background*).
+  * `prompt`: Hasil racikan spesifik (User Input + Style + Posisi Kamera + *White Background*).
   * `image_url` *(Opsional)*: Presigned URL Cloudflare R2 jika *user* menggunakan referensi *Image-to-Image*.
 * **Hardcoded Resolution:** Dikunci di **1024x1024 (1K)** untuk proporsi ikon yang paling akurat tanpa distorsi.
 * **Output:** Temporary Image URL (1K resolution).

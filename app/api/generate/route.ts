@@ -3,9 +3,14 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { userCredits, generations } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { generationRateLimit } from "@/lib/rate-limit";
-import { uploadToR2 } from "@/lib/r2";
+import { inngest } from "@/lib/inngest/client";
+import crypto from "crypto";
+
+// ---------------------------------------------------------------------------
+// Prompt engineering maps
+// ---------------------------------------------------------------------------
 
 const POSITION_PROMPTS: Record<string, string> = {
   isometric: "isometric 3D render, perfectly orthographic projection, uniform scale",
@@ -14,7 +19,7 @@ const POSITION_PROMPTS: Record<string, string> = {
   side_facing: "pure side profile view, orthogonal side camera",
   three_quarter: "3/4 perspective angle, dynamic three-quarter view exposing front and side",
   top_down: "top-down flat-lay view, bird's eye perspective, perfectly straight from above",
-  dimetric: "dimetric 3D render, angled perspective showing subtle depth"
+  dimetric: "dimetric 3D render, angled perspective showing subtle depth",
 };
 
 const STYLE_PROMPTS: Record<string, string> = {
@@ -23,106 +28,145 @@ const STYLE_PROMPTS: Record<string, string> = {
   glass: "transparent glass material, reflections, caustics, glass render style",
   plush: "plush fabric texture, soft fluffy, stuffed toy style",
   toy_block: "blocky voxel shapes, toy building block style, LEGO-like",
-  metallic: "metallic chrome material, reflective surface, metal render style"
+  metallic: "metallic chrome material, reflective surface, metal render style",
 };
 
-const QUALITY_SETTINGS: Record<string, { width: number; height: number; cost: number }> = {
-  "2K": { width: 2048, height: 2048, cost: 1 },
-  "4K": { width: 3840, height: 3840, cost: 2 }
+// ---------------------------------------------------------------------------
+// Credit cost matrix
+//   flux-2-pro  + 2K = 1 Credit
+//   flux-2-pro  + 4K = 2 Credits
+//   nano-banana-2 + 2K = 2 Credits
+//   nano-banana-2 + 4K = 3 Credits
+// ---------------------------------------------------------------------------
+
+type AiModel = "flux-2-pro" | "nano-banana-2";
+type Quality = "2K" | "4K";
+
+const CREDIT_COST_MATRIX: Record<AiModel, Record<Quality, number>> = {
+  "flux-2-pro": { "2K": 1, "4K": 2 },
+  "nano-banana-2": { "2K": 2, "4K": 3 },
 };
+
+const VALID_AI_MODELS: AiModel[] = ["flux-2-pro", "nano-banana-2"];
+const VALID_QUALITIES: Quality[] = ["2K", "4K"];
+
+// ---------------------------------------------------------------------------
+// POST /api/generate
+// ---------------------------------------------------------------------------
 
 export async function POST(request: Request) {
   try {
     const session = await auth.api.getSession({
-      headers: await headers()
+      headers: await headers(),
     });
-    
+
     if (!session || !session.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 1. Rate Limiting Check (Upstash Redis)
+    // 1. Rate Limiting (Upstash Redis)
     const { success, limit, remaining, reset } = await generationRateLimit.limit(session.user.id);
     if (!success) {
-      return NextResponse.json({ error: "Too many requests. Please try again later." }, { 
-        status: 429,
-        headers: {
-          "X-RateLimit-Limit": limit.toString(),
-          "X-RateLimit-Remaining": remaining.toString(),
-          "X-RateLimit-Reset": reset.toString()
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        {
+          status: 429,
+          headers: {
+            "X-RateLimit-Limit": limit.toString(),
+            "X-RateLimit-Remaining": remaining.toString(),
+            "X-RateLimit-Reset": reset.toString(),
+          },
         }
-      });
+      );
     }
 
-    const { userPrompt, position, style = "plastic", quality, referenceImage = null } = await request.json();
+    const {
+      userPrompt,
+      position,
+      style = "plastic",
+      quality,
+      aiModel = "flux-2-pro",
+      referenceImage = null,
+    } = await request.json();
 
-    if (!POSITION_PROMPTS[position] || !STYLE_PROMPTS[style] || !QUALITY_SETTINGS[quality]) {
+    // 2. Validate parameters
+    if (
+      !POSITION_PROMPTS[position] ||
+      !STYLE_PROMPTS[style] ||
+      !VALID_QUALITIES.includes(quality) ||
+      !VALID_AI_MODELS.includes(aiModel)
+    ) {
       return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
     }
 
-    // 2. Checking user credit
+    // 3. Calculate dynamic credit cost
+    const creditCost = CREDIT_COST_MATRIX[aiModel as AiModel][quality as Quality];
+
+    // 4. Check user credit balance
     const isAdmin = (session.user as { role?: string }).role === "admin";
-    let balance = 0;
-    const requiredCredits = QUALITY_SETTINGS[quality].cost;
 
     if (!isAdmin) {
-      const currentCredits = await db.select().from(userCredits).where(eq(userCredits.userId, session.user.id)).limit(1);
-      
+      let balance = 0;
+      const currentCredits = await db
+        .select()
+        .from(userCredits)
+        .where(eq(userCredits.userId, session.user.id))
+        .limit(1);
+
       if (currentCredits.length === 0) {
-        await db.insert(userCredits).values({
-          userId: session.user.id,
-          balance: 2,
-        });
+        await db.insert(userCredits).values({ userId: session.user.id, balance: 2 });
         balance = 2;
       } else {
         balance = currentCredits[0].balance;
       }
 
-      if (balance < requiredCredits) {
+      if (balance < creditCost) {
         return NextResponse.json({ error: "Insufficient credits" }, { status: 403 });
       }
-    }
 
-    // 3. Prompt Engineering
-    // const engineeredPrompt = `A high quality 3D icon of ${userPrompt}. ${POSITION_PROMPTS[position]}. rendered in a modern 3D style, soft lighting, highly detailed, clean design, isolated on a pure white background.`;
-    
-    // Simulate Fal APi (As this is MVP base setup)
-    // Here we download a dummy image to simulate AI Generation taking some time and returning an image.
-    // If you have FAL_KEY, you would call Fal.ai here, get the resulting image URL, and download it.
-    const imageRes = await fetch("https://picsum.photos/512/512");
-    if (!imageRes.ok) {
-      throw new Error("Failed to generate image from AI provider");
-    }
-    
-    const arrayBuffer = await imageRes.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    // 4. Upload to Cloudflare R2
-    const ext = "png";
-    const uniqueId = crypto.randomUUID();
-    const objectKey = `generations/${session.user.id}/${uniqueId}.${ext}`;
-    
-    const resultUrl = await uploadToR2(objectKey, buffer, "image/png");
-
-    // 5. Deduct credits and insert record
-    if (!isAdmin) {
-      await db.update(userCredits)
-        .set({ balance: balance - requiredCredits })
+      // 5. Deduct credits UPFRONT (before dispatching to Inngest)
+      //    If the job fails, onFailure hook in functions.ts will refund them.
+      await db
+        .update(userCredits)
+        .set({ balance: sql`${userCredits.balance} - ${creditCost}` })
         .where(eq(userCredits.userId, session.user.id));
     }
-      
+
+    // 6. Prompt Engineering
+    const engineeredPrompt = `A high quality 3D icon of ${userPrompt}. ${POSITION_PROMPTS[position]}. Style: ${STYLE_PROMPTS[style]}. Rendered in a modern 3D style, soft lighting, highly detailed, clean design, isolated on a pure white background.`;
+
+    // 7. Insert pending generation row & dispatch job
+    const jobId = crypto.randomUUID();
+
     await db.insert(generations).values({
       userId: session.user.id,
-      prompt: userPrompt,
+      jobId,
+      status: "pending",
+      aiModel: aiModel as AiModel,
+      prompt: engineeredPrompt,
       position: position as "isometric" | "front_facing" | "back_facing" | "side_facing" | "three_quarter" | "top_down" | "dimetric",
       style: style as "plastic" | "clay" | "glass" | "plush" | "toy_block" | "metallic",
-      quality: quality as "2K" | "4K",
-      cost: requiredCredits,
+      quality: quality as Quality,
+      cost: creditCost,
+      creditCost,
       referenceImage,
-      resultImageUrl: resultUrl
     });
 
-    return NextResponse.json({ success: true, resultUrl });
+    await inngest.send({
+      name: "audora/icon.generate",
+      data: {
+        jobId,
+        userId: session.user.id,
+        prompt: engineeredPrompt,
+        aiModel,
+        resolution: quality,
+        referenceImage,
+        creditCost,
+      },
+    });
+
+    // Immediately return jobId — frontend polls /api/job-status
+    return NextResponse.json({ success: true, jobId });
   } catch (error) {
     console.error("Generate error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

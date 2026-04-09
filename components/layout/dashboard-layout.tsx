@@ -401,7 +401,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           )}
 
           {/* ── Page Content ─────────────────────────────────────── */}
-          <main className="dot-canvas flex-1 relative overflow-hidden flex flex-col">
+          <main className="flex-1 relative overflow-hidden flex flex-col">
             {children}
           </main>
         </div>
