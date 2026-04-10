@@ -1,8 +1,28 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Documentation
+
+Comprehensive project documentation can be found in the `doc/` directory:
+
+- [**Master Documentation**](doc/master.md) - System overview, tech stack, and architecture.
+- [AI Pipeline Details](doc/2pipeline-ai-integrations.md)
+- [Auth Strategy](doc/security-auth-strategy.md)
+- [Product Requirements (PRD)](doc/prd.md)
+
+## Tech Stack
+
+- **Next.js 16 (App Router)**
+- **Neon + Drizzle ORM**
+- **Better Auth**
+- **Inngest**
+- **Fal.ai**
+- **Cloudflare R2**
 
 ## Getting Started
 
-First, run the development server:
+First, ensure you have your environment variables set up in `.env.local` (see [master.md](doc/master.md) for required keys).
+
+Run the development server:
+... (rest of the content)
+
 
 ```bash
 npm run dev

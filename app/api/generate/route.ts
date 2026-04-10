@@ -9,7 +9,7 @@ import { inngest } from "@/lib/inngest/client";
 import crypto from "crypto";
 
 // ---------------------------------------------------------------------------
-// Prompt engineering maps
+// Position labels (human-readable, injected into style templates)
 // ---------------------------------------------------------------------------
 
 const POSITION_PROMPTS: Record<string, string> = {
@@ -22,14 +22,50 @@ const POSITION_PROMPTS: Record<string, string> = {
   dimetric: "dimetric 3D render, angled perspective showing subtle depth",
 };
 
-const STYLE_PROMPTS: Record<string, string> = {
-  plastic: "smooth plastic material, glossy finish, clean subtle reflections, solid pure color, smooth and sleek",
-  clay: "clay material, soft matte finish, rounded smooth shapes, clay render style",
-  glass: "transparent glass material, reflections, caustics, glass render style",
-  plush: "plush fabric texture, soft fluffy, stuffed toy style",
-  toy_block: "blocky voxel shapes, toy building block style, LEGO-like",
-  metallic: "metallic chrome material, reflective surface, metal render style",
+// ---------------------------------------------------------------------------
+// Master prompt templates — one unique template per style
+// Placeholders: {subject}, {position}, {quality}
+// ---------------------------------------------------------------------------
+
+type StyleKey = "plastic" | "clay" | "glass" | "plush" | "toy_block" | "metallic";
+
+const STYLE_MASTER_PROMPTS: Record<StyleKey, string> = {
+  plastic:
+    "A highly detailed 3D icon of {subject} in a smooth plastic material style, featuring soft reflections, subtle surface highlights and subtle shadow. {position}, clean composition. Rendered with soft, diffused studio lighting, minimal shadows, and a modern aesthetic. Isolated on a pure white background. {quality}, crystal clear image, rendered in 1:1 aspect ratio format.",
+
+  clay:
+    "A stylized 3D icon of {subject} made of soft clay material, with slightly imperfect edges and handcrafted texture details. {position}, balanced composition. Rendered with soft lighting to enhance depth and tactile feel. Clean and minimal, isolated on a pure white background. {quality}, crystal clear image, rendered in 1:1 aspect ratio format.",
+
+  glass:
+    "A premium 3D icon of {subject} made of translucent glass material, featuring realistic refraction, reflections, and light dispersion. {position}, elegant composition. Rendered with studio lighting to emphasize transparency and highlights. Isolated on a pure white background with a subtle shadow. {quality}, crystal clear image, rendered in 1:1 aspect ratio format.",
+
+  plush:
+    "A cute 3D icon of {subject} in a plush fabric style, with soft fibers, fuzzy texture, and rounded shapes. {position}, friendly and playful composition. Rendered with soft lighting and subtle shadow to enhance warmth and depth. Clean background, isolated on pure white. {quality}, crystal clear image, rendered in 1:1 aspect ratio format.",
+
+  toy_block:
+    "A playful 3D icon of {subject} in a toy building block style, featuring bold shapes, vibrant colors, and smooth surfaces. {position}, structured composition. Rendered in a clean modern 3D aesthetic with soft lighting and subtle shadow. Isolated on a pure white background. {quality}, crystal clear image, rendered in 1:1 aspect ratio format.",
+
+  metallic:
+    "A high-end 3D icon of {subject} in a metallic chrome material style, featuring polished surfaces, sharp reflections, realistic highlights and subtle shadow. {position}, strong composition. Rendered with studio lighting to enhance contrast and material depth. Clean and minimal, isolated on a pure white background. {quality}, crystal clear image, rendered in 1:1 aspect ratio format.",
 };
+
+// ---------------------------------------------------------------------------
+// Prompt builder
+// ---------------------------------------------------------------------------
+
+function buildEngineeredPrompt(
+  userPrompt: string,
+  style: StyleKey,
+  position: string,
+  quality: string
+): string {
+  const positionLabel = POSITION_PROMPTS[position] ?? position;
+  const template = STYLE_MASTER_PROMPTS[style];
+  return template
+    .replace("{subject}", userPrompt)
+    .replace("{position}", positionLabel)
+    .replace("{quality}", quality);
+}
 
 // ---------------------------------------------------------------------------
 // Credit cost matrix
@@ -91,8 +127,9 @@ export async function POST(request: Request) {
 
     // 2. Validate parameters
     if (
+      !userPrompt?.trim() ||
       !POSITION_PROMPTS[position] ||
-      !STYLE_PROMPTS[style] ||
+      !STYLE_MASTER_PROMPTS[style as StyleKey] ||
       !VALID_QUALITIES.includes(quality) ||
       !VALID_AI_MODELS.includes(aiModel)
     ) {
@@ -132,8 +169,13 @@ export async function POST(request: Request) {
         .where(eq(userCredits.userId, session.user.id));
     }
 
-    // 6. Prompt Engineering
-    const engineeredPrompt = `A high quality 3D icon of ${userPrompt}. ${POSITION_PROMPTS[position]}. Style: ${STYLE_PROMPTS[style]}. Rendered in a modern 3D style, soft lighting, highly detailed, clean design, isolated on a pure white background.`;
+    // 6. Build engineered prompt (style-specific master template)
+    const engineeredPrompt = buildEngineeredPrompt(
+      userPrompt.trim(),
+      style as StyleKey,
+      position,
+      quality
+    );
 
     // 7. Insert pending generation row & dispatch job
     const jobId = crypto.randomUUID();
@@ -143,7 +185,8 @@ export async function POST(request: Request) {
       jobId,
       status: "pending",
       aiModel: aiModel as AiModel,
-      prompt: engineeredPrompt,
+      prompt: engineeredPrompt,          // full engineered prompt → sent to Fal.ai
+      userPrompt: userPrompt.trim(),     // raw user input → shown on frontend
       position: position as "isometric" | "front_facing" | "back_facing" | "side_facing" | "three_quarter" | "top_down" | "dimetric",
       style: style as "plastic" | "clay" | "glass" | "plush" | "toy_block" | "metallic",
       quality: quality as Quality,

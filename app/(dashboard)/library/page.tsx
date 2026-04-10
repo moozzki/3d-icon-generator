@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +36,7 @@ interface Generation {
   status: string;
   aiModel: string | null;
   prompt: string;
+  userPrompt?: string | null;
   referenceImage: string | null;
   position: string;
   style: string;
@@ -124,7 +126,7 @@ export default function LibraryPage() {
   );
 
   const filteredLibrary = completedGenerations.filter((item) =>
-    item.prompt.toLowerCase().includes(searchQuery.toLowerCase())
+    (item.userPrompt || item.prompt).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleDownload = async (item: Generation) => {
@@ -169,7 +171,7 @@ export default function LibraryPage() {
 
   return (
     <>
-      <div className="flex flex-col h-full w-full px-4 md:px-8 py-8 gap-8 mt-2 items-start">
+      <div className="flex flex-col h-full w-full px-4 md:px-8 py-8 gap-8 mt-2 items-start min-h-[calc(100vh-3.5rem)]">
         {/* ── Header Section ─────────────────────────────────── */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 w-full">
           <div className="space-y-1">
@@ -184,7 +186,7 @@ export default function LibraryPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <input
                 type="text"
-                placeholder="Search prompt..."
+                placeholder="Search icons..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-10 w-full md:w-64 pl-9 pr-4 rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all placeholder:text-muted-foreground/50"
@@ -233,20 +235,22 @@ export default function LibraryPage() {
                 return (
                   <motion.div
                     key={item.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    transition={{ duration: 0.3, delay: index * 0.03 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.35, ease: "easeOut", delay: index * 0.04 }}
                     className="group relative"
                   >
                     <div
                       className="relative aspect-square w-full rounded-2xl overflow-hidden bg-muted/30 border border-border/40 group-hover:border-primary/20 group-hover:shadow-2xl group-hover:shadow-primary/5 transition-all duration-300"
                     >
                       {item.resultImageUrl && (
-                        <img
+                        <Image
                           src={item.resultImageUrl}
                           alt="Generated 3D icon"
-                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          fill
+                          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 20vw"
+                          className="object-cover transition-transform duration-500 group-hover:scale-110"
                         />
                       )}
 
@@ -314,19 +318,22 @@ export default function LibraryPage() {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-32 rounded-3xl border border-dashed border-border/60 bg-muted/10"
+              transition={{ duration: 0.4 }}
+              className="flex flex-1 flex-col items-center justify-center w-full min-h-[50vh] gap-4"
             >
-              <div className="w-16 h-16 rounded-2xl bg-muted/40 flex items-center justify-center mb-4">
+              <div className="w-16 h-16 rounded-2xl bg-muted/40 flex items-center justify-center">
                 <ImageIcon className="w-8 h-8 text-muted-foreground/30" />
               </div>
-              <h3 className="font-heading text-lg font-semibold text-foreground/70">
-                {searchQuery ? "No matches found" : "Your library is empty"}
-              </h3>
-              <p className="text-muted-foreground text-sm mb-8 max-w-[250px] text-center">
-                {searchQuery
-                  ? "Try searching for a different keyword or prompt."
-                  : "Start generating unique 3D icons in the studio to see them here."}
-              </p>
+              <div className="text-center">
+                <h3 className="font-heading text-lg font-semibold text-foreground/70">
+                  {searchQuery ? "No matches found" : "Your library is empty"}
+                </h3>
+                <p className="text-muted-foreground text-sm mt-1 mb-6 max-w-[250px] mx-auto">
+                  {searchQuery
+                    ? "Try searching for a different keyword or prompt."
+                    : "Start generating unique 3D icons in the studio to see them here."}
+                </p>
+              </div>
               {!searchQuery && (
                 <Button asChild className="rounded-xl shadow-lg shadow-primary/20">
                   <Link href="/">Back to Studio</Link>
@@ -351,10 +358,12 @@ export default function LibraryPage() {
 
           {deleteTarget?.resultImageUrl && (
             <div className="flex justify-center py-2">
-              <img
+              <Image
                 src={deleteTarget.resultImageUrl}
                 alt="Icon to delete"
-                className="h-24 w-24 rounded-xl object-cover border border-border/40 shadow-sm opacity-70"
+                width={96}
+                height={96}
+                className="rounded-xl object-cover border border-border/40 shadow-sm opacity-70"
               />
             </div>
           )}

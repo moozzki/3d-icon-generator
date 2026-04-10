@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
       columns: {
         status: true,
         resultImageUrl: true,
+        failReason: true,
       },
     });
 
@@ -27,6 +28,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       status: job.status,
       resultImageUrl: job.resultImageUrl,
+      failReason: job.failReason ?? null,
     });
   } catch (error: unknown) {
     console.error("Job status check error:", error);

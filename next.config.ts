@@ -11,6 +11,14 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "picsum.photos",
       },
+      {
+        protocol: "https",
+        hostname: "cdn.useaudora.com",
+      },
+      {
+        protocol: "https",
+        hostname: "fal.run",
+      },
     ],
   },
 };

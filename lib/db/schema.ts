@@ -81,12 +81,15 @@ export const generations = pgTable("generations", {
   status: statusEnum("status").default("pending"),
   aiModel: aiModelEnum("ai_model").notNull().default("flux-2-pro"),
   prompt: text("prompt").notNull(),
+  userPrompt: text("user_prompt"),   // Raw user input — displayed on frontend
   referenceImage: text("reference_image"),
   position: positionEnum("position").notNull(),
   style: styleEnum("style").notNull().default("plastic"),
   quality: qualityEnum("quality").notNull(),
   cost: integer("cost").notNull(),
   creditCost: integer("credit_cost").notNull().default(1),
+  creditRefunded: boolean("credit_refunded").default(false), // true once credits returned
+  failReason: text("fail_reason"),    // Human-readable error reason for failed jobs
   resultImageUrl: text("result_image_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });

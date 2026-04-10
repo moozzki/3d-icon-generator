@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Sparkles,
+  Coins,
   Download,
   Wand2,
   UploadCloud,
@@ -89,8 +91,27 @@ export default function StudioPage() {
   const [aiModel, setAiModel] = useState<AiModelId>("flux-2-pro");
   const [isModelOpen, setIsModelOpen] = useState(false);
 
+  // Progress bar state
+  const [progress, setProgress] = useState(0);
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const selectedModel = AI_MODELS.find((m) => m.id === aiModel)!;
   const creditCost = getCreditCost(aiModel, quality);
+
+  // Estimated durations in ms per pipeline combination
+  function getEstimatedDuration(model: AiModelId, q: string): number {
+    if (model === "flux-2-pro")    return q === "4K" ? 28000 : 20000;
+    if (model === "nano-banana-2") return q === "4K" ? 45000 : 35000;
+    return 25000;
+  }
+
+  // Phase label based on % progress
+  function getPhaseLabel(pct: number, q: string): string {
+    if (pct < 40) return "Generating base image...";
+    if (pct < 70) return `Upscaling to ${q}...`;
+    return "Finalizing & saving...";
+  }
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const workAreaRef = useRef<HTMLDivElement>(null);
@@ -152,6 +173,18 @@ export default function StudioPage() {
     if (!prompt.trim()) return;
     setIsGenerating(true);
     setResultImage(null);
+    setProgress(0);
+
+    // Start progress timer
+    const estimatedDuration = getEstimatedDuration(aiModel, quality);
+    const startTime = Date.now();
+    const TARGET_PCT = 92; // cap at 92% during polling, jump to 100% on complete
+    progressTimerRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const pct = Math.min((elapsed / estimatedDuration) * TARGET_PCT, TARGET_PCT);
+      setProgress(pct);
+      setRemainingSeconds(Math.max(0, Math.round((estimatedDuration - elapsed) / 1000)));
+    }, 200);
 
     try {
       // Convert 'Front Facing' -> 'front_facing'
@@ -193,9 +226,17 @@ export default function StudioPage() {
         if (status === "completed") {
           finalImageUrl = pollData.resultImageUrl;
         } else if (status === "failed") {
-          throw new Error("Generation job failed on the server.");
+          // Surface the failure reason if available (set by onFailure or content policy)
+          const reason = pollData.failReason
+            ?? "Generation failed. Your credits have been refunded.";
+          throw new Error(reason);
         }
       }
+
+      // Job done — clear timer and jump to 100%
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+      setProgress(100);
+      setRemainingSeconds(0);
 
       setResultImage(finalImageUrl);
       window.dispatchEvent(new Event("credits-updated"));
@@ -205,7 +246,29 @@ export default function StudioPage() {
       const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
       toast.error(errorMessage);
     } finally {
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
       setIsGenerating(false);
+      // Small delay before resetting progress so 100% flash is visible
+      setTimeout(() => setProgress(0), 600);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!resultImage) return;
+    try {
+      const filename = `audora-${quality.toLowerCase()}-gen.png`;
+      const downloadUrl = `/api/download?url=${encodeURIComponent(resultImage)}&filename=${filename}`;
+      
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success("Download started!");
+    } catch {
+      toast.error("Failed to download image.");
     }
   };
 
@@ -255,7 +318,7 @@ export default function StudioPage() {
                 </motion.div>
               )}
 
-              {/* Generating state */}
+              {/* Generating state — progress bar */}
               {isGenerating && (
                 <motion.div
                   key="generating"
@@ -263,34 +326,61 @@ export default function StudioPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 1.05 }}
                   transition={{ duration: 0.3 }}
-                  className="flex flex-col items-center gap-5 mt-10"
+                  className="flex flex-col items-center gap-6 mt-10 w-72"
                 >
-                  <div className="relative w-28 h-28">
-                    {/* Outer spinning ring */}
+                  {/* Spinning icon */}
+                  <div className="relative w-24 h-24">
                     <motion.div
                       className="absolute inset-0 rounded-full border-2 border-primary/20 border-t-primary"
                       animate={{ rotate: 360 }}
                       transition={{ repeat: Infinity, duration: 1.4, ease: "linear" }}
                     />
-                    {/* Inner spinning ring */}
                     <motion.div
                       className="absolute inset-3 rounded-full border-2 border-primary/10 border-b-primary/60"
                       animate={{ rotate: -360 }}
                       transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
                     />
-                    {/* Center icon */}
                     <div className="absolute inset-0 flex items-center justify-center">
                       <Wand2 className="w-7 h-7 text-primary/70" />
                     </div>
                   </div>
 
+                  {/* Animated phase label */}
                   <motion.p
-                    className="text-sm font-medium text-muted-foreground"
-                    animate={{ opacity: [0.4, 1, 0.4] }}
-                    transition={{ repeat: Infinity, duration: 2.2 }}
+                    key={getPhaseLabel(progress, quality)}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-sm font-semibold text-foreground"
                   >
-                    Crafting your 3D icon with {selectedModel.label}...
+                    {getPhaseLabel(progress, quality)}
                   </motion.p>
+
+                  {/* Progress bar */}
+                  <div className="w-full">
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-full bg-primary"
+                        animate={{ width: `${progress}%` }}
+                        transition={{ ease: "linear", duration: 0.2 }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-[11px] text-muted-foreground tabular-nums font-medium">
+                        {Math.round(progress)}%
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {remainingSeconds > 0
+                          ? `~${remainingSeconds}s remaining`
+                          : "Finishing up..."}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Model tag */}
+                  <p className="text-[11px] text-muted-foreground/50">
+                    {selectedModel.label} · {quality}
+                  </p>
                 </motion.div>
               )}
 
@@ -304,29 +394,23 @@ export default function StudioPage() {
                   className="relative group flex flex-col items-center gap-6 mt-10"
                 >
                   <div className="relative pointer-events-auto">
-                    <img
+                    <Image
                       src={resultImage}
                       alt="Generated 3D icon"
+                      width={512}
+                      height={512}
                       className="max-h-[300px] sm:max-h-[420px] w-auto max-w-[85vw] sm:max-w-none h-auto object-contain drop-shadow-2xl rounded-2xl"
+                      priority
                     />
                     <div className="absolute inset-0 rounded-2xl pointer-events-none bg-black/0 group-hover:bg-black/10 transition-colors duration-200" />
                   </div>
-                  
+
                   {/* Download button under image */}
                   <div className="flex flex-wrap justify-center items-center gap-3">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
-                        fetch(resultImage).then(r => r.blob()).then(b => {
-                          const url = window.URL.createObjectURL(b);
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = `audora-generation.png`;
-                          a.click();
-                          window.URL.revokeObjectURL(url);
-                        });
-                      }}
+                      onClick={handleDownload}
                       className="h-9 px-4 text-xs font-semibold gap-2 rounded-xl shadow-sm border-border/60 hover:bg-muted/50"
                     >
                       <Download className="h-4 w-4" />
@@ -380,29 +464,37 @@ export default function StudioPage() {
         </div>
 
         {/* ── Floating prompt bar ─────────────────────────────── */}
-        <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-3 sm:px-4">
+        <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 w-full max-w-4xl px-3 sm:px-4">
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="rounded-xl sm:rounded-2xl border border-border/70 bg-card/90 backdrop-blur-xl shadow-2xl shadow-black/10 overflow-hidden"
+            className="relative rounded-xl sm:rounded-2xl border border-border/70 bg-card/90 backdrop-blur-xl shadow-2xl shadow-black/10 overflow-hidden"
           >
+            {/* Credits badge - Top Right */}
+            <div className="absolute top-3 right-3 sm:top-4 sm:right-4 pointer-events-none">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
+                <Coins className="w-3 h-3" />
+                {creditCost} Credit{creditCost > 1 ? "s" : ""}
+              </div>
+            </div>
+
             {/* Textarea row */}
-            <div className="px-3 sm:px-4 pt-3 sm:pt-3.5 pb-1 sm:pb-2">
+            <div className="px-3 sm:px-4 pt-4 sm:pt-5 pb-1 sm:pb-2">
               <textarea
                 ref={textareaRef}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
-                rows={2}
+                rows={3}
                 placeholder="Describe your 3D icon..."
-                className="w-full resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none leading-relaxed"
+                className="w-full resize-none bg-transparent text-base sm:text-[15px] font-medium text-foreground placeholder:text-muted-foreground/45 outline-none leading-relaxed pr-24"
               />
             </div>
 
             {/* Controls row */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-3 sm:px-3.5 pb-3 pt-1">
-              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
+            <div className="flex items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 pb-3 pt-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 flex-1 pr-2">
                 {/* ── AI Model Selector (prominent) ── */}
                 <Popover open={isModelOpen} onOpenChange={setIsModelOpen}>
                   <PopoverTrigger asChild>
@@ -413,7 +505,7 @@ export default function StudioPage() {
                       <ChevronDown className="h-3 w-3 opacity-60" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-72 p-2 rounded-xl" align="start" sideOffset={8}>
+                  <PopoverContent className="w-[min(18rem,calc(100vw-2rem))] p-2 rounded-xl" align="start" sideOffset={8} avoidCollisions collisionPadding={12}>
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
                       AI Model
                     </p>
@@ -460,7 +552,7 @@ export default function StudioPage() {
                       <ChevronDown className="h-3 w-3 opacity-50" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-56 p-2 rounded-xl" align="start" sideOffset={8}>
+                  <PopoverContent className="w-[min(14rem,calc(100vw-2rem))] p-2 rounded-xl" align="start" sideOffset={8} avoidCollisions collisionPadding={12}>
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
                       Style
                     </p>
@@ -495,7 +587,7 @@ export default function StudioPage() {
                       <ChevronDown className="h-3 w-3 opacity-50" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-56 p-2 rounded-xl" align="start" sideOffset={8}>
+                  <PopoverContent className="w-[min(14rem,calc(100vw-2rem))] p-2 rounded-xl" align="start" sideOffset={8} avoidCollisions collisionPadding={12}>
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
                       Camera Angle
                     </p>
@@ -529,7 +621,7 @@ export default function StudioPage() {
                       <ChevronDown className="h-3 w-3 opacity-50" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-36 p-2 rounded-xl" align="start" sideOffset={8}>
+                  <PopoverContent className="w-[min(9rem,calc(100vw-2rem))] p-2 rounded-xl" align="start" sideOffset={8} avoidCollisions collisionPadding={12}>
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
                       Quality
                     </p>
@@ -562,27 +654,24 @@ export default function StudioPage() {
                 </button>
               </div>
 
-              {/* Generate button */}
+              {/* Generate button (Icon only) */}
               <Button
-                size="sm"
+                size="icon"
                 onClick={handleGenerate}
                 disabled={isGenerating || !prompt.trim()}
-                className="h-9 sm:h-8 px-4 text-[11px] sm:text-xs font-semibold gap-1.5 rounded-xl shadow-sm hover:shadow-primary/20 transition-all w-full sm:w-auto"
+                className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl shadow-sm hover:shadow-primary/20 transition-all shrink-0 ml-auto"
               >
                 {isGenerating ? (
-                  <>
-                    <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                    Generating...
-                  </>
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
                 ) : (
-                  <>
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Generate · {creditCost} Credit{creditCost > 1 ? "s" : ""}
-                  </>
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
                 )}
               </Button>
             </div>
           </motion.div>
+          <p className="text-[10px] text-muted-foreground/40 text-center mt-3 select-none">
+            Audora is an AI. Generations can sometimes be unexpected.
+          </p>
         </div>
       </div>
     </>

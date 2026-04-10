@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -156,7 +157,7 @@ export default function StudioDetailPage() {
   useEffect(() => {
     if (generation && !hasInitialized.current) {
       if (!isRefine) {
-        setPrompt(generation.prompt || "");
+        setPrompt(generation.userPrompt || generation.prompt || "");
       } else {
         setPrompt("");
       }
@@ -291,7 +292,9 @@ export default function StudioDetailPage() {
   const handleDownload = async () => {
     if (!resultImage) return;
     try {
-      const filename = `audora-${jobId}.png`;
+      // Include resolution in filename so user knows what quality they downloaded
+      const resLabel = (generation?.quality ?? quality).toLowerCase(); // "2k" or "4k"
+      const filename = `audora-${resLabel}-${jobId}.png`;
       const downloadUrl = `/api/download?url=${encodeURIComponent(resultImage)}&filename=${filename}`;
       
       const link = document.createElement("a");
@@ -398,10 +401,13 @@ export default function StudioDetailPage() {
                     className="relative pointer-events-auto cursor-pointer focus:outline-none rounded-2xl ring-offset-background transition-shadow hover:ring-2 hover:ring-primary/20 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     onClick={() => !isGenerating && setIsSheetOpen(true)}
                   >
-                    <img
+                    <Image
                       src={resultImage}
                       alt="Generated 3D icon"
+                      width={512}
+                      height={512}
                       className="max-h-[300px] sm:max-h-[420px] w-auto max-w-[85vw] sm:max-w-none h-auto object-contain drop-shadow-2xl rounded-2xl"
+                      priority
                     />
                     <div className="absolute inset-0 rounded-2xl pointer-events-none bg-black/0 group-hover:bg-black/10 transition-colors duration-200" />
                   </button>
@@ -707,7 +713,7 @@ export default function StudioDetailPage() {
                  </div>
                  <button 
                    onClick={() => {
-                     navigator.clipboard.writeText(generation?.prompt || "");
+                     navigator.clipboard.writeText(generation?.userPrompt || generation?.prompt || "");
                      setCopied(true);
                      setTimeout(() => setCopied(false), 2000);
                      toast.success("Prompt copied!");
@@ -719,7 +725,7 @@ export default function StudioDetailPage() {
                  </button>
                </div>
                <div className="text-[12px] leading-relaxed text-foreground/90 bg-muted/30 p-3 rounded-xl border border-border/40 font-medium italic">
-                 &quot;{generation?.prompt}&quot;
+                 &quot;{generation?.userPrompt || generation?.prompt}&quot;
                </div>
              </div>
 
