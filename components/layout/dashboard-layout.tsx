@@ -104,13 +104,13 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link href="/" onClick={() => isMobile && setMobileMenuOpen(false)} className="flex items-center justify-center group">
-                  <Image 
-                    src="/assets/audora-square-logo.png" 
-                    alt="Audora Logo" 
-                    width={28} 
-                    height={28} 
+                  <Image
+                    src="/assets/audora-square-logo.png"
+                    alt="Audora Logo"
+                    width={28}
+                    height={28}
                     className="w-7 h-7 object-contain group-hover:opacity-80 transition-opacity shrink-0"
-                    priority 
+                    priority
                   />
                 </Link>
               </TooltipTrigger>
@@ -119,15 +119,16 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               </TooltipContent>
             </Tooltip>
           ) : (
-            <Link href="/" onClick={() => isMobile && setMobileMenuOpen(false)} className="flex items-center group">
-              <Image 
-                src="/assets/audora-landscape-logo.png" 
-                alt="Audora Logo" 
-                width={120} 
-                height={28} 
-                className="h-7 w-auto object-contain group-hover:opacity-80 transition-opacity shrink-0"
-                priority 
+            <Link href="/" onClick={() => isMobile && setMobileMenuOpen(false)} className="flex items-center gap-2 group">
+              <Image
+                src="/assets/audora-square-logo.png"
+                alt="Audora Logo"
+                width={28}
+                height={28}
+                className="w-7 h-7 object-contain group-hover:opacity-80 transition-opacity shrink-0"
+                priority
               />
+              <span className="font-heading text-lg font-bold tracking-tight">Audora</span>
             </Link>
           )}
         </div>
@@ -370,7 +371,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
                 <div className="flex-1 text-sm">
                   <p className="text-amber-200 leading-relaxed">
-                    <span className="font-semibold">Hai!</span> Sepertinya jaringan Wi-Fi yang kamu gunakan sudah mencapai batas maksimal klaim kredit gratis hari ini. Tapi tenang saja, akunmu sudah aktif! Kamu bisa mulai generate ikon 3D dengan melakukan{" "}
+                    <span className="font-semibold">Hi!</span> t looks like your current network has reached its daily limit for free credits. But do not worry, your account is fully active! You can start generating 3D icons right away by doing a{" "}
                     <button
                       className="underline underline-offset-2 font-semibold text-amber-400 hover:text-amber-300 transition-colors"
                       onClick={() => {
@@ -378,16 +379,16 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                         document.querySelector<HTMLButtonElement>('[data-topup-trigger]')?.click();
                       }}
                     >
-                      Top-up Kredit
+                      Credit Top-up
                     </button>
-                    {" "}atau hubungi{" "}
+                    {" "}or contact{" "}
                     <a
                       href="mailto:support@useaudora.com"
                       className="underline underline-offset-2 font-semibold text-amber-400 hover:text-amber-300 transition-colors"
                     >
                       Support
                     </a>
-                    {" "}jika ini adalah sebuah kesalahan.
+                    {" "}if you think this is a mistake.
                   </p>
                 </div>
                 <button

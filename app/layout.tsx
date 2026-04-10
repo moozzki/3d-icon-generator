@@ -24,7 +24,10 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn("h-full", "antialiased", spaceGrotesk.variable, inter.variable)}
     >
-      <body className="font-sans min-h-full flex flex-col bg-background text-foreground">
+      <body 
+        className="font-sans min-h-full flex flex-col bg-background text-foreground"
+        suppressHydrationWarning
+      >
         <QueryProvider>
           {children}
           <Toaster />

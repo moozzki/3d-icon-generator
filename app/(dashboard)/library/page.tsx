@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
@@ -45,10 +45,7 @@ interface Generation {
   createdAt: string;
 }
 
-const AI_MODEL_LABELS: Record<string, string> = {
-  "flux-2-pro": "Flux 2 Pro",
-  "nano-banana-2": "Nano Banana 2",
-};
+
 
 const STYLE_LABELS: Record<string, { label: string; icon: string }> = {
   plastic: { label: "Plastic", icon: "🫧" },
@@ -101,6 +98,11 @@ export default function LibraryPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<Generation | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const {
     data: generations = [],
@@ -248,16 +250,8 @@ export default function LibraryPage() {
                         />
                       )}
 
-                      {/* Badge Overlays: Model + Style + Quality */}
+                      {/* Badge Overlays: Style + Quality */}
                       <div className="absolute top-2 left-2 flex flex-wrap gap-1.5 z-[1]">
-                        {item.aiModel && (
-                          <Badge
-                            variant="secondary"
-                            className="bg-primary/80 text-primary-foreground backdrop-blur-xl border-none text-[10px] h-5 px-2 shadow-sm font-semibold"
-                          >
-                            {AI_MODEL_LABELS[item.aiModel] || item.aiModel}
-                          </Badge>
-                        )}
                         <Badge
                           variant="secondary"
                           className="bg-background/80 backdrop-blur-xl border-none text-[10px] h-5 px-2 shadow-sm font-semibold"
@@ -305,7 +299,7 @@ export default function LibraryPage() {
                       {/* Hover Overlay w/ date */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3 pointer-events-none">
                         <span className="text-[10px] text-white/90 font-medium">
-                          {formatRelativeDate(item.createdAt)}
+                          {mounted ? formatRelativeDate(item.createdAt) : ""}
                         </span>
                       </div>
                     </div>
