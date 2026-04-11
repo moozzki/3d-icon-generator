@@ -185,34 +185,67 @@ export const iconGenerate = inngest.createFunction(
     if (aiModel === "flux-2-pro") {
       // Step 1: Generate base image at 1K
       const baseUrl = await step.run("generate-base-flux-1k", async () => {
-        const body: Record<string, unknown> = {
-          prompt,
-          image_size: { width: 1024, height: 1024 },
+        if (referenceImage) {
+          const body: Record<string, unknown> = {
+            prompt,
+            image_urls: [referenceImage],
+            image_size: "square_hd",
+            output_format: "png",
+            safety_tolerance: "5",
+            enable_safety_checker: false,
+          };
+          const json = await falPost("fal-ai/flux-2-pro/edit", body);
+          const url = json.images?.[0]?.url ?? json.image?.url ?? json.url;
+          if (!url) throw new Error("flux-2-pro/edit returned no image URL");
+          return url as string;
+        } else {
+          const body: Record<string, unknown> = {
+            prompt,
+            image_size: { width: 1024, height: 1024 },
+            output_format: "png",
+            safety_tolerance: "5",
+            enable_safety_checker: false,
+          };
+          const json = await falPost("fal-ai/flux-2-pro", body);
+          const url = json.images?.[0]?.url ?? json.image?.url ?? json.url;
+          if (!url) throw new Error("flux-2-pro returned no image URL");
+          return url as string;
+        }
+      });
+
+      // Step 2: Upload Base 1K to R2
+      const baseR2Url = await step.run("upload-base-r2", async () => {
+        const res = await fetch(baseUrl);
+        if (!res.ok) throw new Error("Failed to download base image from Fal.ai");
+        const inputBuffer = Buffer.from(await res.arrayBuffer());
+        
+        const sharpInstance = sharp(inputBuffer).png({ compressionLevel: 9, quality: 100 });
+        const buffer = await sharpInstance.toBuffer();
+
+        const objectKey = `generations/${userId}/base-${jobId}.png`;
+        await uploadToR2(objectKey, buffer, "image/png");
+        return `https://cdn.useaudora.com/${objectKey}`;
+      });
+
+      // Step 3: SeedVR Upscale
+      const upscaledUrl = await step.run("upscale-seedvr", async () => {
+        const upscaleFactor = resolution === "4K" ? 4 : 2;
+        const json = await falPost("fal-ai/seedvr/upscale/image", {
+          image_url: baseR2Url,
+          upscale_mode: "factor",
+          upscale_factor: upscaleFactor,
           output_format: "png",
           safety_tolerance: "5",
           enable_safety_checker: false,
-        };
-        if (referenceImage) body.image_url = referenceImage;
-
-        const json = await falPost("fal-ai/flux-2-pro", body);
-        const url = json.images?.[0]?.url ?? json.image?.url ?? json.url;
-        if (!url) throw new Error("flux-2-pro returned no image URL");
-        return url as string;
-      });
-
-      // Step 2: Crisp upscale — inherently produces 4K (4096px) from 1K input
-      const crispUrl = await step.run("upscale-flux-crisp", async () => {
-        const json = await falPost("fal-ai/recraft/upscale/crisp", {
-          image_url: baseUrl,
         });
         const url = json.image?.url ?? json.images?.[0]?.url ?? json.url;
-        if (!url) throw new Error("Recraft Crisp returned no image URL");
+        if (!url) throw new Error("SeedVR returned no image URL");
         return url as string;
       });
 
-      // Step 3: Upload to R2 & finalize DB (it will downscale to 2048px if resolution === "2K")
+      // Step 4: Upload final to R2 & Finalize DB
       const r2Url = await step.run("upload-to-r2-and-finalize", async () =>
-        finalizeJob({ jobId, userId, imageUrl: crispUrl, creditCost, resolution })
+        finalizeJob({ jobId, userId, imageUrl: upscaledUrl, baseImageUrl: baseR2Url, resolution })
       );
 
       return { jobId, url: r2Url, pipeline: "flux-2-pro", resolution };
@@ -233,6 +266,8 @@ export const iconGenerate = inngest.createFunction(
           const body: Record<string, unknown> = {
             prompt,
             image_size: { width: 2048, height: 2048 },
+            safety_tolerance: "5",
+            enable_safety_checker: false,
           };
           if (referenceImage) body.image_url = referenceImage;
 
@@ -252,6 +287,8 @@ export const iconGenerate = inngest.createFunction(
             // Crisp: ~2048px input → ~4096px output (4K)
             const json = await falPost("fal-ai/recraft/upscale/crisp", {
               image_url: baseImageUrl,
+              safety_tolerance: "5",
+              enable_safety_checker: false,
             });
             const url =
               json.image?.url ?? json.images?.[0]?.url ?? json.url;
@@ -272,7 +309,6 @@ export const iconGenerate = inngest.createFunction(
             jobId,
             userId,
             imageUrl: finalImageUrl,
-            creditCost,
             resolution,
           });
         }
@@ -293,13 +329,13 @@ async function finalizeJob({
   jobId,
   userId,
   imageUrl,
-  creditCost,
+  baseImageUrl,
   resolution,
 }: {
   jobId: string;
   userId: string;
   imageUrl: string;
-  creditCost: number;
+  baseImageUrl?: string;
   resolution?: "2K" | "4K";
 }): Promise<string> {
   // 1. Buffer the image from the temporary Fal.ai URL
@@ -333,7 +369,11 @@ async function finalizeJob({
   //    Note: credits were already deducted upfront at the API layer
   await db
     .update(generations)
-    .set({ status: "completed", resultImageUrl: cdnUrl })
+    .set({ 
+      status: "completed", 
+      resultImageUrl: cdnUrl,
+      ...(baseImageUrl ? { baseImageUrl } : {})
+    })
     .where(eq(generations.jobId, jobId));
 
   return cdnUrl;

@@ -38,7 +38,7 @@ export async function uploadToR2(key: string, body: Buffer | Uint8Array | Blob |
   
   // Return the public URL or presigned URL. 
   // Assuming public URL structure based on a custom domain, or fallback to presigned download URL.
-  return `https://${process.env.R2_PUBLIC_DOMAIN_OR_BUCKET_URL}/${key}`;
+  return `https://cdn.useaudora.com/${key}`;
 }
 
 export async function deleteFromR2(key: string) {

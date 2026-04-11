@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { UploadReferenceTrigger, UploadReferencePreview } from "@/components/Studio/UploadReference";
 import {
   Popover,
   PopoverContent,
@@ -19,11 +20,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Sparkles,
+  CornerRightUp,
   Coins,
   Download,
   Wand2,
-  UploadCloud,
   ChevronDown,
   ImageIcon,
   ZoomIn,
@@ -88,8 +88,8 @@ export default function StudioPage() {
   const [isStyleOpen, setIsStyleOpen] = useState(false);
   const [quality, setQuality] = useState("2K");
   const [isQualityOpen, setIsQualityOpen] = useState(false);
-  const [aiModel, setAiModel] = useState<AiModelId>("flux-2-pro");
-  const [isModelOpen, setIsModelOpen] = useState(false);
+  const [aiModel] = useState<AiModelId>("flux-2-pro");
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
 
   // Progress bar state
   const [progress, setProgress] = useState(0);
@@ -138,6 +138,11 @@ export default function StudioPage() {
     const target = workAreaRef.current;
     if (target) {
       target.addEventListener("wheel", handleWheel, { passive: false });
+      
+      // Initial scroll to center
+      const scrollHeight = target.scrollHeight;
+      const clientHeight = target.clientHeight;
+      target.scrollTop = (scrollHeight - clientHeight) / 2;
     }
 
     return () => {
@@ -199,6 +204,7 @@ export default function StudioPage() {
           style,
           quality,
           aiModel,
+          referenceImage,
         }),
       });
 
@@ -285,11 +291,11 @@ export default function StudioPage() {
       <div className="relative flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center overflow-hidden bg-background">
 
         {/* Scrollable container for pan */}
-        <div ref={workAreaRef} className="w-full h-full overflow-auto relative dot-canvas pb-32">
+        <div ref={workAreaRef} className="w-full h-full overflow-auto relative dot-canvas pb-32 scroll-smooth no-scrollbar">
 
-          {/* Scalable inner canvas */}
+          {/* Scalable inner canvas with a very large height to allow "unlimited" scroll */}
           <div
-            className="min-w-full min-h-[calc(100%-8rem)] flex flex-col items-center justify-center origin-center py-20"
+            className="min-w-full min-h-[calc(100%-8rem)] flex flex-col items-center justify-center origin-center py-[200vh]"
             style={{
               transform: `scale(${zoomScale})`,
               transition: "transform 0.1s ease-out"
@@ -479,8 +485,14 @@ export default function StudioPage() {
               </div>
             </div>
 
+            {/* Reference Image Preview */}
+            <UploadReferencePreview
+              referenceUrl={referenceImage}
+              onClear={() => setReferenceImage(null)}
+            />
+
             {/* Textarea row */}
-            <div className="px-3 sm:px-4 pt-4 sm:pt-5 pb-1 sm:pb-2">
+            <div className={cn("px-3 sm:px-4 pb-1 sm:pb-2", referenceImage ? "pt-1" : "pt-4 sm:pt-5")}>
               <textarea
                 ref={textareaRef}
                 value={prompt}
@@ -495,53 +507,13 @@ export default function StudioPage() {
             {/* Controls row */}
             <div className="flex items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 pb-3 pt-1">
               <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 flex-1 pr-2">
-                {/* ── AI Model Selector (prominent) ── */}
-                <Popover open={isModelOpen} onOpenChange={setIsModelOpen}>
-                  <PopoverTrigger asChild>
-                    <button className="h-8 text-[11px] sm:text-xs flex items-center gap-1.5 border border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary transition-colors shrink-0 px-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring font-medium">
-                      <Sparkles className="h-3 w-3" />
-                      <span className="truncate max-w-[90px] sm:max-w-none">{selectedModel.label}</span>
-                      <span className="text-[9px] bg-primary/15 text-primary rounded px-1 py-0.5 leading-none hidden sm:inline">{selectedModel.badge}</span>
-                      <ChevronDown className="h-3 w-3 opacity-60" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[min(18rem,calc(100vw-2rem))] p-2 rounded-xl" align="start" sideOffset={8} avoidCollisions collisionPadding={12}>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
-                      AI Model
-                    </p>
-                    <div className="flex flex-col gap-1">
-                      {AI_MODELS.map((m) => (
-                        <button
-                          key={m.id}
-                          onClick={() => {
-                            setAiModel(m.id);
-                            setIsModelOpen(false);
-                          }}
-                          className={cn(
-                            "text-left px-3 py-2.5 rounded-lg transition-colors focus:outline-none border",
-                            aiModel === m.id
-                              ? "bg-primary/10 border-primary/30 text-primary"
-                              : "border-transparent text-foreground hover:bg-muted"
-                          )}
-                        >
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-xs font-semibold">{m.label}</span>
-                            <span className={cn(
-                              "text-[9px] rounded px-1.5 py-0.5 leading-none font-medium",
-                              aiModel === m.id ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                            )}>
-                              {m.badge}
-                            </span>
-                            <span className="ml-auto text-[10px] font-semibold tabular-nums">
-                              {m.costs[quality as "2K" | "4K"]} cr
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-muted-foreground leading-snug">{m.description}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+
+                {/* Upload reference (ImageUp) */}
+                <UploadReferenceTrigger 
+                  referenceUrl={referenceImage}
+                  onReferenceChanged={setReferenceImage}
+                />
+
                 {/* Style popover */}
                 <Popover open={isStyleOpen} onOpenChange={setIsStyleOpen}>
                   <PopoverTrigger asChild>
@@ -646,13 +618,8 @@ export default function StudioPage() {
                     </div>
                   </PopoverContent>
                 </Popover>
-
-                {/* Upload reference */}
-                <button className="h-8 px-2 sm:px-2.5 text-[11px] sm:text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg border border-border/50 flex items-center gap-1.5 transition-colors shrink-0">
-                  <UploadCloud className="h-3.5 w-3.5" />
-                  <span className="hidden xs:inline">Reference</span>
-                </button>
               </div>
+
 
               {/* Generate button (Icon only) */}
               <Button
@@ -662,9 +629,9 @@ export default function StudioPage() {
                 className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl shadow-sm hover:shadow-primary/20 transition-all shrink-0 ml-auto"
               >
                 {isGenerating ? (
-                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
+                  <CornerRightUp className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
                 ) : (
-                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <CornerRightUp className="w-4 h-4 sm:w-5 sm:h-5" />
                 )}
               </Button>
             </div>

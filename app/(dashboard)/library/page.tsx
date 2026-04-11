@@ -23,9 +23,8 @@ import {
   ButtonGroup,
   ButtonGroupSeparator,
 } from "@/components/ui/button-group";
-import { Search, ImageIcon, Coins, Calendar, Eye, Layers, MessageSquareText, Download, Wand2, ArrowRight, MoreVertical, Trash2 } from "lucide-react";
+import { Search, ImageIcon, Download, Wand2, MoreVertical, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 
@@ -58,15 +57,7 @@ const STYLE_LABELS: Record<string, { label: string; icon: string }> = {
   metallic: { label: "Metallic", icon: "⚙️" },
 };
 
-const POSITION_LABELS: Record<string, string> = {
-  isometric: "Isometric",
-  front_facing: "Front Facing",
-  back_facing: "Back Facing",
-  side_facing: "Side Facing",
-  three_quarter: "Three Quarter",
-  top_down: "Top Down",
-  dimetric: "Dimetric",
-};
+
 
 function formatRelativeDate(dateString: string) {
   const date = new Date(dateString);
@@ -83,16 +74,7 @@ function formatRelativeDate(dateString: string) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function formatDate(dateString: string) {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+
 
 export default function LibraryPage() {
   const queryClient = useQueryClient();

@@ -90,6 +90,7 @@ export const generations = pgTable("generations", {
   creditCost: integer("credit_cost").notNull().default(1),
   creditRefunded: boolean("credit_refunded").default(false), // true once credits returned
   failReason: text("fail_reason"),    // Human-readable error reason for failed jobs
+  baseImageUrl: text("base_image_url"),
   resultImageUrl: text("result_image_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });

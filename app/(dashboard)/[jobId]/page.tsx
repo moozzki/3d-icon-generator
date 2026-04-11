@@ -4,7 +4,6 @@ import { useState, useRef, useEffect, type KeyboardEvent as ReactKeyboardEvent }
 import { useParams, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
-import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,6 @@ import {
 import {
   Sheet,
   SheetContent,
-  SheetHeader,
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
@@ -35,8 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Sparkles,
-  Download,
+  CornerRightUp,
   Wand2,
   UploadCloud,
   ChevronDown,
@@ -44,14 +41,8 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize,
-  ArrowLeft,
-  ArrowRight,
   Crop,
-  RefreshCcw,
-  Settings2,
   MessageSquareText,
-  Layers,
-  Eye,
   Coins,
   Copy,
   Check
@@ -98,10 +89,7 @@ const AI_MODELS = [
 
 type AiModelId = (typeof AI_MODELS)[number]["id"];
 
-const AI_MODEL_LABELS: Record<string, string> = {
-  "flux-2-pro": "Flux 2 Pro",
-  "nano-banana-2": "Nano Banana 2",
-};
+
 
 function getCreditCost(aiModel: AiModelId, quality: string): number {
   const model = AI_MODELS.find((m) => m.id === aiModel);
@@ -115,7 +103,7 @@ export default function StudioDetailPage() {
   const isRefine = searchParams.get("action") === "refine";
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  const { data: generation, isLoading } = useQuery({
+  const { data: generation } = useQuery({
     queryKey: ["generation", jobId],
     queryFn: async () => {
       const res = await fetch(`/api/library/${jobId}`);
@@ -135,8 +123,7 @@ export default function StudioDetailPage() {
   const [isStyleOpen, setIsStyleOpen] = useState(false);
   const [quality, setQuality] = useState("2K");
   const [isQualityOpen, setIsQualityOpen] = useState(false);
-  const [aiModel, setAiModel] = useState<AiModelId>("flux-2-pro");
-  const [isModelOpen, setIsModelOpen] = useState(false);
+  const [aiModel] = useState<AiModelId>("flux-2-pro");
   const [copied, setCopied] = useState(false);
 
   const selectedModel = AI_MODELS.find((m) => m.id === aiModel)!;
@@ -167,7 +154,7 @@ export default function StudioDetailPage() {
       setStyle(generation.style || "plastic");
       setQuality(generation.quality || "2K");
       setResultImage(generation.resultImageUrl || null);
-      
+
       // Auto-open sheet if this is view mode (not refine mode) and image exists
       // Wait, let's strictly follow the instruction: "trigger side sheet menu muncul ketika user meng klik image yang berhasil di generate pada dashboard"
       // So no auto-open here, leave it closed.
@@ -190,6 +177,11 @@ export default function StudioDetailPage() {
     const target = workAreaRef.current;
     if (target) {
       target.addEventListener("wheel", handleWheel, { passive: false });
+
+      // Initial scroll to center
+      const scrollHeight = target.scrollHeight;
+      const clientHeight = target.clientHeight;
+      target.scrollTop = (scrollHeight - clientHeight) / 2;
     }
 
     return () => {
@@ -296,14 +288,14 @@ export default function StudioDetailPage() {
       const resLabel = (generation?.quality ?? quality).toLowerCase(); // "2k" or "4k"
       const filename = `audora-${resLabel}-${jobId}.png`;
       const downloadUrl = `/api/download?url=${encodeURIComponent(resultImage)}&filename=${filename}`;
-      
+
       const link = document.createElement("a");
       link.href = downloadUrl;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       toast.success("Download started!");
     } catch {
       toast.error("Failed to download image.");
@@ -316,11 +308,11 @@ export default function StudioDetailPage() {
       <div className="relative flex h-[calc(100vh-3.5rem)] flex-col items-center justify-center overflow-hidden bg-background">
 
         {/* Scrollable container for pan */}
-        <div ref={workAreaRef} className="w-full h-full overflow-auto relative dot-canvas pb-32">
+        <div ref={workAreaRef} className="w-full h-full overflow-auto relative dot-canvas pb-32 scroll-smooth no-scrollbar">
 
-          {/* Scalable inner canvas */}
+          {/* Scalable inner canvas with a very large height to allow "unlimited" scroll */}
           <div
-            className="min-w-full min-h-[calc(100%-8rem)] flex flex-col items-center justify-center origin-center py-20"
+            className="min-w-full min-h-[calc(100%-8rem)] flex flex-col items-center justify-center origin-center py-[200vh]"
             style={{
               transform: `scale(${zoomScale})`,
               transition: "transform 0.1s ease-out"
@@ -457,76 +449,37 @@ export default function StudioDetailPage() {
         </div>
 
         {/* ── Floating prompt bar ─────────────────────────────── */}
-        <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-3 sm:px-4">
+        <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 w-full max-w-4xl px-3 sm:px-4">
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             className="rounded-xl sm:rounded-2xl border border-border/70 bg-card/90 backdrop-blur-xl shadow-2xl shadow-black/10 overflow-hidden"
           >
+            {/* Credits badge - Top Right */}
+            <div className="absolute top-3 right-3 sm:top-4 sm:right-4 pointer-events-none">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
+                <Coins className="w-3 h-3" />
+                {creditCost} Credit{creditCost > 1 ? "s" : ""}
+              </div>
+            </div>
             {/* Textarea row */}
-            <div className="px-3 sm:px-4 pt-3 sm:pt-3.5 pb-1 sm:pb-2">
+            <div className="px-3 sm:px-4 pt-4 sm:pt-5 pb-1 sm:pb-2">
               <textarea
                 ref={textareaRef}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
-                rows={2}
+                rows={3}
                 placeholder="Describe your 3D icon..."
-                className="w-full resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none leading-relaxed"
+                className="w-full resize-none bg-transparent text-base sm:text-[15px] font-medium text-foreground placeholder:text-muted-foreground/45 outline-none leading-relaxed pr-24"
               />
             </div>
 
             {/* Controls row */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 px-3 sm:px-3.5 pb-3 pt-1">
-              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
-                {/* ── AI Model Selector (prominent) ── */}
-                <Popover open={isModelOpen} onOpenChange={setIsModelOpen}>
-                  <PopoverTrigger asChild>
-                    <button className="h-8 text-[11px] sm:text-xs flex items-center gap-1.5 border border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary transition-colors shrink-0 px-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring font-medium">
-                      <Sparkles className="h-3 w-3" />
-                      <span className="truncate max-w-[90px] sm:max-w-none">{selectedModel.label}</span>
-                      <span className="text-[9px] bg-primary/15 text-primary rounded px-1 py-0.5 leading-none hidden sm:inline">{selectedModel.badge}</span>
-                      <ChevronDown className="h-3 w-3 opacity-60" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-72 p-2 rounded-xl" align="start" sideOffset={8}>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
-                      AI Model
-                    </p>
-                    <div className="flex flex-col gap-1">
-                      {AI_MODELS.map((m) => (
-                        <button
-                          key={m.id}
-                          onClick={() => {
-                            setAiModel(m.id);
-                            setIsModelOpen(false);
-                          }}
-                          className={cn(
-                            "text-left px-3 py-2.5 rounded-lg transition-colors focus:outline-none border",
-                            aiModel === m.id
-                              ? "bg-primary/10 border-primary/30 text-primary"
-                              : "border-transparent text-foreground hover:bg-muted"
-                          )}
-                        >
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span className="text-xs font-semibold">{m.label}</span>
-                            <span className={cn(
-                              "text-[9px] rounded px-1.5 py-0.5 leading-none font-medium",
-                              aiModel === m.id ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                            )}>
-                              {m.badge}
-                            </span>
-                            <span className="ml-auto text-[10px] font-semibold tabular-nums">
-                              {m.costs[quality as "2K" | "4K"]} cr
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-muted-foreground leading-snug">{m.description}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+            <div className="flex items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 pb-3 pt-1">
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 flex-1 pr-2">
+
                 {/* Style popover */}
                 <Popover open={isStyleOpen} onOpenChange={setIsStyleOpen}>
                   <PopoverTrigger asChild>
@@ -537,7 +490,7 @@ export default function StudioDetailPage() {
                       <ChevronDown className="h-3 w-3 opacity-50" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-56 p-2 rounded-xl" align="start" sideOffset={8}>
+                  <PopoverContent className="w-[min(14rem,calc(100vw-2rem))] p-2 rounded-xl" align="start" sideOffset={8} avoidCollisions collisionPadding={12}>
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
                       Style
                     </p>
@@ -572,7 +525,7 @@ export default function StudioDetailPage() {
                       <ChevronDown className="h-3 w-3 opacity-50" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-56 p-2 rounded-xl" align="start" sideOffset={8}>
+                  <PopoverContent className="w-[min(14rem,calc(100vw-2rem))] p-2 rounded-xl" align="start" sideOffset={8} avoidCollisions collisionPadding={12}>
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
                       Camera Angle
                     </p>
@@ -639,34 +592,31 @@ export default function StudioDetailPage() {
                 </button>
               </div>
 
-              {/* Generate button */}
+              {/* Generate button (Icon only) */}
               <Button
-                size="sm"
+                size="icon"
                 onClick={handleGenerate}
                 disabled={isGenerating || !prompt.trim()}
-                className="h-9 sm:h-8 px-4 text-[11px] sm:text-xs font-semibold gap-1.5 rounded-xl shadow-sm hover:shadow-primary/20 transition-all w-full sm:w-auto"
+                className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl shadow-sm hover:shadow-primary/20 transition-all shrink-0 ml-auto"
               >
                 {isGenerating ? (
-                  <>
-                    <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                    Generating...
-                  </>
+                  <CornerRightUp className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
                 ) : (
-                  <>
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Generate · {creditCost} Credit{creditCost > 1 ? "s" : ""}
-                  </>
+                  <CornerRightUp className="w-4 h-4 sm:w-5 sm:h-5" />
                 )}
               </Button>
             </div>
           </motion.div>
+          <p className="text-[10px] text-muted-foreground/40 text-center mt-3 select-none">
+            Audora is an AI. Generations can sometimes be unexpected.
+          </p>
         </div>
       </div>
 
       {/* ── Detail Side Sheet ────────────────── */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen} modal={false}>
-        <SheetContent 
-          side="right" 
+        <SheetContent
+          side="right"
           showCloseButton={false}
           hideOverlay={true}
           className="!inset-y-auto !right-4 !top-20 !bottom-4 !h-auto w-[260px] sm:w-[280px] rounded-2xl border border-border/50 bg-background/95 backdrop-blur-xl shadow-2xl p-0 flex flex-col overflow-hidden"
@@ -675,78 +625,75 @@ export default function StudioDetailPage() {
           <SheetDescription className="sr-only">View icon generation settings and actions.</SheetDescription>
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto no-scrollbar p-5 pb-0 space-y-5">
-             {/* Info list */}
-             <div className="flex flex-col text-[13px]">
-               <div className="flex justify-between items-center py-2.5 border-b border-border/40">
-                 <span className="text-muted-foreground font-medium">Model</span>
-                 <span className="font-semibold text-foreground">{generation?.aiModel ? (AI_MODEL_LABELS[generation.aiModel] || generation.aiModel) : "Flux 2 Pro"}</span>
-               </div>
-               <div className="flex justify-between items-center py-2.5 border-b border-border/40">
-                 <span className="text-muted-foreground font-medium">Style</span>
-                 <span className="font-semibold text-foreground">
-                   {STYLES.find(s => s.id === style)?.label || "Plastic"}
-                 </span>
-               </div>
-               <div className="flex justify-between items-center py-2.5 border-b border-border/40">
-                 <span className="text-muted-foreground font-medium">Camera Angle</span>
-                 <span className="font-semibold text-foreground">
-                   {generation?.position ? generation.position.split("_").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : "Isometric"}
-                 </span>
-               </div>
-               <div className="flex justify-between items-center py-2.5 border-b border-border/40">
-                 <span className="text-muted-foreground font-medium">Quality</span>
-                 <span className="font-semibold text-foreground">{generation?.quality || "2K"}</span>
-               </div>
-               <div className="flex justify-between items-center py-2.5 border-b border-border/40">
-                 <span className="text-muted-foreground font-medium">Size</span>
-                 <span className="font-semibold text-foreground">
-                   {generation?.quality === "4K" ? "4096 × 4096px" : "2048 × 2048px"}
-                 </span>
-               </div>
-             </div>
+            {/* Info list */}
+            <div className="flex flex-col text-[13px]">
 
-             {/* Prompt Section */}
-             <div className="space-y-2 pt-1">
-               <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground/70 uppercase tracking-widest px-1">
-                 <div className="flex items-center gap-2">
-                   <MessageSquareText className="h-3.5 w-3.5" /> Prompt
-                 </div>
-                 <button 
-                   onClick={() => {
-                     navigator.clipboard.writeText(generation?.userPrompt || generation?.prompt || "");
-                     setCopied(true);
-                     setTimeout(() => setCopied(false), 2000);
-                     toast.success("Prompt copied!");
-                   }}
-                   className="p-1 hover:bg-muted/80 rounded-md transition-colors text-muted-foreground/50 hover:text-foreground"
-                   title="Copy Prompt"
-                 >
-                   {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
-                 </button>
-               </div>
-               <div className="text-[12px] leading-relaxed text-foreground/90 bg-muted/30 p-3 rounded-xl border border-border/40 font-medium italic">
-                 &quot;{generation?.userPrompt || generation?.prompt}&quot;
-               </div>
-             </div>
+              <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                <span className="text-muted-foreground font-medium">Style</span>
+                <span className="font-semibold text-foreground">
+                  {STYLES.find(s => s.id === style)?.label || "Plastic"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                <span className="text-muted-foreground font-medium">Camera Angle</span>
+                <span className="font-semibold text-foreground">
+                  {generation?.position ? generation.position.split("_").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : "Isometric"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                <span className="text-muted-foreground font-medium">Quality</span>
+                <span className="font-semibold text-foreground">{generation?.quality || "2K"}</span>
+              </div>
+              <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                <span className="text-muted-foreground font-medium">Size</span>
+                <span className="font-semibold text-foreground">
+                  {generation?.quality === "4K" ? "4096 × 4096px" : "2048 × 2048px"}
+                </span>
+              </div>
+            </div>
 
-             {/* Actions Accordion */}
-             <Accordion type="single" collapsible defaultValue="actions" className="w-full">
-               <AccordionItem value="actions" className="border-b-0 border-t border-border/40 pt-1">
-                 <AccordionTrigger className="text-[15px] font-bold hover:no-underline py-3 px-1 text-foreground">
-                   Actions
-                 </AccordionTrigger>
-                 <AccordionContent className="pb-4 pt-1">
-                   <div className="flex flex-col gap-0.5">
-                     <Button variant="ghost" className="w-full justify-start h-9 px-2 text-[13px] font-medium gap-3 hover:bg-muted/60" disabled>
-                       <Crop className="w-4 h-4 text-muted-foreground" /> Remove background
-                     </Button>
-                     <Button variant="ghost" className="w-full justify-start h-9 px-2 text-[13px] font-medium gap-3 hover:bg-muted/60" disabled>
-                       <Maximize className="w-4 h-4 text-muted-foreground" /> Upscale
-                     </Button>
-                   </div>
-                 </AccordionContent>
-               </AccordionItem>
-             </Accordion>
+            {/* Prompt Section */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground/70 uppercase tracking-widest px-1">
+                <div className="flex items-center gap-2">
+                  <MessageSquareText className="h-3.5 w-3.5" /> Prompt
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(generation?.userPrompt || generation?.prompt || "");
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                    toast.success("Prompt copied!");
+                  }}
+                  className="p-1 hover:bg-muted/80 rounded-md transition-colors text-muted-foreground/50 hover:text-foreground"
+                  title="Copy Prompt"
+                >
+                  {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                </button>
+              </div>
+              <div className="text-[12px] leading-relaxed text-foreground/90 bg-muted/30 p-3 rounded-xl border border-border/40 font-medium italic">
+                &quot;{generation?.userPrompt || generation?.prompt}&quot;
+              </div>
+            </div>
+
+            {/* Actions Accordion */}
+            <Accordion type="single" collapsible defaultValue="actions" className="w-full">
+              <AccordionItem value="actions" className="border-b-0 border-t border-border/40 pt-1">
+                <AccordionTrigger className="text-[15px] font-bold hover:no-underline py-3 px-1 text-foreground">
+                  Actions
+                </AccordionTrigger>
+                <AccordionContent className="pb-4 pt-1">
+                  <div className="flex flex-col gap-0.5">
+                    <Button variant="ghost" className="w-full justify-start h-9 px-2 text-[13px] font-medium gap-3 hover:bg-muted/60" disabled>
+                      <Crop className="w-4 h-4 text-muted-foreground" /> Remove background
+                    </Button>
+                    <Button variant="ghost" className="w-full justify-start h-9 px-2 text-[13px] font-medium gap-3 hover:bg-muted/60" disabled>
+                      <Maximize className="w-4 h-4 text-muted-foreground" /> Upscale
+                    </Button>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
 
           {/* Export at bottom */}

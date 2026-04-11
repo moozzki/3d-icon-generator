@@ -22,14 +22,14 @@ export async function POST(request: Request) {
     // Generate unique key using UUID or hash + original ext to prevent overwrites
     const ext = filename.split(".").pop();
     const uniqueId = crypto.randomUUID();
-    const objectKey = `references/${session.user.id}/${uniqueId}.${ext}`;
+    const objectKey = `temp-uploads/references/${session.user.id}/${uniqueId}.${ext}`;
 
     const uploadUrl = await getUploadPresignedUrl(objectKey);
 
     return NextResponse.json({
       uploadUrl,
       objectKey,
-      fileUrl: `https://${process.env.R2_PUBLIC_DOMAIN_OR_BUCKET_URL}/${objectKey}`
+      fileUrl: `https://cdn.useaudora.com/${objectKey}`
     });
   } catch (err) {
     console.error("Upload error:", err);

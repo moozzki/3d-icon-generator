@@ -212,6 +212,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, jobId });
   } catch (error) {
     console.error("Generate error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ 
+      error: error instanceof Error ? error.message : "Internal Server Error", 
+      details: error instanceof Error ? error.stack : String(error)
+    }, { status: 500 });
   }
 }

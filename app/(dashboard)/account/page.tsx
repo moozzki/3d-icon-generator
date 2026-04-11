@@ -27,9 +27,7 @@ import {
   Eye,
   EyeOff,
   Unlink,
-  ArrowLeft,
 } from "lucide-react";
-import Link from "next/link";
 
 // Google SVG icon component
 function GoogleIcon({ className }: { className?: string }) {
