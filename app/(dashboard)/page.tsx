@@ -46,7 +46,7 @@ const STYLES = [
   { id: "plastic", label: "Plastic", icon: "🫧" },
   { id: "clay", label: "Clay", icon: "🏺" },
   { id: "glass", label: "Glass", icon: "🧊" },
-  { id: "plush", label: "Plush", icon: "🧸" },
+  { id: "plush", label: "Plushy", icon: "🧸" },
   { id: "toy_block", label: "Toy Block", icon: "🧱" },
   { id: "metallic", label: "Metallic", icon: "⚙️" },
 ];
@@ -101,7 +101,7 @@ export default function StudioPage() {
 
   // Estimated durations in ms per pipeline combination
   function getEstimatedDuration(model: AiModelId, q: string): number {
-    if (model === "flux-2-pro")    return q === "4K" ? 28000 : 20000;
+    if (model === "flux-2-pro") return q === "4K" ? 28000 : 20000;
     if (model === "nano-banana-2") return q === "4K" ? 45000 : 35000;
     return 25000;
   }
@@ -258,14 +258,14 @@ export default function StudioPage() {
     try {
       const filename = `audora-${quality.toLowerCase()}-gen.png`;
       const downloadUrl = `/api/download?url=${encodeURIComponent(resultImage)}&filename=${filename}`;
-      
+
       const link = document.createElement("a");
       link.href = downloadUrl;
       link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       toast.success("Download started!");
     } catch {
       toast.error("Failed to download image.");

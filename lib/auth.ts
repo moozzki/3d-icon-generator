@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@/lib/db";
-import { admin, magicLink } from "better-auth/plugins";
+import { admin, magicLink, lastLoginMethod } from "better-auth/plugins";
 import { sendEmail } from "@/lib/resend";
 
 export const auth = betterAuth({
@@ -42,6 +42,7 @@ export const auth = betterAuth({
 
   plugins: [
     admin(),
+    lastLoginMethod(),
     magicLink({
       sendMagicLink: async ({ email, url }) => {
         await sendEmail({
@@ -58,7 +59,7 @@ export const auth = betterAuth({
               <div style="text-align: center; margin-bottom: 32px;">
                 <a href="${url}" 
                    style="display: inline-block; background: #7c3aed; color: #fff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-size: 16px; font-weight: 600;">
-                  Go to Dashboard →
+                   Go to Dashboard →
                 </a>
               </div>
               <p style="font-size: 13px; color: #888; line-height: 1.5;">

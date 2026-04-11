@@ -5,6 +5,7 @@ import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -20,6 +21,11 @@ export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState<"google" | "github" | "magic" | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+
+  const lastMethod = authClient.getLastUsedLoginMethod();
+  const isLastGoogle = lastMethod === "google";
+  const isLastGithub = lastMethod === "github";
+  const isLastMagicLink = lastMethod === "magic-link" || lastMethod === "email";
 
   const handleSocialLogin = async (provider: "google" | "github") => {
     setLoading(provider);
@@ -89,7 +95,7 @@ export default function SignInPage() {
               <div className="space-y-2.5">
                 <Button
                   variant="outline"
-                  className="w-full h-11 text-sm font-medium gap-3 rounded-full border-border/70 hover:bg-muted/60 transition-all"
+                  className="w-full h-11 text-sm font-medium gap-3 rounded-full border-border/70 hover:bg-muted/60 transition-all relative"
                   onClick={() => handleSocialLogin("google")}
                   disabled={loading !== null}
                 >
@@ -116,11 +122,16 @@ export default function SignInPage() {
                     </svg>
                   )}
                   Continue with Google
+                   {isLastGoogle && (
+                    <Badge className="absolute right-2.5 text-[10px] h-5 px-1.5 bg-primary text-primary-foreground border-none hover:bg-primary/90 pointer-events-none">
+                      Last used
+                    </Badge>
+                  )}
                 </Button>
 
                 <Button
                   variant="outline"
-                  className="w-full h-11 text-sm font-medium gap-3 rounded-full border-border/70 hover:bg-muted/60 transition-all"
+                  className="w-full h-11 text-sm font-medium gap-3 rounded-full border-border/70 hover:bg-muted/60 transition-all relative"
                   onClick={() => handleSocialLogin("github")}
                   disabled={loading !== null}
                 >
@@ -132,6 +143,11 @@ export default function SignInPage() {
                     </svg>
                   )}
                   Continue with GitHub
+                  {isLastGithub && (
+                    <Badge className="absolute right-2.5 text-[10px] h-5 px-1.5 bg-primary text-primary-foreground border-none hover:bg-primary/90 pointer-events-none">
+                      Last used
+                    </Badge>
+                  )}
                 </Button>
               </div>
 
@@ -165,7 +181,7 @@ export default function SignInPage() {
                   />
                 </div>
                 <Button
-                  className="w-full h-11 rounded-full text-sm font-semibold gap-2"
+                  className="w-full h-11 rounded-full text-sm font-semibold gap-2 relative"
                   type="submit"
                   disabled={loading !== null || !email.trim()}
                 >
@@ -175,6 +191,11 @@ export default function SignInPage() {
                     <Mail className="h-4 w-4" />
                   )}
                   Send Magic Link
+                  {isLastMagicLink && (
+                    <Badge className="absolute right-2.5 text-[10px] h-5 px-1.5 bg-[#CCCCFF] text-[#09090b] border-none hover:bg-[#CCCCFF]/90 pointer-events-none">
+                      Last used
+                    </Badge>
+                  )}
                 </Button>
               </form>
 
