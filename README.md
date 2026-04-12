@@ -3,42 +3,43 @@
 Comprehensive project documentation can be found in the `doc/` directory:
 
 - [**Master Documentation**](doc/master.md) - System overview, tech stack, and architecture.
-- [AI Pipeline Details](doc/2pipeline-ai-integrations.md)
+- [AI Pipeline & SeedVR2](doc/2pipeline-ai-integrations.md)
+- [Master Prompt System](doc/master-prompt.md)
 - [Auth Strategy](doc/security-auth-strategy.md)
 - [Product Requirements (PRD)](doc/prd.md)
 
 ## Tech Stack
 
-- **Next.js 16 (App Router)**
+- **Next.js 16.2 (App Router)**
+- **React 19**
+- **Tailwind CSS 4**
 - **Neon + Drizzle ORM**
-- **Better Auth**
-- **Inngest**
-- **Fal.ai**
-- **Cloudflare R2**
+- **Better Auth** (Magic Link + Social)
+- **Inngest** (Multi-Pipeline Workflows)
+- **Fal.ai** (Flux 2 Pro + SeedVR2)
+- **Cloudflare R2** (CDN Storage)
 
 ## Getting Started
 
 First, ensure you have your environment variables set up in `.env.local` (see [master.md](doc/master.md) for required keys).
 
 Run the development server:
-... (rest of the content)
-
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) for typography optimization and **Framer Motion** for premium micro-animations.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Credits & Features
+
+- **SeedVR2 Upscaling**: Native 2x/4x upscaling integrated into the generation pipeline.
+- **Reference Image Mode**: Generate 3D icons based on uploaded sketches or reference photos.
+- **Refine (Iterative Edit)**: Fine-tune existing icons with new prompts while preserving the base structure.
+- **Master Prompt Engineering**: Automatic refinement of raw user input for perfect 3D results.
+- **Studio Dashboard**: Unconstrained canvas with collapsible controls and automated credit refunds.
 
 ## Learn More
 

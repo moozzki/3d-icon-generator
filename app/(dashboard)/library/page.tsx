@@ -240,13 +240,13 @@ export default function LibraryPage() {
                       <div className="absolute top-2 left-2 flex flex-wrap gap-1.5 z-[1]">
                         <Badge
                           variant="secondary"
-                          className="bg-background/80 backdrop-blur-xl border-none text-[10px] h-5 px-2 shadow-sm font-semibold"
+                          className="bg-background/80 backdrop-blur-xl border-none text-[10px] h-5 px-2 shadow-sm font-semibold text-foreground"
                         >
                           {styleInfo?.icon} {styleInfo?.label}
                         </Badge>
                         <Badge
                           variant="secondary"
-                          className="bg-background/80 backdrop-blur-xl border-none text-[10px] h-5 px-2 shadow-sm font-semibold"
+                          className="bg-background/80 backdrop-blur-xl border-none text-[10px] h-5 px-2 shadow-sm font-semibold text-foreground"
                         >
                           {item.quality}
                         </Badge>

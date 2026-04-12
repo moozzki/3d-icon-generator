@@ -12,6 +12,18 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -22,13 +34,16 @@ import {
 import {
   CornerRightUp,
   Coins,
-  Download,
   Wand2,
   ChevronDown,
   ImageIcon,
   ZoomIn,
   ZoomOut,
   Maximize,
+  MessageSquareText,
+  Copy,
+  Check,
+  Crop
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -91,6 +106,8 @@ export default function StudioPage() {
   const [aiModel] = useState<AiModelId>("flux-2-pro");
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [isPromptExpanded, setIsPromptExpanded] = useState(true);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // Progress bar state
   const [progress, setProgress] = useState(0);
@@ -248,6 +265,7 @@ export default function StudioPage() {
       setResultImage(finalImageUrl);
       window.dispatchEvent(new Event("credits-updated"));
       toast.success("Icon generated successfully!");
+      setIsSheetOpen(true);
     } catch (err) {
       console.error("Generation error:", err);
       const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
@@ -400,7 +418,10 @@ export default function StudioPage() {
                   transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                   className="relative group flex flex-col items-center gap-6 mt-10"
                 >
-                  <div className="relative pointer-events-auto">
+                  <button
+                    className="relative pointer-events-auto cursor-pointer focus:outline-none rounded-2xl ring-offset-background transition-shadow hover:ring-2 hover:ring-primary/20 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    onClick={() => !isGenerating && setIsSheetOpen(true)}
+                  >
                     <Image
                       src={resultImage}
                       alt="Generated 3D icon"
@@ -410,20 +431,7 @@ export default function StudioPage() {
                       priority
                     />
                     <div className="absolute inset-0 rounded-2xl pointer-events-none bg-black/0 group-hover:bg-black/10 transition-colors duration-200" />
-                  </div>
-
-                  {/* Download button under image */}
-                  <div className="flex flex-wrap justify-center items-center gap-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDownload}
-                      className="h-9 px-4 text-xs font-semibold gap-2 rounded-xl shadow-sm border-border/60 hover:bg-muted/50"
-                    >
-                      <Download className="h-4 w-4" />
-                      Download .png
-                    </Button>
-                  </div>
+                  </button>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -699,6 +707,96 @@ export default function StudioPage() {
           </p>
         </div>
       </div>
+      {/* ── Detail Side Sheet ────────────────── */}
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen} modal={false}>
+        <SheetContent
+          side="right"
+          showCloseButton={false}
+          hideOverlay={true}
+          className="!inset-y-auto !right-4 !top-20 !bottom-4 !h-auto w-[260px] sm:w-[280px] rounded-2xl border border-border/50 bg-background/95 backdrop-blur-xl shadow-2xl p-0 flex flex-col overflow-hidden"
+        >
+          <SheetTitle className="sr-only">Generation Details</SheetTitle>
+          <SheetDescription className="sr-only">View icon generation settings and actions.</SheetDescription>
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto no-scrollbar p-5 pb-0 space-y-5">
+            {/* Info list */}
+            <div className="flex flex-col text-[13px]">
+              <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                <span className="text-muted-foreground font-medium">Style</span>
+                <span className="font-semibold text-foreground">
+                  {STYLES.find(s => s.id === style)?.label || "Plastic"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                <span className="text-muted-foreground font-medium">Camera Angle</span>
+                <span className="font-semibold text-foreground">
+                  {position}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                <span className="text-muted-foreground font-medium">Quality</span>
+                <span className="font-semibold text-foreground">{quality}</span>
+              </div>
+              <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                <span className="text-muted-foreground font-medium">Size</span>
+                <span className="font-semibold text-foreground">
+                  {quality === "4K" ? "4096 × 4096px" : "2048 × 2048px"}
+                </span>
+              </div>
+            </div>
+
+            {/* Prompt Section */}
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground/70 uppercase tracking-widest px-1">
+                <div className="flex items-center gap-2">
+                  <MessageSquareText className="h-3.5 w-3.5" /> Prompt
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(prompt);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                    toast.success("Prompt copied!");
+                  }}
+                  className="p-1 hover:bg-muted/80 rounded-md transition-colors text-muted-foreground/50 hover:text-foreground"
+                  title="Copy Prompt"
+                >
+                  {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                </button>
+              </div>
+              <div className="text-[12px] leading-relaxed text-foreground/90 bg-muted/30 p-3 rounded-xl border border-border/40 font-medium italic">
+                &quot;{prompt}&quot;
+              </div>
+            </div>
+
+            {/* Actions Accordion */}
+            <Accordion type="single" collapsible defaultValue="actions" className="w-full">
+              <AccordionItem value="actions" className="border-b-0 border-t border-border/40 pt-1">
+                <AccordionTrigger className="text-[15px] font-bold hover:no-underline py-3 px-1 text-foreground">
+                  Actions
+                </AccordionTrigger>
+                <AccordionContent className="pb-4 pt-1">
+                  <div className="flex flex-col gap-0.5">
+                    <Button variant="ghost" className="w-full justify-start h-9 px-2 text-[13px] font-medium gap-3 hover:bg-muted/60" disabled>
+                      <Crop className="w-4 h-4 text-muted-foreground" /> Remove background
+                    </Button>
+                    <Button variant="ghost" className="w-full justify-start h-9 px-2 text-[13px] font-medium gap-3 hover:bg-muted/60" disabled>
+                      <Maximize className="w-4 h-4 text-muted-foreground" /> Upscale
+                    </Button>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+
+          {/* Export at bottom */}
+          <div className="p-4 pt-3 border-t border-border/50 bg-background mt-auto">
+            <Button className="w-full font-semibold rounded-xl h-10 shadow-sm text-sm" onClick={handleDownload}>
+              Download Image
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
