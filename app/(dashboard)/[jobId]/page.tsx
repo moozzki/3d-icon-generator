@@ -37,6 +37,7 @@ import {
   Wand2,
   UploadCloud,
   ChevronDown,
+  ChevronUp,
   ImageIcon,
   ZoomIn,
   ZoomOut,
@@ -125,6 +126,7 @@ export default function StudioDetailPage() {
   const [isQualityOpen, setIsQualityOpen] = useState(false);
   const [aiModel] = useState<AiModelId>("flux-2-pro");
   const [copied, setCopied] = useState(false);
+  const [isPromptExpanded, setIsPromptExpanded] = useState(true);
 
   const selectedModel = AI_MODELS.find((m) => m.id === aiModel)!;
   const creditCost = getCreditCost(aiModel, quality);
@@ -408,6 +410,7 @@ export default function StudioDetailPage() {
             </AnimatePresence>
           </div>
         </div>
+
         {/* ── Extracted Floating Zoom Controls ────────────────── */}
         <div className="absolute top-4 right-4 z-10">
           <DropdownMenu>
@@ -448,164 +451,222 @@ export default function StudioDetailPage() {
           </DropdownMenu>
         </div>
 
-        {/* ── Floating prompt bar ─────────────────────────────── */}
-        <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 w-full max-w-4xl px-3 sm:px-4">
+        {/* ── Floating Prompt Bar ────────────────────────────── */}
+        <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 w-full max-w-4xl px-3 sm:px-4 flex flex-col items-center pointer-events-none">
           <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="rounded-xl sm:rounded-2xl border border-border/70 bg-card/90 backdrop-blur-xl shadow-2xl shadow-black/10 overflow-hidden"
+            layout
+            initial={false}
+            animate={{ 
+              width: isPromptExpanded ? "100%" : "180px",
+              height: isPromptExpanded ? "auto" : "48px",
+            }}
+            transition={{ 
+              type: "spring",
+              stiffness: 300,
+              damping: 35,
+              mass: 1
+            }}
+            style={{ transformOrigin: "bottom center" }}
+            className={cn(
+              "relative border border-border/70 bg-card/90 backdrop-blur-xl shadow-2xl shadow-black/10 overflow-hidden pointer-events-auto",
+              isPromptExpanded ? "rounded-xl sm:rounded-2xl" : "rounded-full cursor-pointer hover:bg-card transition-colors border-primary/20 bg-primary/5"
+            )}
+            onClick={() => !isPromptExpanded && setIsPromptExpanded(true)}
           >
-            {/* Credits badge - Top Right */}
-            <div className="absolute top-3 right-3 sm:top-4 sm:right-4 pointer-events-none">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
-                <Coins className="w-3 h-3" />
-                {creditCost} Credit{creditCost > 1 ? "s" : ""}
-              </div>
-            </div>
-            {/* Textarea row */}
-            <div className="px-3 sm:px-4 pt-4 sm:pt-5 pb-1 sm:pb-2">
-              <textarea
-                ref={textareaRef}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onKeyDown={handleKeyDown}
-                rows={3}
-                placeholder="Describe your 3D icon..."
-                className="w-full resize-none bg-transparent text-base sm:text-[15px] font-medium text-foreground placeholder:text-muted-foreground/45 outline-none leading-relaxed pr-24"
-              />
-            </div>
-
-            {/* Controls row */}
-            <div className="flex items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 pb-3 pt-1">
-              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 flex-1 pr-2">
-
-                {/* Style popover */}
-                <Popover open={isStyleOpen} onOpenChange={setIsStyleOpen}>
-                  <PopoverTrigger asChild>
-                    <button className="h-8 text-[11px] sm:text-xs flex items-center gap-1 border border-border/50 bg-muted/40 hover:bg-muted/60 transition-colors shrink-0 px-2 sm:px-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                      <span className="truncate max-w-[70px] sm:max-w-none">
-                        {STYLES.find(s => s.id === style)?.icon} {STYLES.find(s => s.id === style)?.label}
-                      </span>
-                      <ChevronDown className="h-3 w-3 opacity-50" />
+            <AnimatePresence mode="wait">
+              {!isPromptExpanded ? (
+                <motion.div 
+                  key="collapsed"
+                  initial={{ opacity: 0, scale: 0.5, y: 15 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.5, y: 15 }}
+                  className="flex items-center justify-center h-full w-full gap-2.5 px-4"
+                >
+                  <div className="bg-primary/20 p-1 rounded-full shrink-0">
+                    < Wand2 className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                  <span className="text-sm font-semibold text-primary/90 whitespace-nowrap">Write Prompt</span>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="expanded"
+                  initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                  className="w-full relative"
+                >
+                  {/* Toggle Collapse Button - Top Center */}
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsPromptExpanded(false);
+                      }}
+                      className="p-1 px-4 text-muted-foreground/30 hover:text-foreground/60 transition-colors group flex flex-col items-center"
+                      title="Collapse"
+                    >
+                      <div className="w-8 h-1 rounded-full bg-muted-foreground/20 group-hover:bg-muted-foreground/40 transition-colors mb-0.5" />
+                      <ChevronDown className="w-3.5 h-3.5" />
                     </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[min(14rem,calc(100vw-2rem))] p-2 rounded-xl" align="start" sideOffset={8} avoidCollisions collisionPadding={12}>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
-                      Style
-                    </p>
-                    <div className="grid grid-cols-2 gap-1">
-                      {STYLES.map((s) => (
-                        <button
-                          key={s.id}
-                          onClick={() => {
-                            setStyle(s.id);
-                            setIsStyleOpen(false);
-                          }}
-                          className={cn(
-                            "text-xs text-left px-2.5 py-1.5 rounded-md transition-colors focus:outline-none flex items-center gap-2",
-                            style === s.id
-                              ? "bg-primary/10 text-primary font-medium"
-                              : "text-foreground hover:bg-muted"
-                          )}
-                        >
-                          <span>{s.icon}</span>
-                          <span>{s.label}</span>
-                        </button>
-                      ))}
+                  </div>
+
+                  <div className="w-full">
+                    {/* Credits badge - Top Right */}
+                    <div className="absolute top-3 right-3 sm:top-4 sm:right-4 pointer-events-none">
+                      <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
+                        <Coins className="w-3 h-3" />
+                        {creditCost} Credit{creditCost > 1 ? "s" : ""}
+                      </div>
                     </div>
-                  </PopoverContent>
-                </Popover>
 
-                {/* Camera angle popover */}
-                <Popover open={isPositionOpen} onOpenChange={setIsPositionOpen}>
-                  <PopoverTrigger asChild>
-                    <button className="h-8 text-[11px] sm:text-xs flex items-center gap-1 border border-border/50 bg-muted/40 hover:bg-muted/60 transition-colors shrink-0 px-2 sm:px-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                      <span className="truncate max-w-[70px] sm:max-w-none">{position}</span>
-                      <ChevronDown className="h-3 w-3 opacity-50" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[min(14rem,calc(100vw-2rem))] p-2 rounded-xl" align="start" sideOffset={8} avoidCollisions collisionPadding={12}>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
-                      Camera Angle
-                    </p>
-                    <div className="grid grid-cols-2 gap-1">
-                      {POSITIONS.map((pos) => (
-                        <button
-                          key={pos}
-                          onClick={() => {
-                            setPosition(pos);
-                            setIsPositionOpen(false);
-                          }}
-                          className={cn(
-                            "text-xs text-left px-2.5 py-1.5 rounded-md transition-colors focus:outline-none",
-                            position === pos
-                              ? "bg-primary/10 text-primary font-medium"
-                              : "text-foreground hover:bg-muted"
-                          )}
-                        >
-                          {pos}
-                        </button>
-                      ))}
+                    {/* Textarea row */}
+                    <div className="px-3 sm:px-4 pt-7 sm:pt-8 pb-1 sm:pb-2">
+                      <textarea
+                        ref={textareaRef}
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        rows={3}
+                        placeholder="Describe your 3D icon..."
+                        className="w-full resize-none bg-transparent text-base sm:text-[15px] font-medium text-foreground placeholder:text-muted-foreground/45 outline-none leading-relaxed pr-24"
+                      />
                     </div>
-                  </PopoverContent>
-                </Popover>
 
-                {/* Quality popover */}
-                <Popover open={isQualityOpen} onOpenChange={setIsQualityOpen}>
-                  <PopoverTrigger asChild>
-                    <button className="h-8 text-[11px] sm:text-xs flex items-center gap-1 border border-border/50 bg-muted/40 hover:bg-muted/60 transition-colors shrink-0 px-2 sm:px-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                      {quality}
-                      <ChevronDown className="h-3 w-3 opacity-50" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-36 p-2 rounded-xl" align="start" sideOffset={8}>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
-                      Quality
-                    </p>
-                    <div className="flex flex-col gap-1">
-                      {QUALITIES.map((q) => (
-                        <button
-                          key={q}
-                          onClick={() => {
-                            setQuality(q);
-                            setIsQualityOpen(false);
-                          }}
-                          className={cn(
-                            "text-xs text-left px-2.5 py-1.5 rounded-md transition-colors focus:outline-none",
-                            quality === q
-                              ? "bg-primary/10 text-primary font-medium"
-                              : "text-foreground hover:bg-muted"
-                          )}
-                        >
-                          {q}
+                    {/* Controls row */}
+                    <div className="flex items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 pb-3 pt-1">
+                      <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 flex-1 pr-2">
+
+                        {/* Style popover */}
+                        <Popover open={isStyleOpen} onOpenChange={setIsStyleOpen}>
+                          <PopoverTrigger asChild>
+                            <button className="h-8 text-[11px] sm:text-xs flex items-center gap-1 border border-border/50 bg-muted/40 hover:bg-muted/60 transition-colors shrink-0 px-2 sm:px-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                              <span className="truncate max-w-[70px] sm:max-w-none">
+                                {STYLES.find(s => s.id === style)?.icon} {STYLES.find(s => s.id === style)?.label}
+                              </span>
+                              <ChevronDown className="h-3 w-3 opacity-50" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[min(14rem,calc(100vw-2rem))] p-2 rounded-xl" align="start" sideOffset={8} avoidCollisions collisionPadding={12}>
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
+                              Style
+                            </p>
+                            <div className="grid grid-cols-2 gap-1">
+                              {STYLES.map((s) => (
+                                <button
+                                  key={s.id}
+                                  onClick={() => {
+                                    setStyle(s.id);
+                                    setIsStyleOpen(false);
+                                  }}
+                                  className={cn(
+                                    "text-xs text-left px-2.5 py-1.5 rounded-md transition-colors focus:outline-none flex items-center gap-2",
+                                    style === s.id
+                                      ? "bg-primary/10 text-primary font-medium"
+                                      : "text-foreground hover:bg-muted"
+                                  )}
+                                >
+                                  <span>{s.icon}</span>
+                                  <span>{s.label}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+
+                        {/* Camera angle popover */}
+                        <Popover open={isPositionOpen} onOpenChange={setIsPositionOpen}>
+                          <PopoverTrigger asChild>
+                            <button className="h-8 text-[11px] sm:text-xs flex items-center gap-1 border border-border/50 bg-muted/40 hover:bg-muted/60 transition-colors shrink-0 px-2 sm:px-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                              <span className="truncate max-w-[70px] sm:max-w-none">{position}</span>
+                              <ChevronDown className="h-3 w-3 opacity-50" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[min(14rem,calc(100vw-2rem))] p-2 rounded-xl" align="start" sideOffset={8} avoidCollisions collisionPadding={12}>
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
+                              Camera Angle
+                            </p>
+                            <div className="grid grid-cols-2 gap-1">
+                              {POSITIONS.map((pos) => (
+                                <button
+                                  key={pos}
+                                  onClick={() => {
+                                    setPosition(pos);
+                                    setIsPositionOpen(false);
+                                  }}
+                                  className={cn(
+                                    "text-xs text-left px-2.5 py-1.5 rounded-md transition-colors focus:outline-none",
+                                    position === pos
+                                      ? "bg-primary/10 text-primary font-medium"
+                                      : "text-foreground hover:bg-muted"
+                                  )}
+                                >
+                                  {pos}
+                                </button>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+
+                        {/* Quality popover */}
+                        <Popover open={isQualityOpen} onOpenChange={setIsQualityOpen}>
+                          <PopoverTrigger asChild>
+                            <button className="h-8 text-[11px] sm:text-xs flex items-center gap-1 border border-border/50 bg-muted/40 hover:bg-muted/60 transition-colors shrink-0 px-2 sm:px-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                              {quality}
+                              <ChevronDown className="h-3 w-3 opacity-50" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-36 p-2 rounded-xl" align="start" sideOffset={8}>
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
+                              Quality
+                            </p>
+                            <div className="flex flex-col gap-1">
+                              {QUALITIES.map((q) => (
+                                <button
+                                  key={q}
+                                  onClick={() => {
+                                    setQuality(q);
+                                    setIsQualityOpen(false);
+                                  }}
+                                  className={cn(
+                                    "text-xs text-left px-2.5 py-1.5 rounded-md transition-colors focus:outline-none",
+                                    quality === q
+                                      ? "bg-primary/10 text-primary font-medium"
+                                      : "text-foreground hover:bg-muted"
+                                  )}
+                                >
+                                  {q}
+                                </button>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+
+                        {/* Upload reference */}
+                        <button className="h-8 px-2 sm:px-2.5 text-[11px] sm:text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg border border-border/50 flex items-center gap-1.5 transition-colors shrink-0">
+                          <UploadCloud className="h-3.5 w-3.5" />
+                          <span className="hidden xs:inline">Reference</span>
                         </button>
-                      ))}
+                      </div>
+
+
+                      {/* Generate button (Icon only) */}
+                      <Button
+                        size="icon"
+                        onClick={handleGenerate}
+                        disabled={isGenerating || !prompt.trim()}
+                        className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl shadow-sm hover:shadow-primary/20 transition-all shrink-0 ml-auto"
+                      >
+                        {isGenerating ? (
+                          <CornerRightUp className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
+                        ) : (
+                          <CornerRightUp className="w-4 h-4 sm:w-5 sm:h-5" />
+                        )}
+                      </Button>
                     </div>
-                  </PopoverContent>
-                </Popover>
-
-                {/* Upload reference */}
-                <button className="h-8 px-2 sm:px-2.5 text-[11px] sm:text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg border border-border/50 flex items-center gap-1.5 transition-colors shrink-0">
-                  <UploadCloud className="h-3.5 w-3.5" />
-                  <span className="hidden xs:inline">Reference</span>
-                </button>
-              </div>
-
-              {/* Generate button (Icon only) */}
-              <Button
-                size="icon"
-                onClick={handleGenerate}
-                disabled={isGenerating || !prompt.trim()}
-                className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl shadow-sm hover:shadow-primary/20 transition-all shrink-0 ml-auto"
-              >
-                {isGenerating ? (
-                  <CornerRightUp className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
-                ) : (
-                  <CornerRightUp className="w-4 h-4 sm:w-5 sm:h-5" />
-                )}
-              </Button>
-            </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
           <p className="text-[10px] text-muted-foreground/40 text-center mt-3 select-none">
             Audora is an AI. Generations can sometimes be unexpected.
