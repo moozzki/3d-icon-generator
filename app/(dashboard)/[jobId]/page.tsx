@@ -37,7 +37,6 @@ import {
   Wand2,
   UploadCloud,
   ChevronDown,
-  ChevronUp,
   ImageIcon,
   ZoomIn,
   ZoomOut,

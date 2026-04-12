@@ -171,7 +171,6 @@ export const iconGenerate = inngest.createFunction(
       aiModel,
       resolution,
       referenceImage,
-      creditCost,
     } = event.data as IconGenerateEvent["data"];
 
     // -------------------------------------------------------------------------
