@@ -15,10 +15,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useTheme } from "next-themes";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -33,13 +38,19 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X } from "lucide-react";
+import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop } from "lucide-react";
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   const { data: session } = useSession();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [credits, setCredits] = useState<number | null>(null);
   const [zeroCreditWarning, setZeroCreditWarning] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -183,10 +194,10 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         {/* User */}
         {session?.user && (
           <div className={cn("border-t border-border/40 mt-auto", isCollapsed ? "px-1.5 pt-3 pb-8 flex justify-center" : "px-4 pb-5 pt-4")}>
-            <Popover>
-              <PopoverTrigger asChild>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 {isCollapsed ? (
-                  <button className="hover:opacity-80 transition-opacity">
+                  <button className="hover:opacity-80 transition-opacity focus:outline-none">
                     <Avatar className="h-8 w-8 shrink-0">
                       <AvatarImage src={session.user.image || ""} />
                       <AvatarFallback className="text-[10px] uppercase">
@@ -195,8 +206,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                     </Avatar>
                   </button>
                 ) : (
-                  <button className="w-full text-left group">
-                    <div className="flex items-center gap-2.5 hover:bg-muted/60 p-2 -mx-2 rounded-lg transition-colors">
+                  <button className="w-full text-left group focus:outline-none focus:ring-0">
+                    <div className="flex items-center gap-2.5 hover:bg-muted/60 p-2 -mx-2 rounded-lg transition-colors border border-transparent hover:border-border/40">
                       <Avatar className="h-8 w-8 shrink-0">
                         <AvatarImage src={session.user.image || ""} />
                         <AvatarFallback className="text-[10px] uppercase">
@@ -205,54 +216,85 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                       </Avatar>
                       <div className="flex-1 overflow-hidden">
                         <p className="truncate text-xs font-semibold leading-tight group-hover:text-primary transition-colors">{session.user.name}</p>
-                        <p className="truncate text-[10px] text-muted-foreground leading-tight group-hover:text-foreground/80 transition-colors">{session.user.email}</p>
+                        <p className="truncate text-[10px] text-muted-foreground leading-tight group-hover:text-foreground/80 transition-colors uppercase tracking-tight font-medium opacity-70">Free Plan</p>
                       </div>
+                      <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-foreground shrink-0 transition-colors" />
                     </div>
                   </button>
                 )}
-              </PopoverTrigger>
-              <PopoverContent
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
                 side={isCollapsed ? "right" : "top"}
                 align={isCollapsed ? "end" : "start"}
                 sideOffset={12}
-                alignOffset={isCollapsed ? -6 : 0}
-                className="w-56 p-0"
+                className="w-60 p-0 overflow-hidden border-border/40 shadow-xl bg-card/95 backdrop-blur-md"
               >
                 {/* User info header */}
-                <div className="px-3 py-3 border-b border-border/40">
-                  <div className="flex items-center gap-2.5">
-                    <Avatar className="h-8 w-8 shrink-0">
+                <div className="px-3.5 py-3.5 bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-9 w-9 shrink-0 ring-2 ring-background shadow-sm">
                       <AvatarImage src={session.user.image || ""} />
-                      <AvatarFallback className="text-[10px] uppercase">
+                      <AvatarFallback className="text-xs uppercase bg-primary/10 text-primary font-bold">
                         {session.user.name?.substring(0, 2) || "U"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 overflow-hidden">
-                      <p className="truncate text-xs font-semibold leading-tight">{session.user.name}</p>
-                      <p className="truncate text-[10px] text-muted-foreground leading-tight">{session.user.email}</p>
+                      <p className="truncate text-sm font-bold leading-none mb-1 text-foreground">{session.user.name}</p>
+                      <p className="truncate text-[11px] text-muted-foreground leading-none font-medium capitalize prose-sm">Personal Account</p>
                     </div>
                   </div>
                 </div>
-                {/* Menu items */}
-                <div className="p-1">
-                  <Link
-                    href="/account"
-                    onClick={() => isMobile && setMobileMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+
+                <DropdownMenuSeparator className="m-0" />
+
+                {/* Theme Toggle Section - Premium Tabs */}
+                <div className="p-2 bg-muted/10">
+                  <Tabs 
+                    value={mounted ? theme : "system"} 
+                    onValueChange={(v) => setTheme(v)} 
+                    className="w-full"
                   >
-                    <Settings className="h-4 w-4" />
-                    Account
-                  </Link>
-                  <button
-                    onClick={async () => { await signOut(); router.push("/sign-in"); }}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign Out
-                  </button>
+                    <TabsList className="w-full h-8 bg-muted/40 p-1 border border-border/20">
+                      <TabsTrigger value="light" title="Light" className="flex-1 h-6 rounded-md data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all focus-visible:outline-none">
+                        <Sun className="h-3.5 w-3.5" />
+                      </TabsTrigger>
+                      <TabsTrigger value="dark" title="Dark" className="flex-1 h-6 rounded-md data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all focus-visible:outline-none">
+                        <Moon className="h-3.5 w-3.5" />
+                      </TabsTrigger>
+                      <TabsTrigger value="system" title="System" className="flex-1 h-6 rounded-md data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all focus-visible:outline-none">
+                        <Laptop className="h-3.5 w-3.5" />
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
                 </div>
-              </PopoverContent>
-            </Popover>
+
+                <DropdownMenuSeparator className="m-0" />
+
+                {/* Menu items */}
+                <DropdownMenuGroup className="p-1.5 section-group">
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/account"
+                      onClick={() => isMobile && setMobileMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer group/item"
+                    >
+                      <Settings className="h-4 w-4 group-hover/item:rotate-45 transition-transform duration-300" />
+                      Account
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuSeparator className="-mx-1.5 my-1.5" />
+
+                  <DropdownMenuItem
+                    onClick={async () => { await signOut(); router.push("/sign-in"); }}
+                    className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-colors cursor-pointer group/item"
+                  >
+                    <LogOut className="h-4 w-4 group-hover/item:-translate-x-1 transition-transform" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
       </div>
