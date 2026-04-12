@@ -51,14 +51,14 @@ export const auth = betterAuth({
           html: `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">
               <div style="text-align: center; margin-bottom: 32px;">
-                <h1 style="font-size: 24px; font-weight: 700; color: #111; margin: 0;">Audora</h1>
+                <img src="${process.env.BETTER_AUTH_URL}/assets/audora-square-logo.png" alt="Audora" style="width: 56px; height: 56px; border-radius: 12px; margin: 0 auto;">
               </div>
               <p style="font-size: 16px; color: #333; line-height: 1.6; margin-bottom: 24px;">
                 Welcome! Here is your magic link to access your Audora dashboard. It is valid for the next 5 minutes.
               </p>
               <div style="text-align: center; margin-bottom: 32px;">
                 <a href="${url}" 
-                   style="display: inline-block; background: #7c3aed; color: #fff; text-decoration: none; padding: 14px 32px; border-radius: 12px; font-size: 16px; font-weight: 600;">
+                   style="display: inline-block; background: #4949FF; color: #fff; text-decoration: none; padding: 14px 32px; border-radius: 9999px; font-size: 16px; font-weight: 600;">
                    Go to Dashboard →
                 </a>
               </div>
