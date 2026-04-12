@@ -216,7 +216,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                       </Avatar>
                       <div className="flex-1 overflow-hidden">
                         <p className="truncate text-xs font-semibold leading-tight group-hover:text-primary transition-colors">{session.user.name}</p>
-                        <p className="truncate text-[10px] text-muted-foreground leading-tight group-hover:text-foreground/80 transition-colors uppercase tracking-tight font-medium opacity-70">Free Plan</p>
+                        {/* <p className="truncate text-[10px] text-muted-foreground leading-tight group-hover:text-foreground/80 transition-colors uppercase tracking-tight font-medium opacity-70">Free Plan</p> */}
                       </div>
                       <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-foreground shrink-0 transition-colors" />
                     </div>
@@ -240,7 +240,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                     </Avatar>
                     <div className="flex-1 overflow-hidden">
                       <p className="truncate text-sm font-bold leading-none mb-1 text-foreground">{session.user.name}</p>
-                      <p className="truncate text-[11px] text-muted-foreground leading-none font-medium capitalize prose-sm">Personal Account</p>
+                      {/* <p className="truncate text-[11px] text-muted-foreground leading-none font-medium capitalize prose-sm">Personal Account</p> */}
                     </div>
                   </div>
                 </div>
@@ -249,9 +249,9 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
                 {/* Theme Toggle Section - Premium Tabs */}
                 <div className="p-2 bg-muted/10">
-                  <Tabs 
-                    value={mounted ? theme : "system"} 
-                    onValueChange={(v) => setTheme(v)} 
+                  <Tabs
+                    value={mounted ? theme : "system"}
+                    onValueChange={(v) => setTheme(v)}
                     className="w-full"
                   >
                     <TabsList className="w-full h-8 bg-muted/40 p-1 border border-border/20">

@@ -9,7 +9,7 @@ export const auth = betterAuth({
 
   // Keep emailAndPassword enabled ONLY for admin seed script.
   // UI does NOT expose email+password forms — only Social & Magic Link.
-  emailAndPassword: { enabled: true },
+  emailAndPassword: { enabled: false },
 
   user: {
     changeEmail: {
@@ -36,7 +36,7 @@ export const auth = betterAuth({
   account: {
     accountLinking: {
       enabled: true,
-      trustedProviders: ["google", "github", "email-password"],
+      trustedProviders: ["google", "github"],
     },
   },
 
