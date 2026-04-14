@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { authClient, useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
@@ -24,6 +26,7 @@ import {
   Loader2,
   Check,
   Unlink,
+  Panda,
 } from "lucide-react";
 
 // Google SVG icon component
@@ -61,6 +64,13 @@ export default function AccountPage() {
   const [name, setName] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
+  const [updatingAvatar, setUpdatingAvatar] = useState<string | null>(null);
+
+  // Generate 15 stable but "random" seeds for the gallery (5x3 grid)
+  const [avatarSeeds] = useState(() =>
+    Array.from({ length: 15 }, (_, i) => `seed-${i + 1}`)
+  );
 
   // Email state
   const [newEmail, setNewEmail] = useState("");
@@ -124,6 +134,23 @@ export default function AccountPage() {
     }
   };
 
+  const handleSelectAvatar = async (seed: string) => {
+    const newImageUrl = `https://api.dicebear.com/9.x/thumbs/svg?seed=${seed}`;
+    setUpdatingAvatar(seed);
+    try {
+      await authClient.updateUser({
+        image: newImageUrl,
+      });
+      setImageUrl(newImageUrl);
+      toast.success("Profile picture updated");
+      setAvatarModalOpen(false);
+    } catch {
+      toast.error("Failed to update profile picture");
+    } finally {
+      setUpdatingAvatar(null);
+    }
+  };
+
   const handleChangeEmail = async () => {
     if (!newEmail) return;
     setEmailLoading(true);
@@ -173,12 +200,12 @@ export default function AccountPage() {
     try {
       await authClient.unlinkAccount({ providerId });
       setAccounts((prev) => prev.filter((a) => a.providerId !== providerId));
-      
+
       let providerName = "Account";
       if (providerId === "google") providerName = "Google";
       else if (providerId === "github") providerName = "GitHub";
       else if (providerId === "credential") providerName = "Credential";
-      
+
       toast.success(`${providerName} account unlinked`);
     } catch {
       toast.error("Failed to unlink account. You must have at least one linked account.");
@@ -257,18 +284,68 @@ export default function AccountPage() {
               />
             </div>
 
-            {/* Image URL */}
-            <div className="space-y-2">
-              <Label htmlFor="image" className="text-xs text-muted-foreground">
-                Avatar URL
-              </Label>
-              <Input
-                id="image"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://example.com/avatar.jpg"
-                className="h-9 text-sm bg-background/50"
-              />
+            {/* Change Avatar Button */}
+            <div className="flex items-center gap-3 pt-1">
+              <Dialog open={avatarModalOpen} onOpenChange={setAvatarModalOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 text-xs gap-2">
+                    <Panda className="h-3.5 w-3.5 text-primary" />
+                    Choose Your Avatar
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
+                  <DialogHeader className="px-6 pt-6 pb-2">
+                    <DialogTitle className="font-heading text-xl">Choose Avatar</DialogTitle>
+                    <DialogDescription>
+                      Select an avatar from the DiceBear Thumbs collection. Your profile will update automatically.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="flex-1 overflow-y-auto px-6 py-4">
+                    <div className="grid grid-cols-5 gap-3">
+                      {avatarSeeds.map((seed) => {
+                        const url = `https://api.dicebear.com/9.x/thumbs/svg?seed=${seed}`;
+                        const isUpdating = updatingAvatar === seed;
+
+                        return (
+                          <button
+                            key={seed}
+                            onClick={() => handleSelectAvatar(seed)}
+                            disabled={!!updatingAvatar}
+                            className={cn(
+                              "relative group aspect-square rounded-xl overflow-hidden border-2 transition-all p-1",
+                              imageUrl === url
+                                ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                                : "border-border/40 hover:border-primary/50 hover:bg-muted/50"
+                            )}
+                          >
+                            <Image
+                              src={url}
+                              alt={`Avatar ${seed}`}
+                              fill
+                              className={cn(
+                                "object-cover transition-transform duration-300 group-hover:scale-110 p-1.5",
+                                isUpdating && "opacity-20"
+                              )}
+                              sizes="100px"
+                            />
+                            {isUpdating && (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="p-6 border-t border-border/40 bg-muted/20 flex justify-end">
+                    <Button variant="ghost" size="sm" onClick={() => setAvatarModalOpen(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
 
             <div className="flex justify-end">
