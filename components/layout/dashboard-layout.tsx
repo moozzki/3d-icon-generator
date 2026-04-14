@@ -64,7 +64,10 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCollapsed(saved === "true");
     }
-    const timer = setTimeout(() => setEnableTransition(true), 50);
+    // Delay transitions until after hydration and after we've restored the state
+    const timer = setTimeout(() => {
+      setEnableTransition(true);
+    }, 200);
     return () => clearTimeout(timer);
   }, []);
 
@@ -217,7 +220,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                       </Avatar>
                       <div className="flex-1 overflow-hidden">
                         <p className="truncate text-xs font-semibold leading-tight group-hover:text-primary transition-colors">{session.user.name}</p>
-                        {/* <p className="truncate text-[10px] text-muted-foreground leading-tight group-hover:text-foreground/80 transition-colors uppercase tracking-tight font-medium opacity-70">Free Plan</p> */}
+                        <p className="truncate text-[10px] text-muted-foreground leading-tight group-hover:text-foreground/80 transition-colors tracking-tight font-medium opacity-70">{session.user.email}</p>
                       </div>
                       <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-foreground shrink-0 transition-colors" />
                     </div>
@@ -241,7 +244,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                     </Avatar>
                     <div className="flex-1 overflow-hidden">
                       <p className="truncate text-sm font-bold leading-none mb-1 text-foreground">{session.user.name}</p>
-                      {/* <p className="truncate text-[11px] text-muted-foreground leading-none font-medium capitalize prose-sm">Personal Account</p> */}
+                      <p className="truncate text-[11px] text-muted-foreground leading-none font-medium prose-sm">{session.user.email}</p>
                     </div>
                   </div>
                 </div>
@@ -315,7 +318,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         </aside>
 
         {/* ── Main area (sidebar offset) ───────────────────────── */}
-        <div className={cn("flex flex-1 flex-col w-full", enableTransition ? "transition-all duration-200" : "", mainOffset)}>
+        <div className={cn(
+          "flex flex-1 flex-col w-full",
+          enableTransition ? "transition-all duration-200" : "",
+          mainOffset
+        )}>
           {/* ── Top Header ───────────────────────────────────────── */}
           <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border/50 bg-card/60 backdrop-blur-md px-4 md:px-6 shrink-0">
             {/* Left: Page breadcrumb / title Add Mobile Menu Control */}

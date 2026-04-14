@@ -114,7 +114,7 @@ export default function LibraryPage() {
   const handleDownload = async (item: Generation) => {
     if (!item.resultImageUrl) return;
     try {
-      const filename = `audora-${item.jobId}.png`;
+      const filename = `audora-${item.quality.toLowerCase()}-${item.jobId}.png`;
       const downloadUrl = `/api/download?url=${encodeURIComponent(item.resultImageUrl)}&filename=${filename}`;
 
       const link = document.createElement("a");
@@ -178,11 +178,13 @@ export default function LibraryPage() {
         </div>
 
         {/* ── Grid Section ───────────────────────────────────── */}
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence mode="wait">
           {/* Loading Skeleton */}
           {isLoading && (
             <motion.div
-              layout
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 w-full"
             >
               {Array.from({ length: 8 }).map((_, i) => (
@@ -209,7 +211,9 @@ export default function LibraryPage() {
           {/* Grid of results */}
           {!isLoading && !isError && filteredLibrary.length > 0 && (
             <motion.div
-              layout
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 w-full"
             >
               {filteredLibrary.map((item, index) => {
@@ -298,8 +302,10 @@ export default function LibraryPage() {
           {/* Empty State */}
           {!isLoading && !isError && filteredLibrary.length === 0 && (
             <motion.div
+              key="empty"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.4 }}
               className="flex flex-1 flex-col items-center justify-center w-full min-h-[50vh] gap-4"
             >

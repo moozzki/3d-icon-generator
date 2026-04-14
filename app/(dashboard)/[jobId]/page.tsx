@@ -126,6 +126,8 @@ export default function StudioDetailPage() {
   const [aiModel] = useState<AiModelId>("flux-2-pro");
   const [copied, setCopied] = useState(false);
   const [isPromptExpanded, setIsPromptExpanded] = useState(true);
+  const [lastJobId, setLastJobId] = useState<string | null>(null);
+  const [lastQuality, setLastQuality] = useState<string | null>(null);
 
   const selectedModel = AI_MODELS.find((m) => m.id === aiModel)!;
   const creditCost = getCreditCost(aiModel, quality);
@@ -264,6 +266,8 @@ export default function StudioDetailPage() {
       }
 
       setResultImage(finalImageUrl);
+      setLastJobId(jobId);
+      setLastQuality(quality);
       window.dispatchEvent(new Event("credits-updated"));
       toast.success("Icon generated successfully!");
     } catch (err) {
@@ -285,9 +289,9 @@ export default function StudioDetailPage() {
   const handleDownload = async () => {
     if (!resultImage) return;
     try {
-      // Include resolution in filename so user knows what quality they downloaded
-      const resLabel = (generation?.quality ?? quality).toLowerCase(); // "2k" or "4k"
-      const filename = `audora-${resLabel}-${jobId}.png`;
+      const q = lastQuality || generation?.quality || quality;
+      const id = lastJobId || jobId;
+      const filename = `audora-${q.toLowerCase()}-${id}.png`;
       const downloadUrl = `/api/download?url=${encodeURIComponent(resultImage)}&filename=${filename}`;
 
       const link = document.createElement("a");
@@ -455,11 +459,11 @@ export default function StudioDetailPage() {
           <motion.div
             layout
             initial={false}
-            animate={{ 
+            animate={{
               width: isPromptExpanded ? "100%" : "180px",
               height: isPromptExpanded ? "auto" : "48px",
             }}
-            transition={{ 
+            transition={{
               type: "spring",
               stiffness: 300,
               damping: 35,
@@ -474,7 +478,7 @@ export default function StudioDetailPage() {
           >
             <AnimatePresence mode="wait">
               {!isPromptExpanded ? (
-                <motion.div 
+                <motion.div
                   key="collapsed"
                   initial={{ opacity: 0, scale: 0.5, y: 15 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -496,7 +500,7 @@ export default function StudioDetailPage() {
                 >
                   {/* Toggle Collapse Button - Top Center */}
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20">
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setIsPromptExpanded(false);

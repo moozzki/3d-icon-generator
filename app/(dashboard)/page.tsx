@@ -18,12 +18,6 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -43,7 +37,6 @@ import {
   MessageSquareText,
   Copy,
   Check,
-  Crop
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -103,6 +96,8 @@ export default function StudioPage() {
   const [isStyleOpen, setIsStyleOpen] = useState(false);
   const [quality, setQuality] = useState("2K");
   const [isQualityOpen, setIsQualityOpen] = useState(false);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+  const [currentJobQuality, setCurrentJobQuality] = useState<string | null>(null);
   const [aiModel] = useState<AiModelId>("flux-2-pro");
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [isPromptExpanded, setIsPromptExpanded] = useState(true);
@@ -263,6 +258,8 @@ export default function StudioPage() {
       setRemainingSeconds(0);
 
       setResultImage(finalImageUrl);
+      setCurrentJobId(jobId);
+      setCurrentJobQuality(quality);
       window.dispatchEvent(new Event("credits-updated"));
       toast.success("Icon generated successfully!");
       setIsSheetOpen(true);
@@ -281,7 +278,8 @@ export default function StudioPage() {
   const handleDownload = async () => {
     if (!resultImage) return;
     try {
-      const filename = `audora-${quality.toLowerCase()}-gen.png`;
+      const q = currentJobQuality || quality;
+      const filename = `audora-${q.toLowerCase()}-${currentJobId || "gen"}.png`;
       const downloadUrl = `/api/download?url=${encodeURIComponent(resultImage)}&filename=${filename}`;
 
       const link = document.createElement("a");
@@ -525,7 +523,7 @@ export default function StudioPage() {
                 >
                   {/* Toggle Collapse Button - Top Center */}
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 z-20">
-                    <button 
+                    <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setIsPromptExpanded(false);
@@ -770,7 +768,7 @@ export default function StudioPage() {
             </div>
 
             {/* Actions Accordion */}
-            <Accordion type="single" collapsible defaultValue="actions" className="w-full">
+            {/* <Accordion type="single" collapsible defaultValue="actions" className="w-full">
               <AccordionItem value="actions" className="border-b-0 border-t border-border/40 pt-1">
                 <AccordionTrigger className="text-[15px] font-bold hover:no-underline py-3 px-1 text-foreground">
                   Actions
@@ -786,7 +784,7 @@ export default function StudioPage() {
                   </div>
                 </AccordionContent>
               </AccordionItem>
-            </Accordion>
+            </Accordion> */}
           </div>
 
           {/* Export at bottom */}
