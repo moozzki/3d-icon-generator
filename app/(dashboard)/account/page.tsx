@@ -57,8 +57,13 @@ type AccountInfo = {
 };
 
 export default function AccountPage() {
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Profile state
   const [name, setName] = useState("");
@@ -228,12 +233,17 @@ export default function AccountPage() {
     }
   };
 
-  if (!session?.user) {
+  if (!mounted || isPending) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
+  }
+
+  if (!session?.user) {
+    router.push("/sign-in");
+    return null;
   }
 
   return (
@@ -322,6 +332,7 @@ export default function AccountPage() {
                               src={url}
                               alt={`Avatar ${seed}`}
                               fill
+                              unoptimized
                               className={cn(
                                 "object-cover transition-transform duration-300 group-hover:scale-110 p-1.5",
                                 isUpdating && "opacity-20"
