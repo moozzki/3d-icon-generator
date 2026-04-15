@@ -72,7 +72,7 @@ async function falPost(
   body: Record<string, unknown>
 ): Promise<FalResponse> {
   let response: Response | null = null;
-  
+
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       response = await fetch(`${FAL_BASE}/${endpoint}`, {
@@ -150,7 +150,7 @@ async function falPostQueueInngest(
   // 2. Poll for completion via durable sleeps
   let status = "IN_PROGRESS";
   while (status !== "COMPLETED") {
-    await step.sleep(`${stepPrefix}-sleep`, "3s");
+    await step.sleep(`${stepPrefix}-sleep`, "1s");
 
     status = await step.run(`${stepPrefix}-check-status`, async () => {
       let statusRes: Response | null = null;
@@ -166,7 +166,7 @@ async function falPostQueueInngest(
       if (!statusRes.ok) return "IN_PROGRESS"; // Transient API error, keep polling
 
       const statusData = (await statusRes.json()) as { status: string };
-      
+
       if (statusData.status === "FAILED") {
         throw new NonRetriableError(
           `Fal queue [${endpoint}] job ${request_id} failed on Fal.ai side.`
@@ -351,7 +351,7 @@ export const iconGenerate = inngest.createFunction(
         const res = await fetch(baseUrl);
         if (!res.ok) throw new Error("Failed to download base image from Fal.ai");
         const inputBuffer = Buffer.from(await res.arrayBuffer());
-        
+
         const sharpInstance = sharp(inputBuffer).png({ compressionLevel: 9, quality: 100 });
         const buffer = await sharpInstance.toBuffer();
 
@@ -502,8 +502,8 @@ async function finalizeJob({
   //    Note: credits were already deducted upfront at the API layer
   await db
     .update(generations)
-    .set({ 
-      status: "completed", 
+    .set({
+      status: "completed",
       resultImageUrl: cdnUrl,
       ...(baseImageUrl ? { baseImageUrl } : {})
     })
