@@ -71,14 +71,27 @@ async function falPost(
   endpoint: string,
   body: Record<string, unknown>
 ): Promise<FalResponse> {
-  const response = await fetch(`${FAL_BASE}/${endpoint}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Key ${process.env.FAL_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  let response: Response | null = null;
+  
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      response = await fetch(`${FAL_BASE}/${endpoint}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Key ${process.env.FAL_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      break;
+    } catch (err) {
+      if (attempt === 3) throw err;
+      console.warn(`[falPost] submit failed attempt ${attempt}:`, err);
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+
+  if (!response) throw new Error(`Failed to POST to [${endpoint}]`);
 
   if (!response.ok) {
     const errText = await response.text();
@@ -101,15 +114,27 @@ async function falPostQueue(
 ): Promise<FalResponse> {
   const authHeader = `Key ${process.env.FAL_KEY}`;
 
-  // 1. Submit to queue
-  const submitRes = await fetch(`${FAL_QUEUE_BASE}/${endpoint}`, {
-    method: "POST",
-    headers: {
-      Authorization: authHeader,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  // 1. Submit to queue (with retries for ECONNRESET)
+  let submitRes: Response | null = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      submitRes = await fetch(`${FAL_QUEUE_BASE}/${endpoint}`, {
+        method: "POST",
+        headers: {
+          Authorization: authHeader,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+      break; // Success
+    } catch (err) {
+      if (attempt === 3) throw err;
+      console.warn(`[falPostQueue] submit failed attempt ${attempt}:`, err);
+      await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+
+  if (!submitRes) throw new Error("Failed to submit to fal queue");
 
   if (!submitRes.ok) {
     const errText = await submitRes.text();
@@ -124,10 +149,17 @@ async function falPostQueue(
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, pollIntervalMs));
 
-    const statusRes = await fetch(
-      `${FAL_QUEUE_BASE}/${endpoint}/requests/${request_id}/status`,
-      { headers: { Authorization: authHeader } }
-    );
+    let statusRes: Response | null = null;
+    try {
+      statusRes = await fetch(
+        `${FAL_QUEUE_BASE}/${endpoint}/requests/${request_id}/status`,
+        { headers: { Authorization: authHeader } }
+      );
+    } catch (err) {
+      console.warn(`[falPostQueue] status poll error for ${request_id}:`, err);
+      // Transient error (like ECONNRESET) — keep polling
+      continue;
+    }
 
     if (!statusRes.ok) {
       // Transient status check failure — keep polling
@@ -137,11 +169,23 @@ async function falPostQueue(
     const statusData = (await statusRes.json()) as { status: string };
 
     if (statusData.status === "COMPLETED") {
-      // 3. Fetch the result
-      const resultRes = await fetch(
-        `${FAL_QUEUE_BASE}/${endpoint}/requests/${request_id}`,
-        { headers: { Authorization: authHeader } }
-      );
+      // 3. Fetch the result (with retries)
+      let resultRes: Response | null = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          resultRes = await fetch(
+            `${FAL_QUEUE_BASE}/${endpoint}/requests/${request_id}`,
+            { headers: { Authorization: authHeader } }
+          );
+          break;
+        } catch (err) {
+          if (attempt === 3) throw err;
+          console.warn(`[falPostQueue] result fetch error ${request_id}:`, err);
+          await new Promise(r => setTimeout(r, 1000));
+        }
+      }
+
+      if (!resultRes) throw new Error("Failed to fetch result");
 
       if (!resultRes.ok) {
         const errText = await resultRes.text();

@@ -2,6 +2,8 @@ import { serve } from "inngest/next";
 import { inngest } from "@/lib/inngest/client";
 import { iconGenerate } from "@/lib/inngest/functions";
 
+export const maxDuration = 60; // Extend Vercel runtime limit
+
 export const { GET, POST, PUT } = serve({
   client: inngest,
   functions: [iconGenerate],
