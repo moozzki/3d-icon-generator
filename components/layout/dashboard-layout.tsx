@@ -106,15 +106,15 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
     { name: "Library", href: "/library", icon: Images },
   ];
 
-  const sidebarWidth = collapsed ? "w-[60px]" : "w-[200px]";
-  const mainOffset = collapsed ? "md:pl-[60px]" : "md:pl-[200px]";
+  const sidebarWidth = collapsed ? "w-[60px]" : "w-[220px]";
+  const mainOffset = collapsed ? "md:pl-[60px]" : "md:pl-[220px]";
 
   const renderSidebarContent = (isMobile = false) => {
     const isCollapsed = !isMobile && collapsed;
     return (
       <div className="flex flex-col h-full bg-card/50">
         {/* Logo */}
-        <div className={cn("flex h-14 items-center border-b border-border/40 shrink-0", isCollapsed ? "justify-center px-2" : "px-5")}>
+        <div className={cn("flex h-14 items-center border-b border-border/40 shrink-0 overflow-hidden", isCollapsed ? "justify-center px-2" : "px-5")}>
           {isCollapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -143,18 +143,19 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 className="w-7 h-7 object-contain group-hover:opacity-80 transition-opacity shrink-0"
                 priority
               />
-              <span className="font-heading text-lg font-bold tracking-tight">Audora</span>
+              <span className={cn("font-heading text-lg font-bold tracking-tight whitespace-nowrap transition-opacity duration-200", isCollapsed ? "opacity-0" : "opacity-100")}>Audora</span>
             </Link>
           )}
         </div>
 
         {/* Nav */}
-        <nav className={cn("flex-1 py-5 space-y-0.5", isCollapsed ? "px-1.5" : "px-3")}>
-          {!isCollapsed && (
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 px-3 mb-3">
-              Workspace
-            </p>
-          )}
+        <nav className={cn("flex-1 py-5 space-y-0.5 overflow-hidden", isCollapsed ? "px-1.5" : "px-3")}>
+          <p className={cn(
+            "text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 px-3 mb-3 whitespace-nowrap transition-opacity duration-200 overflow-hidden",
+            isCollapsed ? "opacity-0 h-0 mb-0" : "opacity-100"
+          )}>
+            Workspace
+          </p>
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             const linkContent = (
@@ -163,7 +164,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 href={item.href}
                 onClick={() => isMobile && setMobileMenuOpen(false)}
                 className={cn(
-                  "flex items-center rounded-lg text-sm font-medium transition-all duration-150",
+                  "flex items-center rounded-lg text-sm font-medium transition-colors duration-150 whitespace-nowrap overflow-hidden",
                   isCollapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2",
                   isActive
                     ? "bg-primary/10 text-primary"
@@ -176,7 +177,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                     isActive ? "text-primary" : "text-muted-foreground"
                   )}
                 />
-                {!isCollapsed && item.name}
+                {!isCollapsed && <span className="transition-opacity duration-200">{item.name}</span>}
               </Link>
             );
 
@@ -196,7 +197,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         </nav>
 
         {/* User */}
-        <div className={cn("border-t border-border/40 mt-auto", isCollapsed ? "px-1.5 pt-3 pb-8 flex justify-center" : "px-4 pb-5 pt-4")}>
+        <div className={cn("border-t border-border/40 mt-auto overflow-hidden", isCollapsed ? "px-1.5 pt-3 pb-8 flex justify-center" : "px-4 pb-5 pt-4")}>
           {sessionLoading ? (
             /* Skeleton while session is resolving */
             isCollapsed ? (
@@ -323,8 +324,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen bg-background text-foreground">
         {/* ── Sidebar (Desktop) ─────────────────────────────────────────── */}
         <aside className={cn(
-          "hidden md:flex flex-col border-r border-border/50 bg-card/50 backdrop-blur-sm fixed inset-y-0 left-0 z-20",
-          enableTransition ? "transition-all duration-200" : "",
+          "hidden md:flex flex-col border-r border-border/50 bg-card/50 backdrop-blur-sm fixed inset-y-0 left-0 z-40 overflow-hidden",
+          enableTransition ? "transition-[width] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]" : "",
           sidebarWidth
         )}>
           {renderSidebarContent()}
@@ -333,11 +334,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         {/* ── Main area (sidebar offset) ───────────────────────── */}
         <div className={cn(
           "flex flex-1 flex-col w-full",
-          enableTransition ? "transition-all duration-200" : "",
+          enableTransition ? "transition-[padding-left] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)]" : "",
           mainOffset
         )}>
           {/* ── Top Header ───────────────────────────────────────── */}
-          <header className="sticky top-0 z-10 flex h-14 items-center justify-between border-b border-border/50 bg-card/60 backdrop-blur-md px-4 md:px-6 shrink-0">
+          <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border/50 bg-card/60 backdrop-blur-md px-4 md:px-6 shrink-0">
             {/* Left: Page breadcrumb / title Add Mobile Menu Control */}
             <div className="flex items-center gap-3">
               {/* Desktop toggle button */}
