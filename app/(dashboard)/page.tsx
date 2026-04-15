@@ -37,6 +37,9 @@ import {
   MessageSquareText,
   Copy,
   Check,
+  Download,
+  Loader2,
+  Eraser,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -103,6 +106,7 @@ export default function StudioPage() {
   const [isPromptExpanded, setIsPromptExpanded] = useState(true);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isRemovingBg, setIsRemovingBg] = useState(false);
 
   // Progress bar state
   const [progress, setProgress] = useState(0);
@@ -188,7 +192,7 @@ export default function StudioPage() {
   }, []);
 
   const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+    if (!prompt.trim() && !referenceImage) return;
     setIsGenerating(true);
     setResultImage(null);
     setProgress(0);
@@ -229,26 +233,57 @@ export default function StudioPage() {
 
       const { jobId } = data;
 
-      // Polling loop
+      // Polling loop — resilient to transient errors
       let status = "pending";
       let finalImageUrl = null;
+      let consecutiveErrors = 0;
+      const MAX_ERRORS = 5;
 
       while (status === "pending") {
-        await new Promise((resolve) => setTimeout(resolve, 2000)); // wait 2s
-        const pollRes = await fetch(`/api/job-status?jobId=${jobId}`);
-        if (!pollRes.ok) {
-          throw new Error("Failed to check job status.");
-        }
-        const pollData = await pollRes.json();
-        status = pollData.status;
+        await new Promise((resolve) => setTimeout(resolve, 3000)); // wait 3s
+        try {
+          const pollRes = await fetch(`/api/job-status?jobId=${jobId}`);
 
-        if (status === "completed") {
-          finalImageUrl = pollData.resultImageUrl;
-        } else if (status === "failed") {
-          // Surface the failure reason if available (set by onFailure or content policy)
-          const reason = pollData.failReason
-            ?? "Generation failed. Your credits have been refunded.";
-          throw new Error(reason);
+          if (pollRes.status === 404) {
+            // Job row not yet written to DB — treat as still pending
+            consecutiveErrors = 0; // reset, not a real error
+            continue;
+          }
+
+          if (!pollRes.ok) {
+            consecutiveErrors++;
+            if (consecutiveErrors >= MAX_ERRORS) {
+              throw new Error("Failed to check job status after multiple attempts.");
+            }
+            continue; // retry on transient server errors
+          }
+
+          consecutiveErrors = 0;
+          const pollData = await pollRes.json();
+          status = pollData.status;
+
+          if (status === "completed") {
+            finalImageUrl = pollData.resultImageUrl;
+          } else if (status === "failed") {
+            const reason = pollData.failReason
+              ?? "Generation failed. Your credits have been refunded.";
+            throw new Error(reason);
+          }
+        } catch (pollErr) {
+          // Re-throw known errors (failed status, max retries exceeded)
+          if (status === "failed") {
+            throw pollErr;
+          }
+          if (pollErr instanceof Error && (
+            pollErr.message.includes("multiple attempts")
+          )) {
+            throw pollErr;
+          }
+          // Network-level error — retry
+          consecutiveErrors++;
+          if (consecutiveErrors >= MAX_ERRORS) {
+            throw new Error("Failed to check job status after multiple attempts.");
+          }
         }
       }
 
@@ -292,6 +327,39 @@ export default function StudioPage() {
       toast.success("Download started!");
     } catch {
       toast.error("Failed to download image.");
+    }
+  };
+
+  const handleDownloadTransparent = async () => {
+    if (!currentJobId) return;
+    setIsRemovingBg(true);
+    try {
+      const res = await fetch("/api/remove-bg", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: currentJobId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to remove background");
+
+      const q = currentJobQuality || quality;
+      const filename = `audora-${q.toLowerCase()}-${currentJobId}-transparent.png`;
+      const downloadUrl = `/api/download?url=${encodeURIComponent(data.url)}&filename=${filename}`;
+
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success("Transparent download started!");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to remove background";
+      toast.error(message);
+    } finally {
+      setIsRemovingBg(false);
     }
   };
 
@@ -685,7 +753,7 @@ export default function StudioPage() {
                       <Button
                         size="icon"
                         onClick={handleGenerate}
-                        disabled={isGenerating || !prompt.trim()}
+                        disabled={isGenerating || (!prompt.trim() && !referenceImage)}
                         className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl shadow-sm hover:shadow-primary/20 transition-all shrink-0 ml-auto"
                       >
                         {isGenerating ? (
@@ -767,31 +835,38 @@ export default function StudioPage() {
               </div>
             </div>
 
-            {/* Actions Accordion */}
-            {/* <Accordion type="single" collapsible defaultValue="actions" className="w-full">
-              <AccordionItem value="actions" className="border-b-0 border-t border-border/40 pt-1">
-                <AccordionTrigger className="text-[15px] font-bold hover:no-underline py-3 px-1 text-foreground">
-                  Actions
-                </AccordionTrigger>
-                <AccordionContent className="pb-4 pt-1">
-                  <div className="flex flex-col gap-0.5">
-                    <Button variant="ghost" className="w-full justify-start h-9 px-2 text-[13px] font-medium gap-3 hover:bg-muted/60" disabled>
-                      <Crop className="w-4 h-4 text-muted-foreground" /> Remove background
-                    </Button>
-                    <Button variant="ghost" className="w-full justify-start h-9 px-2 text-[13px] font-medium gap-3 hover:bg-muted/60" disabled>
-                      <Maximize className="w-4 h-4 text-muted-foreground" /> Upscale
-                    </Button>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion> */}
           </div>
 
           {/* Export at bottom */}
           <div className="p-4 pt-3 border-t border-border/50 bg-background mt-auto">
-            <Button className="w-full font-semibold rounded-xl h-10 shadow-sm text-sm" onClick={handleDownload}>
-              Download Image
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="w-full font-semibold rounded-xl h-10 shadow-sm text-sm gap-2" disabled={isRemovingBg}>
+                  {isRemovingBg ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Removing Background...</>
+                  ) : (
+                    <><Download className="w-4 h-4" /> Download Image <ChevronDown className="w-3 h-3 opacity-60 ml-auto" /></>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="w-[calc(260px-2rem)] sm:w-[calc(280px-2rem)] rounded-xl">
+                <DropdownMenuItem onClick={handleDownload} className="gap-3 py-2.5 cursor-pointer">
+                  <Download className="w-4 h-4 text-muted-foreground" />
+                  <div className="flex flex-col">
+                    <span className="text-[13px] font-medium">Original Background</span>
+                    <span className="text-[11px] text-muted-foreground">White background · PNG</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleDownloadTransparent} disabled={isRemovingBg} className="gap-3 py-2.5 cursor-pointer">
+                  <Eraser className="w-4 h-4 text-muted-foreground" />
+                  <div className="flex flex-col">
+                    <span className="text-[13px] font-medium">Transparent Background</span>
+                    <span className="text-[11px] text-muted-foreground">No background · PNG</span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </SheetContent>
       </Sheet>

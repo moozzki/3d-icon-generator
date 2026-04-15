@@ -27,9 +27,10 @@ type IconGenerateEvent = {
 // ---------------------------------------------------------------------------
 
 const FAL_BASE = "https://fal.run";
+const FAL_QUEUE_BASE = "https://queue.fal.run";
 
 // ---------------------------------------------------------------------------
-// Helper: call Fal.ai
+// Helper: call Fal.ai (synchronous — for fast endpoints like upscale)
 // ---------------------------------------------------------------------------
 
 type FalResponse = {
@@ -38,6 +39,33 @@ type FalResponse = {
   url?: string;
   [key: string]: unknown;
 };
+
+function handleFalError(endpoint: string, status: number, errText: string): never {
+  // 422 Content Policy Violation — do NOT retry, fail immediately
+  if (status === 422) {
+    let userMessage = "Your prompt was flagged by the content policy. Please revise and try again.";
+    try {
+      const errJson = JSON.parse(errText);
+      const detail = errJson?.detail?.[0];
+      if (detail?.type === "content_policy_violation") {
+        userMessage = "Content policy violation: your prompt contains material that cannot be processed. Please remove brand names, logos, or sensitive content and try again.";
+      }
+    } catch { /* ignore JSON parse fails */ }
+    throw new NonRetriableError(userMessage);
+  }
+
+  // Other 4xx errors — also non-retriable (won't succeed on retry)
+  if (status >= 400 && status < 500) {
+    throw new NonRetriableError(
+      `Fal API [${endpoint}] client error (${status}): ${errText}`
+    );
+  }
+
+  // 5xx — retriable (transient server errors)
+  throw new Error(
+    `Fal API [${endpoint}] server error (${status}): ${errText}`
+  );
+}
 
 async function falPost(
   endpoint: string,
@@ -54,34 +82,85 @@ async function falPost(
 
   if (!response.ok) {
     const errText = await response.text();
-
-    // 422 Content Policy Violation — do NOT retry, fail immediately
-    if (response.status === 422) {
-      let userMessage = "Your prompt was flagged by the content policy. Please revise and try again.";
-      try {
-        const errJson = JSON.parse(errText);
-        const detail = errJson?.detail?.[0];
-        if (detail?.type === "content_policy_violation") {
-          userMessage = "Content policy violation: your prompt contains material that cannot be processed. Please remove brand names, logos, or sensitive content and try again.";
-        }
-      } catch { /* ignore JSON parse fails */ }
-      throw new NonRetriableError(userMessage);
-    }
-
-    // Other 4xx errors — also non-retriable (won't succeed on retry)
-    if (response.status >= 400 && response.status < 500) {
-      throw new NonRetriableError(
-        `Fal API [${endpoint}] client error (${response.status}): ${errText}`
-      );
-    }
-
-    // 5xx — retriable (transient server errors)
-    throw new Error(
-      `Fal API [${endpoint}] server error (${response.status}): ${errText}`
-    );
+    handleFalError(endpoint, response.status, errText);
   }
 
   return response.json();
+}
+
+// ---------------------------------------------------------------------------
+// Helper: call Fal.ai via Queue API (for large payloads / long-running jobs)
+//   Submit → Poll status → Fetch result.  Avoids TCP timeout / ECONNRESET.
+// ---------------------------------------------------------------------------
+
+async function falPostQueue(
+  endpoint: string,
+  body: Record<string, unknown>,
+  pollIntervalMs = 3000,
+  maxWaitMs = 180_000
+): Promise<FalResponse> {
+  const authHeader = `Key ${process.env.FAL_KEY}`;
+
+  // 1. Submit to queue
+  const submitRes = await fetch(`${FAL_QUEUE_BASE}/${endpoint}`, {
+    method: "POST",
+    headers: {
+      Authorization: authHeader,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!submitRes.ok) {
+    const errText = await submitRes.text();
+    handleFalError(endpoint, submitRes.status, errText);
+  }
+
+  const { request_id } = (await submitRes.json()) as { request_id: string };
+  if (!request_id) throw new Error(`Fal queue [${endpoint}] returned no request_id`);
+
+  // 2. Poll for completion
+  const deadline = Date.now() + maxWaitMs;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, pollIntervalMs));
+
+    const statusRes = await fetch(
+      `${FAL_QUEUE_BASE}/${endpoint}/requests/${request_id}/status`,
+      { headers: { Authorization: authHeader } }
+    );
+
+    if (!statusRes.ok) {
+      // Transient status check failure — keep polling
+      continue;
+    }
+
+    const statusData = (await statusRes.json()) as { status: string };
+
+    if (statusData.status === "COMPLETED") {
+      // 3. Fetch the result
+      const resultRes = await fetch(
+        `${FAL_QUEUE_BASE}/${endpoint}/requests/${request_id}`,
+        { headers: { Authorization: authHeader } }
+      );
+
+      if (!resultRes.ok) {
+        const errText = await resultRes.text();
+        handleFalError(endpoint, resultRes.status, errText);
+      }
+
+      return resultRes.json();
+    }
+
+    if (statusData.status === "FAILED") {
+      throw new NonRetriableError(
+        `Fal queue [${endpoint}] job ${request_id} failed on Fal.ai side.`
+      );
+    }
+
+    // IN_QUEUE or IN_PROGRESS — keep polling
+  }
+
+  throw new Error(`Fal queue [${endpoint}] timed out after ${maxWaitMs / 1000}s`);
 }
 
 // ---------------------------------------------------------------------------
@@ -185,17 +264,31 @@ export const iconGenerate = inngest.createFunction(
       // Step 1: Generate base image at 1K
       const baseUrl = await step.run("generate-base-flux-1k", async () => {
         if (referenceImage) {
+          // Download the reference image from R2 and encode it as a base64 data URI.
+          // Fal.ai explicitly supports data URI file inputs, which avoids any CDN
+          // accessibility issues that arise when Fal.ai tries to fetch from our CDN.
+          const refRes = await fetch(referenceImage);
+          if (!refRes.ok) throw new Error(`Failed to download reference image from CDN: ${refRes.status}`);
+          const refBuffer = await refRes.arrayBuffer();
+          const contentType = refRes.headers.get("content-type") || "image/png";
+          const base64 = Buffer.from(refBuffer).toString("base64");
+          const dataUri = `data:${contentType};base64,${base64}`;
+
           const body: Record<string, unknown> = {
             prompt,
-            image_urls: [referenceImage],
+            image_urls: [dataUri],
             image_size: "square_hd",
             output_format: "png",
             safety_tolerance: "5",
             enable_safety_checker: false,
           };
-          const json = await falPost("fal-ai/flux-2-pro/edit", body);
+
+          // Use queue API to avoid TCP timeout (ECONNRESET) on large payloads.
+          // The queue accepts the payload instantly, processes async, and we poll.
+          // This also prevents Inngest retries from creating duplicate generations.
+          const json = await falPostQueue("fal-ai/flux-2-pro/edit", body);
           const url = json.images?.[0]?.url ?? json.image?.url ?? json.url;
-          if (!url) throw new Error("flux-2-pro/edit returned no image URL");
+          if (!url) throw new NonRetriableError("flux-2-pro/edit returned no image URL");
           return url as string;
         } else {
           const body: Record<string, unknown> = {

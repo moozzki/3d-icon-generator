@@ -43,7 +43,7 @@ import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLef
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
-  const { data: session } = useSession();
+  const { data: session, isPending: sessionLoading } = useSession();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
@@ -196,8 +196,21 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
         </nav>
 
         {/* User */}
-        {session?.user && (
-          <div className={cn("border-t border-border/40 mt-auto", isCollapsed ? "px-1.5 pt-3 pb-8 flex justify-center" : "px-4 pb-5 pt-4")}>
+        <div className={cn("border-t border-border/40 mt-auto", isCollapsed ? "px-1.5 pt-3 pb-8 flex justify-center" : "px-4 pb-5 pt-4")}>
+          {sessionLoading ? (
+            /* Skeleton while session is resolving */
+            isCollapsed ? (
+              <div className="h-8 w-8 rounded-full bg-muted/60 animate-pulse" />
+            ) : (
+              <div className="flex items-center gap-2.5 p-2 rounded-lg">
+                <div className="h-8 w-8 rounded-full bg-muted/60 animate-pulse shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-2.5 w-24 rounded-full bg-muted/60 animate-pulse" />
+                  <div className="h-2 w-32 rounded-full bg-muted/40 animate-pulse" />
+                </div>
+              </div>
+            )
+          ) : session?.user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 {isCollapsed ? (
@@ -299,8 +312,8 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-        )}
+          ) : null}
+        </div>
       </div>
     );
   };
@@ -365,7 +378,9 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               {/* Credit badge */}
               <div className="flex h-7 items-center gap-1.5 rounded-full bg-primary/[0.08] dark:bg-primary/[0.15] px-3 text-[11px] sm:text-xs font-bold text-primary border border-primary/10 transition-colors">
                 <Coins className="h-3.5 w-3.5" />
-                {isAdmin ? (
+                {sessionLoading ? (
+                  <div className="h-2.5 w-14 rounded-full bg-primary/20 animate-pulse" />
+                ) : isAdmin ? (
                   <span className="flex items-center gap-1">
                     <Infinity className="h-3.5 w-3.5" />
                     <span>Unlimited</span>

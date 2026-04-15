@@ -23,7 +23,7 @@ import {
   ButtonGroup,
   ButtonGroupSeparator,
 } from "@/components/ui/button-group";
-import { Search, ImageIcon, Download, Wand2, MoreVertical, Trash2 } from "lucide-react";
+import { Search, ImageIcon, Download, Wand2, MoreVertical, Trash2, Eraser, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -83,6 +83,7 @@ export default function LibraryPage() {
   const [deleteTarget, setDeleteTarget] = useState<Generation | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [removingBgJobId, setRemovingBgJobId] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -127,6 +128,38 @@ export default function LibraryPage() {
       toast.success("Download started!");
     } catch {
       toast.error("Failed to download image.");
+    }
+  };
+
+  const handleDownloadTransparent = async (item: Generation) => {
+    if (!item.jobId) return;
+    setRemovingBgJobId(item.jobId);
+    try {
+      const res = await fetch("/api/remove-bg", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: item.jobId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to remove background");
+
+      const filename = `audora-${item.quality.toLowerCase()}-${item.jobId}-transparent.png`;
+      const downloadUrl = `/api/download?url=${encodeURIComponent(data.url)}&filename=${filename}`;
+
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success("Transparent download started!");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to remove background";
+      toast.error(message);
+    } finally {
+      setRemovingBgJobId(null);
     }
   };
 
@@ -274,7 +307,21 @@ export default function LibraryPage() {
                               </Button>
                               <Button variant="ghost" size="sm" className="h-8 w-full justify-start gap-2 text-xs" onClick={() => handleDownload(item)}>
                                 <Download className="h-3.5 w-3.5 text-foreground/80" />
-                                Download
+                                Download Original
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-full justify-start gap-2 text-xs"
+                                onClick={() => handleDownloadTransparent(item)}
+                                disabled={removingBgJobId === item.jobId}
+                              >
+                                {removingBgJobId === item.jobId ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-foreground/80" />
+                                ) : (
+                                  <Eraser className="h-3.5 w-3.5 text-foreground/80" />
+                                )}
+                                {removingBgJobId === item.jobId ? "Processing..." : "Download Transparent"}
                               </Button>
                               <ButtonGroupSeparator orientation="horizontal" />
                               <Button variant="ghost" size="sm" className="h-8 w-full justify-start gap-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteTarget(item)}>

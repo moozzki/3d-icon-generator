@@ -307,7 +307,7 @@ export default function AccountPage() {
                   <DialogHeader className="px-6 pt-6 pb-2">
                     <DialogTitle className="font-heading text-xl">Choose Avatar</DialogTitle>
                     <DialogDescription>
-                      Select an avatar from the DiceBear Thumbs collection. Your profile will update automatically.
+                      Pick an avatar that matches your vibe. Your profile updates instantly.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="flex-1 overflow-y-auto px-6 py-4">

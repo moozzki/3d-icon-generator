@@ -50,6 +50,31 @@ const STYLE_MASTER_PROMPTS: Record<StyleKey, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// Master prompt templates for IMAGE-TO-IMAGE (Reference Upload)
+// Placeholders: {subject}, {position}, {quality}
+// ---------------------------------------------------------------------------
+
+const STYLE_REF_PROMPTS: Record<StyleKey, string> = {
+  plastic:
+    "Transform {subject} into a highly detailed 3D character/icon in a premium matte vinyl designer toy style. {position}, clean composition. Maintain the core identity and clothing style of the reference, but render it as a smooth, non-glossy plastic figure. Feature soft, diffused ambient lighting with minimal shadows and no harsh specular highlights. Muted, elegant color palette. Strictly isolated on a perfect, flawless, uniform, pure solid white background (#FFFFFF). Remove any original background completely, zero background noise, no artifacts. {quality}, crystal clear image.",
+
+  clay:
+    "Transform {subject} into a stylized 3D icon made of soft clay material. {position}, balanced composition. Maintain the core identity of the reference. Add slightly imperfect edges and handcrafted texture details. Rendered with soft lighting to enhance tactile depth. Strictly isolated on a perfect, flawless, uniform, pure solid white background (#FFFFFF). Remove any original background completely, zero background noise, no artifacts. {quality}, crystal clear image.",
+
+  glass:
+    "Transform {subject} into a premium 3D icon made of translucent glass material. {position}, elegant composition. Maintain the core identity of the reference. Feature realistic refraction, reflections, and light dispersion. Rendered with studio lighting. Strictly isolated on a perfect, flawless, uniform, pure solid white background (#FFFFFF) with a subtle shadow. Remove any original background completely, zero background noise, no artifacts. {quality}, crystal clear image.",
+
+  plush:
+    "Transform {subject} into a cute 3D icon in a plush fabric style. {position}, friendly and playful composition. Maintain the core identity of the reference. Feature soft fibers, fuzzy texture, and rounded shapes. Rendered with soft lighting and subtle shadow. Strictly isolated on a perfect, flawless, uniform, pure solid white background (#FFFFFF). Remove any original background completely, zero background noise, no artifacts. {quality}, crystal clear image.",
+
+  toy_block:
+    "Transform {subject} into a playful 3D icon in a toy building block style. {position}, structured composition. Maintain the core identity of the reference. Feature bold shapes, vibrant colors, and smooth interlocking surfaces. Rendered with soft lighting. Strictly isolated on a perfect, flawless, uniform, pure solid white background (#FFFFFF). Remove any original background completely, zero background noise, no artifacts. {quality}, crystal clear image.",
+
+  metallic:
+    "Transform {subject} into a high-end 3D icon in a metallic chrome material style. {position}, strong composition. Maintain the core identity of the reference. Feature polished surfaces, sharp reflections, realistic highlights, and subtle shadow. Rendered with studio lighting. Strictly isolated on a perfect, flawless, uniform, pure solid white background (#FFFFFF). Remove any original background completely, zero background noise, no artifacts. {quality}, crystal clear image.",
+};
+
+// ---------------------------------------------------------------------------
 // Prompt builder
 // ---------------------------------------------------------------------------
 
@@ -63,6 +88,32 @@ function buildEngineeredPrompt(
   const template = STYLE_MASTER_PROMPTS[style];
   return template
     .replace("{subject}", userPrompt)
+    .replace("{position}", positionLabel)
+    .replace("{quality}", quality);
+}
+
+// ---------------------------------------------------------------------------
+// Prompt builder specifically for Reference Image workflow
+// ---------------------------------------------------------------------------
+
+function buildRefEngineeredPrompt(
+  userPrompt: string | undefined | null,
+  style: StyleKey,
+  position: string,
+  quality: string
+): string {
+  // Graceful fallback for empty inputs
+  const rawSubject = userPrompt?.trim() || "";
+  const finalSubject = rawSubject !== ""
+    ? rawSubject
+    : "the exact main subject from the provided reference image";
+
+  // Re-map position parameter
+  const positionLabel = POSITION_PROMPTS[position] ?? position;
+  const template = STYLE_REF_PROMPTS[style];
+
+  return template
+    .replace("{subject}", finalSubject)
     .replace("{position}", positionLabel)
     .replace("{quality}", quality);
 }
@@ -126,8 +177,12 @@ export async function POST(request: Request) {
     } = await request.json();
 
     // 2. Validate parameters
+    //    userPrompt is optional when a referenceImage is provided (I2I fallback)
+    const hasPrompt = !!userPrompt?.trim();
+    const hasReference = !!referenceImage;
+
     if (
-      !userPrompt?.trim() ||
+      (!hasPrompt && !hasReference) ||
       !POSITION_PROMPTS[position] ||
       !STYLE_MASTER_PROMPTS[style as StyleKey] ||
       !VALID_QUALITIES.includes(quality) ||
@@ -169,13 +224,20 @@ export async function POST(request: Request) {
         .where(eq(userCredits.userId, session.user.id));
     }
 
-    // 6. Build engineered prompt (style-specific master template)
-    const engineeredPrompt = buildEngineeredPrompt(
-      userPrompt.trim(),
-      style as StyleKey,
-      position,
-      quality
-    );
+    // 6. Build engineered prompt — branch T2I vs I2I based on referenceImage
+    const engineeredPrompt = hasReference
+      ? buildRefEngineeredPrompt(
+          userPrompt?.trim(),
+          style as StyleKey,
+          position,
+          quality
+        )
+      : buildEngineeredPrompt(
+          userPrompt.trim(),
+          style as StyleKey,
+          position,
+          quality
+        );
 
     // 7. Insert pending generation row & dispatch job
     const jobId = crypto.randomUUID();

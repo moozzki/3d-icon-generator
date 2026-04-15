@@ -92,6 +92,7 @@ export const generations = pgTable("generations", {
   failReason: text("fail_reason"),    // Human-readable error reason for failed jobs
   baseImageUrl: text("base_image_url"),
   resultImageUrl: text("result_image_url"),
+  transparentImageUrl: text("transparent_image_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
