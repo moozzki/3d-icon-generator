@@ -103,109 +103,106 @@ async function falPost(
 
 // ---------------------------------------------------------------------------
 // Helper: call Fal.ai via Queue API (for large payloads / long-running jobs)
-//   Submit → Poll status → Fetch result.  Avoids TCP timeout / ECONNRESET.
+//   Using Inngest step.run and step.sleep to avoid Vercel timeouts.
 // ---------------------------------------------------------------------------
 
-async function falPostQueue(
+async function falPostQueueInngest(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  step: any,
+  stepPrefix: string,
   endpoint: string,
-  body: Record<string, unknown>,
-  pollIntervalMs = 3000,
-  maxWaitMs = 180_000
+  body: Record<string, unknown>
 ): Promise<FalResponse> {
   const authHeader = `Key ${process.env.FAL_KEY}`;
 
-  // 1. Submit to queue (with retries for ECONNRESET)
-  let submitRes: Response | null = null;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      submitRes = await fetch(`${FAL_QUEUE_BASE}/${endpoint}`, {
-        method: "POST",
-        headers: {
-          Authorization: authHeader,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-      break; // Success
-    } catch (err) {
-      if (attempt === 3) throw err;
-      console.warn(`[falPostQueue] submit failed attempt ${attempt}:`, err);
-      await new Promise(r => setTimeout(r, 1000));
-    }
-  }
-
-  if (!submitRes) throw new Error("Failed to submit to fal queue");
-
-  if (!submitRes.ok) {
-    const errText = await submitRes.text();
-    handleFalError(endpoint, submitRes.status, errText);
-  }
-
-  const { request_id } = (await submitRes.json()) as { request_id: string };
-  if (!request_id) throw new Error(`Fal queue [${endpoint}] returned no request_id`);
-
-  // 2. Poll for completion
-  const deadline = Date.now() + maxWaitMs;
-  while (Date.now() < deadline) {
-    await new Promise((r) => setTimeout(r, pollIntervalMs));
-
-    let statusRes: Response | null = null;
-    try {
-      statusRes = await fetch(
-        `${FAL_QUEUE_BASE}/${endpoint}/requests/${request_id}/status`,
-        { headers: { Authorization: authHeader } }
-      );
-    } catch (err) {
-      console.warn(`[falPostQueue] status poll error for ${request_id}:`, err);
-      // Transient error (like ECONNRESET) — keep polling
-      continue;
+  // 1. Submit to queue
+  const { request_id } = await step.run(`${stepPrefix}-submit`, async () => {
+    let submitRes: Response | null = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        submitRes = await fetch(`${FAL_QUEUE_BASE}/${endpoint}`, {
+          method: "POST",
+          headers: {
+            Authorization: authHeader,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+        break;
+      } catch (err) {
+        if (attempt === 3) throw err;
+        await new Promise(r => setTimeout(r, 1000));
+      }
     }
 
-    if (!statusRes.ok) {
-      // Transient status check failure — keep polling
-      continue;
+    if (!submitRes) throw new Error(`[${stepPrefix}] Failed to submit to fal queue`);
+
+    if (!submitRes.ok) {
+      const errText = await submitRes.text();
+      handleFalError(endpoint, submitRes.status, errText);
     }
 
-    const statusData = (await statusRes.json()) as { status: string };
+    const json = (await submitRes.json()) as { request_id: string };
+    if (!json.request_id) throw new Error(`Fal queue returned no request_id`);
+    return { request_id: json.request_id };
+  });
 
-    if (statusData.status === "COMPLETED") {
-      // 3. Fetch the result (with retries)
-      let resultRes: Response | null = null;
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-          resultRes = await fetch(
-            `${FAL_QUEUE_BASE}/${endpoint}/requests/${request_id}`,
-            { headers: { Authorization: authHeader } }
-          );
-          break;
-        } catch (err) {
-          if (attempt === 3) throw err;
-          console.warn(`[falPostQueue] result fetch error ${request_id}:`, err);
-          await new Promise(r => setTimeout(r, 1000));
-        }
+  // 2. Poll for completion via durable sleeps
+  let status = "IN_PROGRESS";
+  while (status !== "COMPLETED") {
+    await step.sleep(`${stepPrefix}-sleep`, "3s");
+
+    status = await step.run(`${stepPrefix}-check-status`, async () => {
+      let statusRes: Response | null = null;
+      try {
+        statusRes = await fetch(
+          `${FAL_QUEUE_BASE}/${endpoint}/requests/${request_id}/status`,
+          { headers: { Authorization: authHeader } }
+        );
+      } catch {
+        return "IN_PROGRESS"; // Transient network error, keep polling
       }
 
-      if (!resultRes) throw new Error("Failed to fetch result");
+      if (!statusRes.ok) return "IN_PROGRESS"; // Transient API error, keep polling
 
-      if (!resultRes.ok) {
-        const errText = await resultRes.text();
-        handleFalError(endpoint, resultRes.status, errText);
+      const statusData = (await statusRes.json()) as { status: string };
+      
+      if (statusData.status === "FAILED") {
+        throw new NonRetriableError(
+          `Fal queue [${endpoint}] job ${request_id} failed on Fal.ai side.`
+        );
       }
-
-      return resultRes.json();
-    }
-
-    if (statusData.status === "FAILED") {
-      throw new NonRetriableError(
-        `Fal queue [${endpoint}] job ${request_id} failed on Fal.ai side.`
-      );
-    }
-
-    // IN_QUEUE or IN_PROGRESS — keep polling
+      return statusData.status;
+    });
   }
 
-  throw new Error(`Fal queue [${endpoint}] timed out after ${maxWaitMs / 1000}s`);
+  // 3. Fetch the final result
+  return step.run(`${stepPrefix}-fetch-result`, async () => {
+    let resultRes: Response | null = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        resultRes = await fetch(
+          `${FAL_QUEUE_BASE}/${endpoint}/requests/${request_id}`,
+          { headers: { Authorization: authHeader } }
+        );
+        break;
+      } catch (err) {
+        if (attempt === 3) throw err;
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+
+    if (!resultRes) throw new Error("Failed to fetch result");
+
+    if (!resultRes.ok) {
+      const errText = await resultRes.text();
+      handleFalError(endpoint, resultRes.status, errText);
+    }
+
+    return resultRes.json();
+  });
 }
+
 
 // ---------------------------------------------------------------------------
 // Inngest Function
@@ -306,8 +303,9 @@ export const iconGenerate = inngest.createFunction(
     // -------------------------------------------------------------------------
     if (aiModel === "flux-2-pro") {
       // Step 1: Generate base image at 1K
-      const baseUrl = await step.run("generate-base-flux-1k", async () => {
-        if (referenceImage) {
+      let baseUrl: string;
+      if (referenceImage) {
+        const body = await step.run("prepare-ref-image", async () => {
           // Download the reference image from R2 and encode it as a base64 data URI.
           // Fal.ai explicitly supports data URI file inputs, which avoids any CDN
           // accessibility issues that arise when Fal.ai tries to fetch from our CDN.
@@ -318,7 +316,7 @@ export const iconGenerate = inngest.createFunction(
           const base64 = Buffer.from(refBuffer).toString("base64");
           const dataUri = `data:${contentType};base64,${base64}`;
 
-          const body: Record<string, unknown> = {
+          return {
             prompt,
             image_urls: [dataUri],
             image_size: "square_hd",
@@ -326,28 +324,27 @@ export const iconGenerate = inngest.createFunction(
             safety_tolerance: "5",
             enable_safety_checker: false,
           };
+        });
 
-          // Use queue API to avoid TCP timeout (ECONNRESET) on large payloads.
-          // The queue accepts the payload instantly, processes async, and we poll.
-          // This also prevents Inngest retries from creating duplicate generations.
-          const json = await falPostQueue("fal-ai/flux-2-pro/edit", body);
-          const url = json.images?.[0]?.url ?? json.image?.url ?? json.url;
-          if (!url) throw new NonRetriableError("flux-2-pro/edit returned no image URL");
-          return url as string;
-        } else {
-          const body: Record<string, unknown> = {
+        // Use standard durable execution to poll the Fal queue, avoiding Vercel timeouts.
+        const json = await falPostQueueInngest(step, "flux-edit", "fal-ai/flux-2-pro/edit", body);
+        baseUrl = (json.images?.[0]?.url ?? json.image?.url ?? json.url) as string;
+        if (!baseUrl) throw new NonRetriableError("flux-2-pro/edit returned no image URL");
+      } else {
+        baseUrl = await step.run("generate-base-flux-1k", async () => {
+          const payload: Record<string, unknown> = {
             prompt,
             image_size: { width: 1024, height: 1024 },
             output_format: "png",
             safety_tolerance: "5",
             enable_safety_checker: false,
           };
-          const json = await falPost("fal-ai/flux-2-pro", body);
+          const json = await falPost("fal-ai/flux-2-pro", payload);
           const url = json.images?.[0]?.url ?? json.image?.url ?? json.url;
           if (!url) throw new Error("flux-2-pro returned no image URL");
           return url as string;
-        }
-      });
+        });
+      }
 
       // Step 2: Upload Base 1K to R2
       const baseR2Url = await step.run("upload-base-r2", async () => {
