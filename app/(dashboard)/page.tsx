@@ -117,10 +117,15 @@ export default function StudioPage() {
   const creditCost = getCreditCost(aiModel, quality);
 
   // Estimated durations in ms per pipeline combination
-  function getEstimatedDuration(model: AiModelId, q: string): number {
-    if (model === "flux-2-pro") return q === "4K" ? 28000 : 20000;
-    if (model === "nano-banana-2") return q === "4K" ? 45000 : 35000;
-    return 25000;
+  function getEstimatedDuration(model: AiModelId, q: string, hasReference: boolean): number {
+    if (hasReference) {
+      if (model === "flux-2-pro") return q === "4K" ? 45000 : 40000;
+      if (model === "nano-banana-2") return q === "4K" ? 50000 : 45000;
+      return 45000;
+    }
+    if (model === "flux-2-pro") return q === "4K" ? 36000 : 32000;
+    if (model === "nano-banana-2") return q === "4K" ? 40000 : 36000;
+    return 36000;
   }
 
   // Phase label based on % progress
@@ -198,7 +203,7 @@ export default function StudioPage() {
     setProgress(0);
 
     // Start progress timer
-    const estimatedDuration = getEstimatedDuration(aiModel, quality);
+    const estimatedDuration = getEstimatedDuration(aiModel, quality, !!referenceImage);
     const startTime = Date.now();
     const TARGET_PCT = 92; // cap at 92% during polling, jump to 100% on complete
     progressTimerRef.current = setInterval(() => {
@@ -467,11 +472,6 @@ export default function StudioPage() {
                       </span>
                     </div>
                   </div>
-
-                  {/* Model tag */}
-                  <p className="text-[11px] text-muted-foreground/50">
-                    {selectedModel.label} · {quality}
-                  </p>
                 </motion.div>
               )}
 
