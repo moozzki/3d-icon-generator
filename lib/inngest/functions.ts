@@ -115,8 +115,8 @@ async function falPostQueueInngest(
 ): Promise<FalResponse> {
   const authHeader = `Key ${process.env.FAL_KEY}`;
 
-  // 1. Submit to queue
-  const { request_id } = await step.run(`${stepPrefix}-submit`, async () => {
+  return step.run(`${stepPrefix}-sync-poll`, async () => {
+    // 1. Submit to queue
     let submitRes: Response | null = null;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
@@ -142,49 +142,63 @@ async function falPostQueueInngest(
       handleFalError(endpoint, submitRes.status, errText);
     }
 
-    const json = (await submitRes.json()) as { request_id: string };
-    if (!json.request_id) throw new Error(`Fal queue returned no request_id`);
-    return { request_id: json.request_id };
-  });
+    const submitJson = (await submitRes.json()) as { 
+      request_id: string; 
+      status_url: string; 
+      response_url: string; 
+    };
+    
+    if (!submitJson.request_id || !submitJson.status_url || !submitJson.response_url) {
+      throw new Error(`Fal queue returned incomplete response. Missing URLs or request_id.`);
+    }
 
-  // 2. Poll for completion via durable sleeps
-  let status = "IN_PROGRESS";
-  while (status !== "COMPLETED") {
-    await step.sleep(`${stepPrefix}-sleep`, "1s");
+    const { request_id, status_url, response_url } = submitJson;
 
-    status = await step.run(`${stepPrefix}-check-status`, async () => {
-      let statusRes: Response | null = null;
+    // 2. Poll for completion synchronously
+    let isCompleted = false;
+    let pollCount = 0;
+    // 37 attempts * 1.5s sleep = ~55.5s timeout (protects Vercel's 60s hard limit)
+    while (!isCompleted && pollCount < 37) {
+      pollCount++;
+      await new Promise(r => setTimeout(r, 1500));
+
+      let errToThrow: Error | null = null;
       try {
-        statusRes = await fetch(
-          `${FAL_QUEUE_BASE}/${endpoint}/requests/${request_id}/status`,
-          { headers: { Authorization: authHeader } }
-        );
+        const statusRes = await fetch(status_url, { 
+          headers: { Authorization: authHeader } 
+        });
+
+        if (!statusRes.ok) continue; // Transient API error, keep polling
+
+        const statusData = (await statusRes.json()) as { status: string };
+        const statusUpper = (statusData.status || "").toUpperCase();
+
+        if (statusUpper === "FAILED") {
+          errToThrow = new NonRetriableError(
+            `Fal queue [${endpoint}] job ${request_id} failed on Fal.ai side.`
+          );
+        } else if (statusUpper === "COMPLETED") {
+          isCompleted = true;
+          break;
+        }
       } catch {
-        return "IN_PROGRESS"; // Transient network error, keep polling
+        // Transient network error parsing json or fetching, keep polling
       }
 
-      if (!statusRes.ok) return "IN_PROGRESS"; // Transient API error, keep polling
+      if (errToThrow) throw errToThrow;
+    }
 
-      const statusData = (await statusRes.json()) as { status: string };
+    if (!isCompleted) {
+      throw new Error(`[${stepPrefix}] Polling timed out (55s) for request ${request_id}`);
+    }
 
-      if (statusData.status === "FAILED") {
-        throw new NonRetriableError(
-          `Fal queue [${endpoint}] job ${request_id} failed on Fal.ai side.`
-        );
-      }
-      return statusData.status;
-    });
-  }
-
-  // 3. Fetch the final result
-  return step.run(`${stepPrefix}-fetch-result`, async () => {
+    // 3. Fetch the final result
     let resultRes: Response | null = null;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        resultRes = await fetch(
-          `${FAL_QUEUE_BASE}/${endpoint}/requests/${request_id}`,
-          { headers: { Authorization: authHeader } }
-        );
+        resultRes = await fetch(response_url, { 
+          headers: { Authorization: authHeader } 
+        });
         break;
       } catch (err) {
         if (attempt === 3) throw err;
@@ -192,7 +206,7 @@ async function falPostQueueInngest(
       }
     }
 
-    if (!resultRes) throw new Error("Failed to fetch result");
+    if (!resultRes) throw new Error(`[${stepPrefix}] Failed to fetch result`);
 
     if (!resultRes.ok) {
       const errText = await resultRes.text();

@@ -6,6 +6,23 @@ import { sendEmail } from "@/lib/resend";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg" }),
+  
+  emailVerification: {
+    sendOnSignUp: false, // Magic link already verifies email
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendEmail({
+        to: user.email,
+        subject: "Verify your email link ✨",
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">
+            <p>Click the link below to verify your account linking:</p>
+            <a href="${url}" style="background: #4949FF; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none;">Verify Link</a>
+          </div>
+        `,
+      });
+    },
+  },
 
   // Keep emailAndPassword enabled ONLY for admin seed script.
   // UI does NOT expose email+password forms — only Social & Magic Link.
@@ -36,7 +53,7 @@ export const auth = betterAuth({
   account: {
     accountLinking: {
       enabled: true,
-      trustedProviders: ["google", "github"],
+      trustedProviders: ["google", "github", "magic-link", "email"],
     },
   },
 

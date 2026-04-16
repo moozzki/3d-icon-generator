@@ -113,7 +113,6 @@ export default function StudioPage() {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const selectedModel = AI_MODELS.find((m) => m.id === aiModel)!;
   const creditCost = getCreditCost(aiModel, quality);
 
   // Estimated durations in ms per pipeline combination
