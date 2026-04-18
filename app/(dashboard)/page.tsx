@@ -92,6 +92,7 @@ function getCreditCost(aiModel: AiModelId, quality: string): number {
 export default function StudioPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
+  const [baseImage, setBaseImage] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
   const [position, setPosition] = useState("Isometric");
   const [isPositionOpen, setIsPositionOpen] = useState(false);
@@ -103,6 +104,7 @@ export default function StudioPage() {
   const [currentJobQuality, setCurrentJobQuality] = useState<string | null>(null);
   const [aiModel] = useState<AiModelId>("flux-2-pro");
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [isRefineMode, setIsRefineMode] = useState(false);
   const [isPromptExpanded, setIsPromptExpanded] = useState(true);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -226,6 +228,7 @@ export default function StudioPage() {
           quality,
           aiModel,
           referenceImage,
+          isRefine: isRefineMode,
         }),
       });
 
@@ -240,6 +243,7 @@ export default function StudioPage() {
       // Polling loop — resilient to transient errors
       let status = "pending";
       let finalImageUrl = null;
+      let finalBaseImageUrl = null;
       let consecutiveErrors = 0;
       const MAX_ERRORS = 5;
 
@@ -268,6 +272,7 @@ export default function StudioPage() {
 
           if (status === "completed") {
             finalImageUrl = pollData.resultImageUrl;
+            finalBaseImageUrl = pollData.baseImageUrl;
           } else if (status === "failed") {
             const reason = pollData.failReason
               ?? "Generation failed. Your credits have been refunded.";
@@ -297,6 +302,7 @@ export default function StudioPage() {
       setRemainingSeconds(0);
 
       setResultImage(finalImageUrl);
+      setBaseImage(finalBaseImageUrl);
       setCurrentJobId(jobId);
       setCurrentJobQuality(quality);
       window.dispatchEvent(new Event("credits-updated"));
@@ -615,7 +621,10 @@ export default function StudioPage() {
                     {/* Reference Image Preview */}
                     <UploadReferencePreview
                       referenceUrl={referenceImage}
-                      onClear={() => setReferenceImage(null)}
+                      onClear={() => {
+                        setReferenceImage(null);
+                        setIsRefineMode(false);
+                      }}
                     />
 
                     {/* Textarea row */}
@@ -638,7 +647,10 @@ export default function StudioPage() {
                         {/* Upload reference (ImageUp) */}
                         <UploadReferenceTrigger
                           referenceUrl={referenceImage}
-                          onReferenceChanged={setReferenceImage}
+                          onReferenceChanged={(url) => {
+                            setReferenceImage(url);
+                            setIsRefineMode(false);
+                          }}
                         />
 
                         {/* Style popover */}
@@ -837,7 +849,25 @@ export default function StudioPage() {
           </div>
 
           {/* Export at bottom */}
-          <div className="p-4 pt-3 border-t border-border/50 bg-background mt-auto">
+          <div className="p-4 pt-3 border-t border-border/50 bg-background mt-auto flex flex-col gap-2">
+            <Button
+              variant="outline"
+              className="w-full font-semibold rounded-xl h-10 shadow-sm text-sm gap-2"
+              onClick={() => {
+                if (resultImage) {
+                  setReferenceImage(baseImage || resultImage);
+                  setIsRefineMode(true);
+                  setPrompt("");
+                  setIsSheetOpen(false);
+                  setIsPromptExpanded(true);
+                  // Optional: Focus textarea after a short delay to allow animation
+                  setTimeout(() => textareaRef.current?.focus(), 100);
+                }
+              }}
+            >
+              <Wand2 className="w-4 h-4 text-primary" />
+              Refine Icon
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="w-full font-semibold rounded-xl h-10 shadow-sm text-sm gap-2" disabled={isRemovingBg}>

@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
         where: eq(generations.jobId, jobId),
         columns: {
           status: true,
+          baseImageUrl: true,
           resultImageUrl: true,
           failReason: true,
         },
@@ -44,6 +45,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       status: job.status,
+      baseImageUrl: job.baseImageUrl,
       resultImageUrl: job.resultImageUrl,
       failReason: job.failReason ?? null,
     });

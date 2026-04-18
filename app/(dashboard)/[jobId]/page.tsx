@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { UploadReferenceTrigger, UploadReferencePreview } from "@/components/Studio/UploadReference";
 import {
   Popover,
   PopoverContent,
@@ -29,7 +30,6 @@ import {
 import {
   CornerRightUp,
   Wand2,
-  UploadCloud,
   ChevronDown,
   ImageIcon,
   ZoomIn,
@@ -94,10 +94,13 @@ function getCreditCost(aiModel: AiModelId, quality: string): number {
 }
 
 export default function StudioDetailPage() {
+  const router = useRouter();
   const { jobId } = useParams<{ jobId: string }>();
   const searchParams = useSearchParams();
   const isRefine = searchParams.get("action") === "refine";
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [isRefineMode, setIsRefineMode] = useState(isRefine);
 
   const { data: generation } = useQuery({
     queryKey: ["generation", jobId],
@@ -147,6 +150,9 @@ export default function StudioDetailPage() {
         setPrompt(generation.userPrompt || generation.prompt || "");
       } else {
         setPrompt("");
+        // Use baseImageUrl for lower cost, fallback to resultImageUrl
+        setReferenceImage(generation.baseImageUrl || generation.resultImageUrl || null);
+        setIsRefineMode(true);
       }
       const formattedPos = generation.position || "isometric";
       const matchedPos = POSITIONS.find(p => p.toLowerCase().replace(" ", "_") === formattedPos) || "Isometric";
@@ -231,6 +237,8 @@ export default function StudioDetailPage() {
           style,
           quality,
           aiModel,
+          referenceImage,
+          isRefine: isRefineMode,
         }),
       });
 
@@ -268,6 +276,7 @@ export default function StudioDetailPage() {
       setLastQuality(quality);
       window.dispatchEvent(new Event("credits-updated"));
       toast.success("Icon generated successfully!");
+      router.push(`/${jobId}`);
     } catch (err) {
       console.error("Generation error:", err);
       const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
@@ -554,8 +563,17 @@ export default function StudioDetailPage() {
                       </div>
                     </div>
 
+                    {/* Reference Image Preview */}
+                    <UploadReferencePreview
+                      referenceUrl={referenceImage}
+                      onClear={() => {
+                        setReferenceImage(null);
+                        setIsRefineMode(false);
+                      }}
+                    />
+
                     {/* Textarea row */}
-                    <div className="px-3 sm:px-4 pt-7 sm:pt-8 pb-1 sm:pb-2">
+                    <div className={cn("px-3 sm:px-4 pb-1 sm:pb-2", referenceImage ? "pt-1" : "pt-7 sm:pt-8")}>
                       <textarea
                         ref={textareaRef}
                         value={prompt}
@@ -676,11 +694,14 @@ export default function StudioDetailPage() {
                           </PopoverContent>
                         </Popover>
 
-                        {/* Upload reference */}
-                        <button className="h-8 px-2 sm:px-2.5 text-[11px] sm:text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg border border-border/50 flex items-center gap-1.5 transition-colors shrink-0">
-                          <UploadCloud className="h-3.5 w-3.5" />
-                          <span className="hidden xs:inline">Reference</span>
-                        </button>
+                        {/* Upload reference (ImageUp) */}
+                        <UploadReferenceTrigger
+                          referenceUrl={referenceImage}
+                          onReferenceChanged={(url) => {
+                            setReferenceImage(url);
+                            setIsRefineMode(false);
+                          }}
+                        />
                       </div>
 
 
