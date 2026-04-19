@@ -112,3 +112,15 @@ export const waitlist = pgTable("waitlist", {
   status: text("status").default("waitlisted"),
   joinedAt: timestamp("joined_at").defaultNow(),
 });
+
+export const feedbacks = pgTable("feedbacks", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  rating: integer("rating").notNull(),
+  content: text("content").notNull(),
+  suggestions: text("suggestions"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Feedback = typeof feedbacks.$inferSelect;
+export type NewFeedback = typeof feedbacks.$inferInsert;

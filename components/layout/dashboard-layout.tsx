@@ -38,7 +38,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop } from "lucide-react";
+import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare } from "lucide-react";
+import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -196,8 +197,33 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           })}
         </nav>
 
+        {/* Feedback Trigger */}
+        <div className={cn("px-3 mb-2", isCollapsed && "px-1.5")}>
+          {isCollapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <FeedbackDialog>
+                  <button className="flex items-center justify-center w-full rounded-lg py-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+                    <MessageSquare className="h-4 w-4" />
+                  </button>
+                </FeedbackDialog>
+              </TooltipTrigger>
+              <TooltipContent side="right" sideOffset={8}>
+                Share Feedback
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <FeedbackDialog>
+              <button className="flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+                <MessageSquare className="h-4 w-4" />
+                <span>Share Feedback</span>
+              </button>
+            </FeedbackDialog>
+          )}
+        </div>
+
         {/* User */}
-        <div className={cn("border-t border-border/40 mt-auto overflow-hidden", isCollapsed ? "px-1.5 pt-3 pb-8 flex justify-center" : "px-4 pb-5 pt-4")}>
+        <div className={cn("border-t border-border/40 overflow-hidden", isCollapsed ? "px-1.5 pt-3 pb-8 flex justify-center" : "px-4 pb-5 pt-4")}>
           {sessionLoading ? (
             /* Skeleton while session is resolving */
             isCollapsed ? (
@@ -374,8 +400,24 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               </div>
             </div>
 
-            {/* Right: Credits + CTA */}
+            {/* Right: Feedback + Credits + CTA */}
             <div className="flex items-center gap-2 sm:gap-3">
+              {/* Feedback Trigger (Desktop) */}
+              <div className="hidden sm:block">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <FeedbackDialog>
+                      <button className="flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors w-8 h-8">
+                        <MessageSquare className="h-4 w-4" />
+                      </button>
+                    </FeedbackDialog>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" sideOffset={8}>
+                    Share Feedback
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+
               {/* Credit badge */}
               <div className="flex h-7 items-center gap-1.5 rounded-full bg-primary/[0.08] dark:bg-primary/[0.15] px-3 text-[11px] sm:text-xs font-bold text-primary border border-primary/10 transition-colors">
                 <Coins className="h-3.5 w-3.5" />
