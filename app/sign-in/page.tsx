@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,9 @@ export default function SignInPage() {
   const [loading, setLoading] = useState<"google" | "github" | "magic" | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
+  const searchParams = useSearchParams();
+  const callbackURL = searchParams.get("callbackURL") || "/";
+
   const lastMethod = authClient.getLastUsedLoginMethod();
   const isLastGoogle = lastMethod === "google";
   const isLastGithub = lastMethod === "github";
@@ -32,7 +36,7 @@ export default function SignInPage() {
     try {
       await authClient.signIn.social({
         provider,
-        callbackURL: "/",
+        callbackURL,
       });
     } catch {
       toast.error("Connection failed. Please try again.");
@@ -48,7 +52,7 @@ export default function SignInPage() {
     try {
       await authClient.signIn.magicLink({
         email,
-        callbackURL: "/",
+        callbackURL,
       });
       setMagicLinkSent(true);
       toast.success("Magic link sent! Check your inbox.");
