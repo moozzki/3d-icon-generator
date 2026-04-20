@@ -1,6 +1,6 @@
 # master.md
 
-# Audora - AI 3D Icon Generator
+# Audora - AI 3D Isometric Icon Generator
 
 Audora is a SaaS platform designed for developers, designers, and marketers to generate high-quality 3D icons (2K & 4K) instantly using AI. The platform provides granular control over camera angles and image quality, integrated into a seamless dashboard experience using the **SeedVR2** upscaling pipeline and **Flux 2 Pro Edit** for refinement.
 
