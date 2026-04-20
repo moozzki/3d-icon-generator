@@ -4,6 +4,31 @@ import { auth } from "@/lib/auth";
 import { ShoppingBag, Loader2 } from "lucide-react";
 import Image from "next/image";
 
+// ─── Package Allowlist ──────────────────────────────────────────────────────
+// Canonical list of valid package IDs. Add new tiers here as they are created.
+const VALID_PACKAGES_IDR = ["starter_idr", "creator_idr", "studio_idr"] as const;
+const VALID_PACKAGES_USD = ["starter_usd", "creator_usd", "studio_usd"] as const;
+type PackageIdr = (typeof VALID_PACKAGES_IDR)[number];
+type PackageUsd = (typeof VALID_PACKAGES_USD)[number];
+type ValidPackage = PackageIdr | PackageUsd;
+
+const ALL_VALID_PACKAGES = new Set<string>([
+  ...VALID_PACKAGES_IDR,
+  ...VALID_PACKAGES_USD,
+]);
+
+const PRICING_PAGE = "https://useaudora.com/pricing";
+
+/** Swaps the currency suffix of a valid package ID (e.g. creator_usd → creator_idr). */
+function swapCurrency(packageId: ValidPackage): ValidPackage {
+  if (packageId.endsWith("_idr")) {
+    return packageId.replace(/_idr$/, "_usd") as ValidPackage;
+  }
+  return packageId.replace(/_usd$/, "_idr") as ValidPackage;
+}
+
+// ─── Page ───────────────────────────────────────────────────────────────────
+
 interface CheckoutPageProps {
   searchParams: Promise<{ package?: string }>;
 }
@@ -14,16 +39,53 @@ export const metadata = {
 };
 
 export default async function CheckoutPage({ searchParams }: CheckoutPageProps) {
-  const { package: packageId } = await searchParams;
+  const { package: rawPackageId } = await searchParams;
+  const requestHeaders = await headers();
 
-  const session = await auth.api.getSession({ headers: await headers() });
+  // ── 1. Auth guard ─────────────────────────────────────────────────────────
+  const session = await auth.api.getSession({ headers: requestHeaders });
 
   if (!session) {
-    const destination = packageId
-      ? `/checkout?package=${encodeURIComponent(packageId)}`
+    const destination = rawPackageId
+      ? `/checkout?package=${encodeURIComponent(rawPackageId)}`
       : "/checkout";
     redirect(`/sign-in?callbackURL=${encodeURIComponent(destination)}`);
   }
+
+  // ── 2. Package validation ─────────────────────────────────────────────────
+
+  // 2a. Unknown / missing package → send to pricing page
+  if (!rawPackageId || !ALL_VALID_PACKAGES.has(rawPackageId)) {
+    redirect(PRICING_PAGE);
+  }
+
+  const packageId = rawPackageId as ValidPackage;
+
+  // 2b. Geo-currency validation
+  // x-vercel-ip-country is set by Vercel's edge network.
+  // Falls back to 'ID' for local development so IDR is the default.
+  const country = requestHeaders.get("x-vercel-ip-country") ?? "ID";
+  const isIndonesia = country === "ID";
+  const isIdrPackage = packageId.endsWith("_idr");
+  const isUsdPackage = packageId.endsWith("_usd");
+
+  if (isIndonesia && isUsdPackage) {
+    // Indonesian user tried to access a USD package — redirect to IDR equivalent
+    redirect(`/checkout?package=${swapCurrency(packageId)}`);
+  }
+
+  if (!isIndonesia && isIdrPackage) {
+    // International user tried to access an IDR package — redirect to USD equivalent
+    redirect(`/checkout?package=${swapCurrency(packageId)}`);
+  }
+
+  // ── 3. Render confirmation UI ─────────────────────────────────────────────
+  const displayName = packageId
+    .replace(/_idr$/, "")
+    .replace(/_usd$/, "")
+    .replace(/^\w/, (c) => c.toUpperCase()); // e.g. "creator_idr" → "Creator"
+
+  const currency = isIdrPackage ? "IDR" : "USD";
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center p-4 bg-background">
@@ -51,10 +113,8 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
           <h1 className="text-2xl font-bold font-heading">Confirm Your Purchase</h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
             You&apos;re about to purchase the{" "}
-            <span className="font-semibold text-foreground capitalize">
-              {packageId ? packageId.replace(/_/g, " ") : "selected"}
-            </span>{" "}
-            package. Redirecting you to the payment page&hellip;
+            <span className="font-semibold text-foreground">{displayName}</span>{" "}
+            package ({currency}). Redirecting you to the payment page&hellip;
           </p>
         </div>
 
