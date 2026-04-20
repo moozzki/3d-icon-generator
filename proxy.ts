@@ -36,7 +36,8 @@ export async function proxy(request: NextRequest) {
   const isProtectedApiRoute =
     pathname.startsWith("/api/generate") ||
     pathname.startsWith("/api/credits") ||
-    pathname.startsWith("/api/library");
+    pathname.startsWith("/api/library") ||
+    pathname.startsWith("/api/payment"); // Payment routes require auth (webhooks excluded via /api/webhooks prefix)
 
   if (isProtectedApiRoute) {
     const session = await auth.api.getSession({

@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { ShoppingBag, Loader2 } from "lucide-react";
 import Image from "next/image";
+import { CheckoutButton } from "./_components/checkout-button";
+import type { IdrPackageId } from "@/lib/pakasir/packages";
 
 // ─── Package Allowlist ──────────────────────────────────────────────────────
 // Canonical list of valid package IDs. Add new tiers here as they are created.
@@ -119,10 +121,14 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
         </div>
 
         {/* Loading indicator — payment gateway integration in next task */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Preparing your checkout&hellip;</span>
-        </div>
+        {isIdrPackage ? (
+          <CheckoutButton packageId={packageId as IdrPackageId} />
+        ) : (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Preparing your checkout&hellip;</span>
+          </div>
+        )}
 
         {/* User context */}
         <p className="text-xs text-muted-foreground/50">

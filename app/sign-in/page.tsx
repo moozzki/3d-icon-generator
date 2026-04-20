@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
@@ -23,10 +23,18 @@ function SignInForm() {
   const [loading, setLoading] = useState<"google" | "github" | "magic" | null>(null);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
 
+  // ── Last-used method ───────────────────────────────────────────────────────
+  // getLastUsedLoginMethod() reads from localStorage — only available on the
+  // client. Initialise to null so SSR and the first client render match, then
+  // populate after hydration via useEffect.
+  const [lastMethod, setLastMethod] = useState<string | null>(null);
+  useEffect(() => {
+    setLastMethod(authClient.getLastUsedLoginMethod() ?? null);
+  }, []);
+
   const searchParams = useSearchParams();
   const callbackURL = searchParams.get("callbackURL") || "/";
 
-  const lastMethod = authClient.getLastUsedLoginMethod();
   const isLastGoogle = lastMethod === "google";
   const isLastGithub = lastMethod === "github";
   const isLastMagicLink = lastMethod === "magic-link" || lastMethod === "email";
