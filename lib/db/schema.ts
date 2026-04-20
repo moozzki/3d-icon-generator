@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, pgEnum, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, pgEnum, boolean, numeric } from "drizzle-orm/pg-core";
 
 export const positionEnum = pgEnum("position", [
   "isometric", "front_facing", "back_facing", "side_facing",
@@ -100,7 +100,9 @@ export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull(), // References better-auth users id
   creditAmount: integer("credit_amount").notNull(),
-  priceIdr: integer("price_idr").notNull(),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(), // Supports IDR integers & USD decimals
+  currency: text("currency").notNull().default("IDR"),              // 'IDR' | 'USD'
+  paymentProvider: text("payment_provider").notNull(),               // 'pakasir' | 'polar'
   paymentStatus: text("payment_status").notNull(), // 'pending', 'success', 'failed'
   paymentProviderRef: text("payment_provider_ref"),
   createdAt: timestamp("created_at").defaultNow(),

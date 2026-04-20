@@ -50,7 +50,12 @@ export async function proxy(request: NextRequest) {
 
   // ─── Auth: Protect Page Routes ─────────────────────────────────────
   const isAuthPage = pathname === "/sign-in" || pathname === "/sign-up";
-  const isProtectedPage = pathname === "/" || pathname === "/library" || pathname === "/account";
+  const isCheckoutPage = pathname === "/checkout";
+  const isProtectedPage =
+    pathname === "/" ||
+    pathname === "/library" ||
+    pathname === "/account" ||
+    isCheckoutPage;
 
   if (isAuthPage || isProtectedPage) {
     const session = await auth.api.getSession({
@@ -62,8 +67,16 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/", request.url));
     }
 
-    // Redirect unauthenticated users to sign-in
+    // Redirect unauthenticated users to sign-in.
+    // For /checkout: carry the full original URL (including ?package=...) as callbackURL
+    // so Better Auth returns the user to their intended checkout destination after login.
     if (!session && isProtectedPage) {
+      if (isCheckoutPage) {
+        const callbackURL = request.nextUrl.pathname + request.nextUrl.search;
+        const signInUrl = new URL("/sign-in", request.url);
+        signInUrl.searchParams.set("callbackURL", callbackURL);
+        return NextResponse.redirect(signInUrl);
+      }
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
   }
