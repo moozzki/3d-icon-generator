@@ -38,7 +38,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare } from "lucide-react";
+import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare, Receipt } from "lucide-react";
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
@@ -324,6 +324,17 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                     >
                       <Settings className="h-4 w-4 group-hover/item:rotate-45 transition-transform duration-300" />
                       Account
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/transactions"
+                      onClick={() => isMobile && setMobileMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer group/item"
+                    >
+                      <Receipt className="h-4 w-4 group-hover/item:scale-110 transition-transform duration-200" />
+                      Transactions
                     </Link>
                   </DropdownMenuItem>
 

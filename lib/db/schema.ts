@@ -103,8 +103,9 @@ export const transactions = pgTable("transactions", {
   amount: numeric("amount", { precision: 10, scale: 2 }).notNull(), // Supports IDR integers & USD decimals
   currency: text("currency").notNull().default("IDR"),              // 'IDR' | 'USD'
   paymentProvider: text("payment_provider").notNull(),               // 'pakasir' | 'polar'
-  paymentStatus: text("payment_status").notNull(), // 'pending', 'success', 'failed'
+  paymentStatus: text("payment_status").notNull(), // 'pending' | 'paid' | 'cancelled' | 'expired'
   paymentProviderRef: text("payment_provider_ref"),
+  expiresAt: timestamp("expires_at"),              // 1 hour after creation for IDR/Pakasir
   createdAt: timestamp("created_at").defaultNow(),
 });
 
