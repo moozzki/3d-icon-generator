@@ -40,8 +40,18 @@ import {
   Download,
   Loader2,
   Eraser,
+  Palette,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  ColorPicker,
+  ColorPickerSelection,
+  ColorPickerHue,
+  ColorPickerEyeDropper,
+  ColorPickerOutput,
+  ColorPickerFormat,
+} from "@/components/kibo-ui/color-picker";
 
 const POSITIONS = [
   "Isometric",
@@ -100,6 +110,16 @@ export default function StudioPage() {
   const [isStyleOpen, setIsStyleOpen] = useState(false);
   const [quality, setQuality] = useState("2K");
   const [isQualityOpen, setIsQualityOpen] = useState(false);
+  const [color, setColor] = useState<string | null>(null);
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+  // Incrementing this key forces the ColorPicker to remount (reset internal state)
+  // only when the user explicitly clears the color — breaking any feedback loop.
+  const [colorPickerKey, setColorPickerKey] = useState(0);
+
+  const handleClearColor = () => {
+    setColor(null);
+    setColorPickerKey((k) => k + 1);
+  };
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [currentJobQuality, setCurrentJobQuality] = useState<string | null>(null);
   const [aiModel] = useState<AiModelId>("flux-2-pro");
@@ -116,6 +136,17 @@ export default function StudioPage() {
   const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const creditCost = getCreditCost(aiModel, quality);
+
+  // Helper: convert [r, g, b, a] array from ColorPicker onChange to a HEX string
+  const rgbaToHex = (rgba: number[]): string => {
+    const [r, g, b] = rgba;
+    return (
+      "#" +
+      [r, g, b]
+        .map((v) => Math.round(v).toString(16).padStart(2, "0"))
+        .join("")
+    ).toUpperCase();
+  };
 
   // Estimated durations in ms per pipeline combination
   function getEstimatedDuration(model: AiModelId, q: string, hasReference: boolean): number {
@@ -229,6 +260,7 @@ export default function StudioPage() {
           aiModel,
           referenceImage,
           isRefine: isRefineMode,
+          color,
         }),
       });
 
@@ -755,6 +787,69 @@ export default function StudioPage() {
                                 </button>
                               ))}
                             </div>
+                          </PopoverContent>
+                        </Popover>
+
+                        {/* Color picker */}
+                        <Popover open={isColorPickerOpen} onOpenChange={setIsColorPickerOpen}>
+                          <PopoverTrigger asChild>
+                            <button className="h-8 text-[11px] sm:text-xs flex items-center gap-1.5 border border-border/50 bg-muted/40 hover:bg-muted/60 transition-colors shrink-0 px-2 sm:px-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                              {color ? (
+                                <span
+                                  className="w-3.5 h-3.5 rounded-sm border border-border/60 shrink-0"
+                                  style={{ backgroundColor: color }}
+                                />
+                              ) : (
+                                <Palette className="w-3.5 h-3.5 opacity-50" />
+                              )}
+                              <span className="truncate max-w-[56px] sm:max-w-none">
+                                {color ? color.toUpperCase() : "Color"}
+                              </span>
+                              {color && (
+                                <span
+                                  role="button"
+                                  aria-label="Clear color"
+                                  onClick={(e) => { e.stopPropagation(); handleClearColor(); }}
+                                  className="ml-0.5 hover:text-foreground text-muted-foreground/50 transition-colors"
+                                >
+                                  <X className="w-3 h-3" />
+                                </span>
+                              )}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="w-64 p-3 rounded-xl space-y-3"
+                            align="start"
+                            sideOffset={8}
+                            avoidCollisions
+                            collisionPadding={12}
+                          >
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-0.5">
+                              Color
+                            </p>
+                            <ColorPicker
+                              key={colorPickerKey}
+                              defaultValue="#000000"
+                              onChange={(rgba) => {
+                                setColor(rgbaToHex(rgba as unknown as number[]));
+                              }}
+                            >
+                              <ColorPickerSelection className="h-32 rounded-lg" />
+                              <ColorPickerHue />
+                              <div className="flex items-center gap-2">
+                                <ColorPickerEyeDropper className="h-8 w-8" />
+                                <ColorPickerOutput />
+                                <ColorPickerFormat className="flex-1" />
+                              </div>
+                            </ColorPicker>
+                            {color && (
+                              <button
+                                onClick={() => handleClearColor()}
+                                className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1 border border-border/40 rounded-lg hover:bg-muted/50"
+                              >
+                                Clear Color
+                              </button>
+                            )}
                           </PopoverContent>
                         </Popover>
                       </div>

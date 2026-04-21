@@ -74,6 +74,7 @@ export async function POST(request: Request) {
       aiModel = "flux-2-pro",
       referenceImage = null,
       isRefine = false,
+      color = null,
     } = await request.json();
 
     // 2. Validate parameters
@@ -131,21 +132,24 @@ export async function POST(request: Request) {
         userPrompt?.trim(),
         style as StyleKey,
         position,
-        quality
+        quality,
+        color
       );
     } else if (hasReference) {
       engineeredPrompt = buildRefEngineeredPrompt(
         userPrompt?.trim(),
         style as StyleKey,
         position,
-        quality
+        quality,
+        color
       );
     } else {
       engineeredPrompt = buildEngineeredPrompt(
         userPrompt?.trim() || "",
         style as StyleKey,
         position,
-        quality
+        quality,
+        color
       );
     }
 
@@ -165,6 +169,7 @@ export async function POST(request: Request) {
       cost: creditCost,
       creditCost,
       referenceImage,
+      color,
     });
 
     await inngest.send({

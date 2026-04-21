@@ -15,6 +15,7 @@ export const POSITION_PROMPTS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 // Master prompt templates — one unique template per style
 // Placeholders: {subject}, {position}, {quality}
+// Optional color instruction is appended via buildColorClause()
 // ---------------------------------------------------------------------------
 
 export type StyleKey = "plastic" | "clay" | "glass" | "plush" | "toy_block" | "metallic";
@@ -94,25 +95,37 @@ export const STYLE_REFINE_PROMPTS: Record<StyleKey, string> = {
 // Prompt builders
 // ---------------------------------------------------------------------------
 
+/**
+ * Builds an optional color instruction appended to all prompts.
+ * Returns an empty string when color is null/undefined.
+ */
+function buildColorClause(color: string | null | undefined): string {
+  if (!color) return "";
+  return ` The dominant color scheme must be ${color}, apply this color to the main material and surface of the subject.`;
+}
+
 export function buildEngineeredPrompt(
   userPrompt: string,
   style: StyleKey,
   position: string,
-  quality: string
+  quality: string,
+  color?: string | null
 ): string {
   const positionLabel = POSITION_PROMPTS[position] ?? position;
   const template = STYLE_MASTER_PROMPTS[style];
-  return template
+  const base = template
     .replace("{subject}", userPrompt)
     .replace("{position}", positionLabel)
     .replace("{quality}", quality);
+  return base + buildColorClause(color);
 }
 
 export function buildRefEngineeredPrompt(
   userPrompt: string | undefined | null,
   style: StyleKey,
   position: string,
-  quality: string
+  quality: string,
+  color?: string | null
 ): string {
   // Graceful fallback for empty inputs
   const rawSubject = userPrompt?.trim() || "";
@@ -124,24 +137,27 @@ export function buildRefEngineeredPrompt(
   const positionLabel = POSITION_PROMPTS[position] ?? position;
   const template = STYLE_REF_PROMPTS[style];
 
-  return template
+  const base = template
     .replace("{subject}", finalSubject)
     .replace("{position}", positionLabel)
     .replace("{quality}", quality);
+  return base + buildColorClause(color);
 }
 
 export function buildRefineEngineeredPrompt(
   userPrompt: string | undefined | null,
   style: StyleKey,
   position: string,
-  quality: string
+  quality: string,
+  color?: string | null
 ): string {
   const finalSubject = userPrompt?.trim() || "Enhance details";
   const positionLabel = POSITION_PROMPTS[position] ?? position;
   const template = STYLE_REFINE_PROMPTS[style];
 
-  return template
+  const base = template
     .replace("{subject}", finalSubject)
     .replace("{position}", positionLabel)
     .replace("{quality}", quality);
+  return base + buildColorClause(color);
 }

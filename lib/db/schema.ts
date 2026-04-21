@@ -86,6 +86,7 @@ export const generations = pgTable("generations", {
   position: positionEnum("position").notNull(),
   style: styleEnum("style").notNull().default("plastic"),
   quality: qualityEnum("quality").notNull(),
+  color: text("color"),   // Optional HEX color chosen by user e.g. "#FF5733". null = no color override
   cost: integer("cost").notNull(),
   creditCost: integer("credit_cost").notNull().default(1),
   creditRefunded: boolean("credit_refunded").default(false), // true once credits returned
