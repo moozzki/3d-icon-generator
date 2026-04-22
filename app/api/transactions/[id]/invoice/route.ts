@@ -7,6 +7,7 @@ import { eq, and } from "drizzle-orm";
 import { jsPDF } from "jspdf";
 import { format } from "date-fns";
 import { IDR_PACKAGES, packageDisplayName, IdrPackageId } from "@/lib/pakasir/packages";
+import { formatInvoiceId } from "@/lib/utils";
 
 // ── Package name resolver ──────────────────────────────────────────────────
 // Maps stored creditAmount + provider back to the human-readable Audora plan name.
@@ -141,7 +142,7 @@ export async function GET(
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.setTextColor(30, 30, 30);
-    doc.text(`Invoice #${tx.id}`, MARGIN, y);
+    doc.text(`Invoice ${formatInvoiceId(tx.createdAt!, tx.id)}`, MARGIN, y);
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
@@ -291,7 +292,7 @@ export async function GET(
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="audora-invoice-${tx.id}.pdf"`,
+        "Content-Disposition": `attachment; filename="${formatInvoiceId(tx.createdAt!, tx.id)}.pdf"`,
         "Cache-Control": "no-store",
       },
     });

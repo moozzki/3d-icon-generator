@@ -437,3 +437,113 @@ export function InHouseCheckout({ packageId, userEmail }: InHouseCheckoutProps) 
     </div>
   );
 }
+
+// ─── Polar USD Checkout ───────────────────────────────────────────────────────
+
+export type UsdPackageId = "starter_usd" | "creator_usd" | "studio_usd";
+
+const USD_PACKAGE_DISPLAY: Record<UsdPackageId, { name: string; credits: number; amount: number }> = {
+  starter_usd: { name: "Starter", credits: 25,  amount: 5.00  },
+  creator_usd: { name: "Creator", credits: 60,  amount: 10.00 },
+  studio_usd:  { name: "Studio",  credits: 175, amount: 25.00 },
+};
+
+interface PolarCheckoutProps {
+  packageId: UsdPackageId;
+  userEmail: string;
+}
+
+export function PolarCheckout({ packageId, userEmail }: PolarCheckoutProps) {
+  const pkg = USD_PACKAGE_DISPLAY[packageId];
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState<string | null>(null);
+
+  const displayAmount = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(pkg.amount);
+
+  const handlePay = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res  = await fetch("/api/payment/polar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ packageId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to initiate checkout.");
+      window.location.href = data.checkoutUrl;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-6 w-full">
+      {/* Header */}
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Payment Details</h2>
+        <p className="text-sm text-muted-foreground">
+          Signed in as <span className="font-medium text-foreground">{userEmail}</span>
+        </p>
+      </div>
+
+      {/* Package summary card */}
+      <div className="rounded-xl border border-border/50 bg-muted/30 px-4 py-4 flex items-center justify-between">
+        <div>
+          <p className="font-semibold text-foreground">{pkg.name} Package</p>
+          <p className="text-sm text-muted-foreground">{pkg.credits} Credits</p>
+        </div>
+        <p className="text-xl font-bold text-primary">{displayAmount}</p>
+      </div>
+
+      {/* What's included */}
+      <div className="rounded-xl border border-border/50 bg-muted/20 px-4 py-3 space-y-2">
+        <div className="flex items-start gap-2 text-sm text-muted-foreground">
+          <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+          <p>Instant credit activation after payment.</p>
+        </div>
+        <div className="flex items-start gap-2 text-sm text-muted-foreground">
+          <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+          <p>Credits never expire — use them anytime.</p>
+        </div>
+        <div className="flex items-start gap-2 text-sm text-muted-foreground">
+          <CheckCircle2 className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+          <p>Secured by Polar — taxes & receipts handled automatically.</p>
+        </div>
+      </div>
+
+      {/* Accepted payment methods */}
+      <p className="text-xs text-muted-foreground text-center">
+        Accepted: Visa, Mastercard, Apple Pay, Google Pay
+      </p>
+
+      {/* Error banner */}
+      {error && (
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5 text-sm text-destructive">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* CTA */}
+      <button
+        onClick={handlePay}
+        disabled={loading}
+        className="flex items-center justify-center gap-2 w-full rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {loading ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Preparing checkout…
+          </>
+        ) : (
+          <>Pay with Card / Apple Pay &rarr;</>
+        )}
+      </button>
+    </div>
+  );
+}

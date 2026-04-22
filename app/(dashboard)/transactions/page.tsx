@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
 import { format } from "date-fns";
 import {
@@ -22,7 +22,8 @@ import {
   PackageOpen,
   AlertCircle,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatInvoiceId, formatPaymentMethod } from "@/lib/utils";
+import { toast } from "sonner";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -112,6 +113,18 @@ function formatAmount(amount: string, currency: string): string {
 // ── Main Page ──────────────────────────────────────────────────────────────
 
 export default function TransactionsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex-1 flex items-center justify-center">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <TransactionsContent />
+    </Suspense>
+  );
+}
+
+function TransactionsContent() {
   const { data: session, isPending: sessionLoading } = useSession();
   const router = useRouter();
 
@@ -119,6 +132,23 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const searchParams = useSearchParams();
+
+  // Show success toast when Polar redirects back after payment
+  useEffect(() => {
+    if (searchParams.get("payment") === "success") {
+      toast.success("Payment successful!", {
+        description: "Your credits will be added to your account shortly. Please refresh if they don't appear.",
+        duration: 8000,
+      });
+      // Clean up the URL so a refresh doesn't re-trigger the toast
+      const url = new URL(window.location.href);
+      url.searchParams.delete("payment");
+      url.searchParams.delete("customer_session_token"); // strip Polar's token too
+      window.history.replaceState({}, "", url.toString());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -143,16 +173,17 @@ export default function TransactionsPage() {
   }, [session?.user?.id]);
 
   // Download invoice as PDF
-  const handleDownloadInvoice = async (id: number) => {
-    setDownloadingId(id);
+  const handleDownloadInvoice = async (tx: Transaction) => {
+    setDownloadingId(tx.id);
     try {
-      const res = await fetch(`/api/transactions/${id}/invoice`);
+      const res = await fetch(`/api/transactions/${tx.id}/invoice`);
       if (!res.ok) throw new Error("Failed to generate invoice");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
+      const invoiceFilename = `${formatInvoiceId(tx.createdAt, tx.id)}.pdf`;
       const a = document.createElement("a");
       a.href = url;
-      a.download = `audora-invoice-${id}.pdf`;
+      a.download = invoiceFilename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -233,13 +264,19 @@ export default function TransactionsPage() {
                       Package
                     </TableHead>
                     <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Invoice ID
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Method
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Amount
                     </TableHead>
                     <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       Status
                     </TableHead>
                     <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pr-5 text-right">
-                      Action
+                      Download
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -268,10 +305,19 @@ export default function TransactionsPage() {
                               tx.paymentProvider
                             )}
                           </span>
-                          <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wide">
-                            #{tx.id}
-                          </span>
                         </div>
+                      </TableCell>
+
+                      <TableCell className="py-3.5">
+                        <span className="text-xs font-medium tabular-nums tracking-wide">
+                          {formatInvoiceId(tx.createdAt, tx.id)}
+                        </span>
+                      </TableCell>
+
+                      <TableCell className="py-3.5">
+                        <span className="text-xs font-medium">
+                          {formatPaymentMethod(tx.paymentProvider, tx.paymentProviderRef)}
+                        </span>
                       </TableCell>
 
                       <TableCell className="py-3.5">
@@ -287,21 +333,25 @@ export default function TransactionsPage() {
                       </TableCell>
 
                       <TableCell className="pr-5 py-3.5 text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
-                          onClick={() => handleDownloadInvoice(tx.id)}
-                          disabled={downloadingId === tx.id}
-                          title="Download Invoice PDF"
-                        >
-                          {downloadingId === tx.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <FileDown className="h-3.5 w-3.5" />
-                          )}
-                          Invoice
-                        </Button>
+                        {tx.paymentStatus === "paid" ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2.5 text-xs gap-1.5 text-muted-foreground hover:text-foreground"
+                            onClick={() => handleDownloadInvoice(tx)}
+                            disabled={downloadingId === tx.id}
+                            title="Download Invoice PDF"
+                          >
+                            {downloadingId === tx.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <FileDown className="h-3.5 w-3.5" />
+                            )}
+                            Invoice
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground/50 pr-2">-</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

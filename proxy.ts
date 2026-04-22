@@ -56,6 +56,7 @@ export async function proxy(request: NextRequest) {
     pathname === "/" ||
     pathname === "/library" ||
     pathname === "/account" ||
+    pathname === "/transactions" ||
     isCheckoutPage;
 
   if (isAuthPage || isProtectedPage) {

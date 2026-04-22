@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
-import { ShoppingBag, Loader2, CheckCircle2 } from "lucide-react";
+import { ShoppingBag, CheckCircle2 } from "lucide-react";
 import Image from "next/image";
-import { InHouseCheckout } from "./_components/checkout-button";
+import { InHouseCheckout, PolarCheckout, type UsdPackageId } from "./_components/checkout-button";
 import { IDR_PACKAGES, type IdrPackageId } from "@/lib/pakasir/packages";
 
 // ─── Package Allowlist ──────────────────────────────────────────────────────
@@ -84,9 +84,9 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
       minimumFractionDigits: 0,
     }).format(amount);
   } else {
-    if (packageId.includes("starter")) { amount = 2; credits = 10; }
-    else if (packageId.includes("creator")) { amount = 5; credits = 30; }
-    else if (packageId.includes("studio")) { amount = 10; credits = 75; }
+    if (packageId.includes("starter")) { amount = 5.00; credits = 25; }
+    else if (packageId.includes("creator")) { amount = 10.00; credits = 60; }
+    else if (packageId.includes("studio")) { amount = 25.00; credits = 175; }
     displayTotal = new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
@@ -100,7 +100,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
       <div className="fixed inset-0 bg-gradient-to-br from-primary/[0.03] via-transparent to-primary/[0.06] pointer-events-none" />
 
       <div className="relative w-full max-w-5xl rounded-2xl border border-border/60 bg-card shadow-2xl shadow-black/5 overflow-hidden flex flex-col lg:flex-row">
-        
+
         {/* Left Column: Order Information */}
         <div className="w-full lg:w-[40%] bg-muted/20 p-6 lg:p-8 flex flex-col border-b lg:border-b-0 lg:border-r border-border/60">
           <div className="flex items-center gap-3 mb-10">
@@ -115,7 +115,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
 
           <div className="flex-1">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Order Summary</h2>
-            
+
             <div className="rounded-xl border border-border/50 bg-background p-4 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -167,10 +167,10 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
               userEmail={session!.user.email}
             />
           ) : (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground justify-center h-full min-h-[200px]">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Preparing your checkout&hellip;</span>
-            </div>
+            <PolarCheckout
+              packageId={packageId as UsdPackageId}
+              userEmail={session!.user.email}
+            />
           )}
         </div>
 
