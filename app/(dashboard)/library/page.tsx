@@ -23,7 +23,14 @@ import {
   ButtonGroup,
   ButtonGroupSeparator,
 } from "@/components/ui/button-group";
-import { Search, ImageIcon, Download, Wand2, MoreVertical, Trash2, Eraser, Loader2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Search, ImageIcon, Download, Wand2, MoreVertical, Trash2, Eraser, Loader2, ZoomIn, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -84,6 +91,7 @@ export default function LibraryPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [removingBgJobId, setRemovingBgJobId] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<Generation | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -261,7 +269,8 @@ export default function LibraryPage() {
                     className="group relative"
                   >
                     <div
-                      className="relative aspect-square w-full rounded-2xl overflow-hidden bg-muted/30 border border-border/40 group-hover:border-primary/20 group-hover:shadow-2xl group-hover:shadow-primary/5 transition-all duration-300"
+                      onClick={() => setSelectedImage(item)}
+                      className="relative aspect-square w-full rounded-2xl overflow-hidden bg-muted/30 border border-border/40 group-hover:border-primary/20 group-hover:shadow-2xl group-hover:shadow-primary/5 transition-all duration-300 cursor-pointer"
                     >
                       {item.resultImageUrl && (
                         <Image
@@ -277,27 +286,27 @@ export default function LibraryPage() {
                       <div className="absolute top-2 left-2 flex flex-wrap gap-1.5 z-[1]">
                         <Badge
                           variant="secondary"
-                          className="bg-background/80 backdrop-blur-xl border-none text-[10px] h-5 px-2 shadow-sm font-semibold text-foreground"
+                          className="bg-background/95 backdrop-blur-md border border-border/20 text-[10px] h-5 px-2 shadow-md font-bold text-foreground"
                         >
                           {styleInfo?.icon} {styleInfo?.label}
                         </Badge>
                         <Badge
                           variant="secondary"
-                          className="bg-background/80 backdrop-blur-xl border-none text-[10px] h-5 px-2 shadow-sm font-semibold text-foreground"
+                          className="bg-background/95 backdrop-blur-md border border-border/20 text-[10px] h-5 px-2 shadow-md font-bold text-foreground"
                         >
                           {item.quality}
                         </Badge>
                       </div>
 
                       {/* Action Button */}
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-[2]">
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-[2]" onClick={(e) => e.stopPropagation()}>
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button variant="secondary" size="icon" className="h-7 w-7 rounded-full bg-background/80 backdrop-blur-xl border-none shadow-sm text-foreground">
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="min-w-[110px] w-auto p-1 border-border/50 rounded-xl" align="end">
+                          <PopoverContent className="min-w-[110px] w-auto p-1 border-border/50 rounded-xl" align="end" onClick={(e) => e.stopPropagation()}>
                             <ButtonGroup orientation="vertical" className="w-full">
                               <Button asChild variant="ghost" size="sm" className="h-8 w-full justify-start gap-2 text-xs">
                                 <Link href={`/${item.jobId}?action=refine`}>
@@ -333,9 +342,19 @@ export default function LibraryPage() {
                         </Popover>
                       </div>
 
-                      {/* Hover Overlay w/ date */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3 pointer-events-none">
-                        <span className="text-[10px] text-white/90 font-medium">
+                      {/* Zoom In Icon Overlay */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-[1]">
+                        <div className="bg-black/40 backdrop-blur-md p-3 rounded-full text-white">
+                          <ZoomIn className="h-6 w-6" />
+                        </div>
+                      </div>
+
+                      {/* Hover Overlay w/ text & date */}
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 pointer-events-none z-[1]">
+                        <p className="text-xs text-white/90 font-medium line-clamp-2 mb-1">
+                          {item.userPrompt || item.prompt}
+                        </p>
+                        <span className="text-[10px] text-white/70">
                           {mounted ? formatRelativeDate(item.createdAt) : ""}
                         </span>
                       </div>
@@ -378,6 +397,106 @@ export default function LibraryPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* ── Image Detail Dialog ────────────────────────────── */}
+      <Dialog open={!!selectedImage} onOpenChange={(open) => { if (!open) setSelectedImage(null); }}>
+        <DialogContent className="sm:max-w-4xl w-full border-border/50 bg-card p-0 overflow-hidden shadow-2xl">
+          <DialogTitle className="sr-only">Image Details</DialogTitle>
+          {selectedImage && (
+            <div className="grid grid-cols-1 md:grid-cols-5 min-h-0">
+              {/* Left: Image */}
+              <div className="flex items-center justify-center bg-muted/10 p-6 border-b md:border-b-0 md:border-r border-border/20 md:col-span-3">
+                <div className="relative w-full aspect-square md:max-h-[75vh] rounded-xl overflow-hidden shadow-lg bg-background border border-border/20">
+                  {selectedImage.resultImageUrl && (
+                    <Image
+                      src={selectedImage.resultImageUrl}
+                      alt={selectedImage.prompt}
+                      fill
+                      className="object-contain"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Right: Info + Actions */}
+              <div className="flex flex-col justify-between p-6 gap-6 md:col-span-2">
+                {/* Prompt + Badges */}
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary" className="text-xs h-6 px-2.5 bg-secondary/80 font-semibold">
+                      {STYLE_LABELS[selectedImage.style]?.icon} {STYLE_LABELS[selectedImage.style]?.label}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs h-6 px-2.5 bg-secondary/80 font-semibold">
+                      {selectedImage.quality}
+                    </Badge>
+                    {mounted && (
+                      <Badge variant="outline" className="text-xs h-6 px-2.5 text-muted-foreground">
+                        {formatRelativeDate(selectedImage.createdAt)}
+                      </Badge>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground/70 mb-2">Prompt</p>
+                    <p className="text-base font-medium leading-relaxed text-foreground/90 max-h-[40vh] overflow-y-auto pr-2">
+                      {selectedImage.userPrompt || selectedImage.prompt}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-row gap-2 pt-4 border-t border-border/40 mt-auto items-center">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="outline" className="flex-1 font-semibold rounded-xl h-10 shadow-sm text-xs gap-2" disabled={removingBgJobId === selectedImage.jobId}>
+                        {removingBgJobId === selectedImage.jobId ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Removing Background...</>
+                        ) : (
+                          <><Download className="w-4 h-4" /> Download Image <ChevronDown className="w-3 h-3 opacity-60 ml-auto" /></>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-[200px] sm:w-[240px] rounded-xl">
+                      <DropdownMenuItem onClick={() => handleDownload(selectedImage)} className="gap-3 py-2.5 cursor-pointer">
+                        <Download className="w-4 h-4 text-muted-foreground" />
+                        <div className="flex flex-col">
+                          <span className="text-[13px] font-medium">Original Background</span>
+                          <span className="text-[11px] text-muted-foreground">White background · PNG</span>
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleDownloadTransparent(selectedImage)} disabled={removingBgJobId === selectedImage.jobId} className="gap-3 py-2.5 cursor-pointer">
+                        <Eraser className="w-4 h-4 text-muted-foreground" />
+                        <div className="flex flex-col">
+                          <span className="text-[13px] font-medium">Transparent Background</span>
+                          <span className="text-[11px] text-muted-foreground">No background · PNG</span>
+                        </div>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <Button asChild size="icon" variant="secondary" className="h-10 w-10 flex-shrink-0 rounded-xl" title="Refine">
+                    <Link href={`/${selectedImage.jobId}?action=refine`}>
+                      <Wand2 className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-10 w-10 text-destructive hover:bg-destructive/10 hover:text-destructive flex-shrink-0 rounded-xl"
+                    onClick={() => {
+                      setDeleteTarget(selectedImage);
+                      setSelectedImage(null);
+                    }}
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ── Delete Confirmation Dialog ─────────────────────── */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
