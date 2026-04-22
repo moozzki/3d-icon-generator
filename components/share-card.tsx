@@ -84,7 +84,6 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
             <img
               src={imageUrl}
               alt="Generated 3D icon"
-              crossOrigin="anonymous"
               style={{
                 width: "100%",
                 height: "100%",
@@ -199,7 +198,6 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
               <img
                 src="/assets/audora-square-logo.png"
                 alt="Audora"
-                crossOrigin="anonymous"
                 style={{
                   width: "60px",
                   height: "60px",

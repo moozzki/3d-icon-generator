@@ -138,6 +138,7 @@ export default function StudioDetailPage() {
   
   const shareCardRef = useRef<HTMLDivElement>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [shareImageUrl, setShareImageUrl] = useState<string | null>(null);
   const [shareFallbackFile, setShareFallbackFile] = useState<File | null>(null);
   
   const [visibilityTarget, setVisibilityTarget] = useState<string | null>(null);
@@ -443,17 +444,35 @@ export default function StudioDetailPage() {
   const handleShareToIG = async () => {
     if (!resultImage || !generation) return;
     setIsSharing(true);
-    
-    setTimeout(async () => {
-      let shareFile: File | null = null;
-      let shareDataUrl: string | null = null;
+    try {
+      // Pre-fetch the icon image as a data URL so html-to-image doesn't hit CORS
+      const iconRes = await fetch(`/api/download?url=${encodeURIComponent(resultImage)}&filename=icon.png`);
+      const iconBlob = await iconRes.blob();
+      const iconDataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(iconBlob);
+      });
 
-      if (!shareCardRef.current) {
-        setIsSharing(false);
-        return;
-      }
+      setShareImageUrl(iconDataUrl);
+
+      // Wait for next render tick + a small buffer for layout
+      setTimeout(async () => {
+        let shareFile: File | null = null;
+        let shareDataUrl: string | null = null;
+        
+        if (!shareCardRef.current) {
+          setIsSharing(false);
+          return;
+        }
       try {
         const { toJpeg } = await import("html-to-image");
+        
+        // Safari hack: prime cache
+        await toJpeg(shareCardRef.current, { quality: 0.95 });
+        await new Promise(resolve => setTimeout(resolve, 150));
+        
         shareDataUrl = await toJpeg(shareCardRef.current, { quality: 0.95 });
         
         const blob = await (await fetch(shareDataUrl)).blob();
@@ -492,8 +511,15 @@ export default function StudioDetailPage() {
         }
       } finally {
         setIsSharing(false);
+        setShareImageUrl(null);
       }
-    }, 0);
+      }, 0);
+    } catch (err) {
+      console.error("IG Share Init Error", err);
+      toast.error("Failed to initialize share.");
+      setIsSharing(false);
+      setShareImageUrl(null);
+    }
   };
 
   return (
@@ -1139,9 +1165,9 @@ export default function StudioDetailPage() {
           zIndex: -1,
         }}
       >
-        {resultImage && generation && (
+        {resultImage && generation && (shareImageUrl || !isSharing) && (
           <ShareCard 
-            imageUrl={resultImage}
+            imageUrl={shareImageUrl || resultImage}
             style={generation.style || style}
             position={generation.position || position}
             userName={session?.user?.name || undefined}

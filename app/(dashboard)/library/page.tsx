@@ -269,6 +269,11 @@ export default function LibraryPage() {
       }
 
       const { toJpeg } = await import("html-to-image");
+      
+      // Safari hack: Webkit often paints a blank canvas on the first run of SVG-based cloning
+      await toJpeg(shareCardRef.current, { width: 1080, height: 1920, skipFonts: true });
+      await new Promise(resolve => setTimeout(resolve, 150));
+
       shareDataUrl = await toJpeg(shareCardRef.current, {
         quality: 0.95,
         width: 1080,
