@@ -63,6 +63,7 @@ interface Generation {
   resultImageUrl: string | null;
   isPublic: boolean;
   createdAt: string;
+  userName?: string;
 }
 
 
@@ -95,7 +96,7 @@ function formatRelativeDate(dateString: string) {
 
 
 
-export default function LibraryPage() {
+export default function SpotlightPage() {
   const queryClient = useQueryClient();
   const { data: session } = useSession();
   const [searchQuery, setSearchQuery] = useState("");
@@ -124,9 +125,9 @@ export default function LibraryPage() {
     isLoading,
     isError,
   } = useQuery<Generation[]>({
-    queryKey: ["library"],
+    queryKey: ["spotlight"],
     queryFn: async () => {
-      const res = await fetch("/api/library");
+      const res = await fetch("/api/spotlight");
       if (!res.ok) throw new Error("Failed to fetch library");
       const json = await res.json();
       return json.data;
@@ -324,9 +325,9 @@ export default function LibraryPage() {
         {/* ── Header Section ─────────────────────────────────── */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 w-full">
           <div className="space-y-1">
-            <h1 className="text-3xl font-heading font-bold tracking-tight">Library</h1>
+            <h1 className="text-3xl font-heading font-bold tracking-tight">Spotlight</h1>
             <p className="text-muted-foreground text-sm">
-              Your collection of generated 3D icons.
+              Discover amazing 3D icons created by the community.
             </p>
           </div>
 
@@ -370,7 +371,7 @@ export default function LibraryPage() {
               animate={{ opacity: 1 }}
               className="flex flex-col items-center justify-center py-32 rounded-3xl border border-dashed border-destructive/30 bg-destructive/5"
             >
-              <p className="text-sm text-destructive font-medium">Failed to load your library.</p>
+              <p className="text-sm text-destructive font-medium">Failed to load the spotlight feed.</p>
               <p className="text-xs text-muted-foreground mt-1">Please try refreshing the page.</p>
             </motion.div>
           )}
@@ -408,7 +409,7 @@ export default function LibraryPage() {
                         />
                       )}
 
-                      {/* Badge Overlays: Style + Quality + Visibility */}
+                      {/* Badge Overlays: Style + Position + UserName */}
                       <div className="absolute top-2 left-2 flex flex-wrap gap-1.5 z-[1]">
                         <Badge
                           variant="secondary"
@@ -418,23 +419,16 @@ export default function LibraryPage() {
                         </Badge>
                         <Badge
                           variant="secondary"
-                          className="bg-background/95 backdrop-blur-md border border-border/20 text-[10px] h-5 px-2 shadow-md font-bold text-foreground"
+                          className="bg-background/95 backdrop-blur-md border border-border/20 text-[10px] h-5 px-2 shadow-md font-bold text-foreground capitalize"
                         >
-                          {item.quality}
+                          {item.position.replace('_', ' ')}
                         </Badge>
-                        {item.isPublic ? (
+                        {item.userName && (
                           <Badge
                             variant="secondary"
-                            className="bg-indigo-500/10 text-indigo-500 backdrop-blur-md border border-indigo-500/20 text-[10px] h-5 px-2 shadow-md font-bold"
+                            className="bg-[#FFFF47] text-[#121212] backdrop-blur-md border border-[#FFFF47] text-[10px] h-5 px-2 shadow-md font-bold truncate max-w-[100px]"
                           >
-                            <Globe className="w-3 h-3 mr-1" /> Spotlight
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant="secondary"
-                            className="bg-background/95 backdrop-blur-md border border-border/20 text-[10px] h-5 px-2 shadow-md font-bold text-muted-foreground"
-                          >
-                            <Lock className="w-3 h-3 mr-1" /> Private
+                            @{item.userName}
                           </Badge>
                         )}
                       </div>
@@ -478,19 +472,6 @@ export default function LibraryPage() {
                                 variant="ghost" 
                                 size="sm" 
                                 className="h-8 w-full justify-start gap-2 text-xs"
-                                onClick={() => {
-                                  if (!item.isPublic) setVisibilityTarget(item);
-                                  else handleToggleVisibilityDirectly(item);
-                                }}
-                                disabled={isUpdatingVisibility}
-                              >
-                                {item.isPublic ? <Lock className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
-                                {item.isPublic ? "Make Private" : "Spotlight"}
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 w-full justify-start gap-2 text-xs"
                                 onClick={() => handleShareToIG(item)}
                                 disabled={isSharing}
                               >
@@ -500,11 +481,6 @@ export default function LibraryPage() {
                                   <Share2 className="h-3.5 w-3.5" /> 
                                 )}
                                 Share to IG Story
-                              </Button>
-                              <ButtonGroupSeparator orientation="horizontal" />
-                              <Button variant="ghost" size="sm" className="h-8 w-full justify-start gap-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteTarget(item)}>
-                                <Trash2 className="h-3.5 w-3.5" />
-                                Delete
                               </Button>
                             </ButtonGroup>
                           </PopoverContent>
@@ -545,16 +521,16 @@ export default function LibraryPage() {
               className="flex flex-1 flex-col items-center justify-center w-full min-h-[50vh] gap-4"
             >
               <div className="w-16 h-16 rounded-2xl bg-muted/40 flex items-center justify-center">
-                <ImageIcon className="w-8 h-8 text-muted-foreground/30" />
+                <Globe className="w-8 h-8 text-muted-foreground/30" />
               </div>
               <div className="text-center">
                 <h3 className="font-heading text-lg font-semibold text-foreground/70">
-                  {searchQuery ? "No matches found" : "Your library is empty"}
+                  {searchQuery ? "No matches found" : "The spotlight is currently empty"}
                 </h3>
                 <p className="text-muted-foreground text-sm mt-1 mb-6 max-w-[250px] mx-auto">
                   {searchQuery
                     ? "Try searching for a different keyword or prompt."
-                    : "Start generating unique 3D icons in the studio to see them here."}
+                    : "Be the first to share your creative generation with the community."}
                 </p>
               </div>
               {!searchQuery && (
@@ -595,14 +571,15 @@ export default function LibraryPage() {
                     <Badge variant="secondary" className="text-xs h-6 px-2.5 bg-secondary/80 font-semibold">
                       {STYLE_LABELS[selectedImage.style]?.icon} {STYLE_LABELS[selectedImage.style]?.label}
                     </Badge>
-                    <Badge variant="secondary" className="text-xs h-6 px-2.5 bg-secondary/80 font-semibold">
-                      {selectedImage.quality}
+                    <Badge variant="secondary" className="text-xs h-6 px-2.5 bg-secondary/80 font-semibold capitalize">
+                      {selectedImage.position.replace('_', ' ')}
                     </Badge>
-                    {mounted && (
-                      <Badge variant="outline" className="text-xs h-6 px-2.5 text-muted-foreground">
-                        {formatRelativeDate(selectedImage.createdAt)}
+                    {selectedImage.userName && (
+                      <Badge variant="secondary" className="text-xs h-6 px-2.5 bg-[#FFFF47] text-[#121212] border border-[#FFFF47] font-bold">
+                        @{selectedImage.userName}
                       </Badge>
                     )}
+
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground/70 mb-2">Prompt</p>
@@ -647,18 +624,6 @@ export default function LibraryPage() {
                     <Link href={`/${selectedImage.jobId}?action=refine`}>
                       <Wand2 className="h-4 w-4" />
                     </Link>
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-10 w-10 text-destructive hover:bg-destructive/10 hover:text-destructive flex-shrink-0 rounded-xl"
-                    onClick={() => {
-                      setDeleteTarget(selectedImage);
-                      setSelectedImage(null);
-                    }}
-                    title="Delete"
-                  >
-                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>

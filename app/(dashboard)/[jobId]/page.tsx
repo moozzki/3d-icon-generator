@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,17 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { ShareCard } from "@/components/share-card";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -27,6 +38,13 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   CornerRightUp,
   Wand2,
@@ -44,6 +62,9 @@ import {
   Eraser,
   Palette,
   X,
+  Globe,
+  Lock,
+  Share2
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -54,6 +75,7 @@ import {
   ColorPickerOutput,
   ColorPickerFormat,
 } from "@/components/kibo-ui/color-picker";
+import { useSession } from "@/lib/auth-client";
 
 const POSITIONS = [
   "Isometric",
@@ -105,12 +127,21 @@ function getCreditCost(aiModel: AiModelId, quality: string): number {
 
 export default function StudioDetailPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const { data: session } = useSession();
   const { jobId } = useParams<{ jobId: string }>();
   const searchParams = useSearchParams();
   const isRefine = searchParams.get("action") === "refine";
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [isRefineMode, setIsRefineMode] = useState(isRefine);
+  
+  const shareCardRef = useRef<HTMLDivElement>(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareFallbackFile, setShareFallbackFile] = useState<File | null>(null);
+  
+  const [visibilityTarget, setVisibilityTarget] = useState<string | null>(null);
+  const [isUpdatingVisibility, setIsUpdatingVisibility] = useState(false);
 
   const { data: generation } = useQuery({
     queryKey: ["generation", jobId],
@@ -379,6 +410,90 @@ export default function StudioDetailPage() {
     } finally {
       setIsRemovingBg(false);
     }
+  };
+
+  const handleToggleVisibilityDirectly = async () => {
+    if (!generation?.jobId) return;
+    setIsUpdatingVisibility(true);
+    try {
+      const res = await fetch("/api/library/visibility", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: generation.jobId, isPublic: !generation.isPublic }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(!generation.isPublic ? "Asset added to Spotlight!" : "Asset is now private");
+      queryClient.invalidateQueries({ queryKey: ["generation", jobId] });
+      queryClient.invalidateQueries({ queryKey: ["library"] });
+      queryClient.invalidateQueries({ queryKey: ["spotlight"] });
+    } catch {
+      toast.error("Failed to update visibility");
+    } finally {
+      setIsUpdatingVisibility(false);
+    }
+  };
+
+  const handleConfirmSpotlight = () => {
+    if (visibilityTarget) {
+      handleToggleVisibilityDirectly();
+      setVisibilityTarget(null);
+    }
+  };
+
+  const handleShareToIG = async () => {
+    if (!resultImage || !generation) return;
+    setIsSharing(true);
+    
+    setTimeout(async () => {
+      let shareFile: File | null = null;
+      let shareDataUrl: string | null = null;
+
+      if (!shareCardRef.current) {
+        setIsSharing(false);
+        return;
+      }
+      try {
+        const { toJpeg } = await import("html-to-image");
+        shareDataUrl = await toJpeg(shareCardRef.current, { quality: 0.95 });
+        
+        const blob = await (await fetch(shareDataUrl)).blob();
+        shareFile = new File([blob], `audora-story-${generation.jobId}.jpg`, { type: 'image/jpeg' });
+        
+        if (navigator.canShare && navigator.canShare({ files: [shareFile] })) {
+          await navigator.share({
+            files: [shareFile],
+            title: 'Crafted on Audora',
+            text: 'Check out this 3D icon I made on Audora!',
+          });
+          toast.success("Shared successfully!");
+        } else {
+          const link = document.createElement("a");
+          link.href = shareDataUrl;
+          link.download = `audora-story-${generation.jobId}.jpg`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          toast.success("Story card downloaded!");
+        }
+      } catch (err: any) {
+        console.error("IG Share Error", err);
+        if (err.name === "NotAllowedError" || err.message?.includes("user gesture")) {
+          if (shareFile) {
+            setShareFallbackFile(shareFile);
+          } else if (shareDataUrl) {
+            const link = document.createElement("a");
+            link.href = shareDataUrl;
+            link.download = `audora-story-${generation.jobId}.jpg`;
+            link.click();
+            toast.success("Story card downloaded!");
+          }
+        } else {
+          toast.error("Failed to generate share card.");
+        }
+      } finally {
+        setIsSharing(false);
+      }
+    }, 0);
   };
 
   return (
@@ -892,7 +1007,33 @@ export default function StudioDetailPage() {
           </div>
 
           {/* Export at bottom */}
-          <div className="p-4 pt-3 border-t border-border/50 bg-background mt-auto">
+          <div className="p-4 pt-3 border-t border-border/50 bg-background mt-auto flex flex-col gap-2">
+             {generation && (
+               <>
+                 <Button
+                    variant="outline"
+                    className="w-full font-semibold rounded-xl h-10 shadow-sm text-sm gap-2"
+                    onClick={() => {
+                      if (!generation.isPublic) setVisibilityTarget(generation.jobId);
+                      else handleToggleVisibilityDirectly();
+                    }}
+                    disabled={isUpdatingVisibility}
+                  >
+                    {generation.isPublic ? <Lock className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
+                    {generation.isPublic ? "Make Private" : "Spotlight"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full font-semibold rounded-xl h-10 shadow-sm text-sm gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border-indigo-200 dark:bg-indigo-950/20 dark:text-indigo-400 dark:border-indigo-900"
+                    onClick={handleShareToIG}
+                    disabled={isSharing || !resultImage}
+                  >
+                    {isSharing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
+                    Share to IG Story
+                  </Button>
+               </>
+             )}
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="w-full font-semibold rounded-xl h-10 shadow-sm text-sm gap-2" disabled={isRemovingBg}>
@@ -924,6 +1065,91 @@ export default function StudioDetailPage() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* ── Spotlight Confirmation Dialog ──────────────────── */}
+      <AlertDialog open={!!visibilityTarget} onOpenChange={(open) => { if (!open) setVisibilityTarget(null); }}>
+        <AlertDialogContent className="sm:max-w-sm rounded-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to spotlight this icon?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will make your generation visible to others in the community spotlight feed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSpotlight} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
+              Yes, Spotlight it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Share Fallback Modal ──────────────────── */}
+      <Dialog open={!!shareFallbackFile} onOpenChange={(open) => { if (!open) setShareFallbackFile(null); }}>
+        <DialogContent className="sm:max-w-sm rounded-xl text-center flex flex-col items-center">
+          <DialogHeader>
+            <DialogTitle>Share to Instagram</DialogTitle>
+            <DialogDescription>
+              Your beautifully crafted story card is ready!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4 w-full">
+            {shareFallbackFile && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img 
+                src={URL.createObjectURL(shareFallbackFile)} 
+                alt="Story card preview" 
+                className="w-48 h-auto rounded-xl border border-border/50 shadow-md mb-2" 
+              />
+            )}
+            <Button
+              size="lg"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-full"
+              onClick={() => {
+                if (shareFallbackFile && navigator.canShare && navigator.canShare({ files: [shareFallbackFile] })) {
+                  navigator.share({
+                    files: [shareFallbackFile],
+                    title: "Crafted on Audora",
+                    text: "Check out this 3D icon I made on Audora!",
+                  }).then(() => {
+                    toast.success("Shared successfully!");
+                    setShareFallbackFile(null);
+                  }).catch(() => {
+                    toast.error("Share cancelled.");
+                  });
+                }
+              }}
+            >
+              Share Now
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* ── Hidden Share Card (off-screen, NOT opacity-0 which causes blank captures) */}
+      <div
+        style={{
+          position: "fixed",
+          top: "-9999px",
+          left: "-9999px",
+          width: "1080px",
+          height: "1920px",
+          overflow: "hidden",
+          pointerEvents: "none",
+          zIndex: -1,
+        }}
+      >
+        {resultImage && generation && (
+          <ShareCard 
+            imageUrl={resultImage}
+            style={generation.style || style}
+            position={generation.position || position}
+            userName={session?.user?.name || undefined}
+            ref={shareCardRef}
+          />
+        )}
+      </div>
+
     </>
   );
 }

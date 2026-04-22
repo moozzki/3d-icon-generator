@@ -94,6 +94,7 @@ export const generations = pgTable("generations", {
   baseImageUrl: text("base_image_url"),
   resultImageUrl: text("result_image_url"),
   transparentImageUrl: text("transparent_image_url"),
+  isPublic: boolean("is_public").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

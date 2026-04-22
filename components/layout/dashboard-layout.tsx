@@ -38,7 +38,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare, Receipt } from "lucide-react";
+import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare, Receipt, Globe } from "lucide-react";
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
@@ -105,6 +105,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const navItems = [
     { name: "Studio", href: "/", icon: Wand2 },
     { name: "Library", href: "/library", icon: Images },
+    { name: "Spotlight", href: "/spotlight", icon: Globe },
   ];
 
   const sidebarWidth = collapsed ? "w-[60px]" : "w-[220px]";
