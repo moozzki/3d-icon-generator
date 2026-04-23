@@ -140,7 +140,7 @@ export default function AccountPage() {
   };
 
   const handleSelectAvatar = async (seed: string) => {
-    const newImageUrl = `https://api.dicebear.com/9.x/thumbs/webp?seed=${seed}`;
+    const newImageUrl = `https://api.dicebear.com/9.x/thumbs/png?seed=${seed}`;
     setUpdatingAvatar(seed);
     try {
       await authClient.updateUser({
@@ -313,7 +313,7 @@ export default function AccountPage() {
                   <div className="flex-1 overflow-y-auto px-6 py-4">
                     <div className="grid grid-cols-5 gap-3">
                       {avatarSeeds.map((seed) => {
-                        const url = `https://api.dicebear.com/9.x/thumbs/webp?seed=${seed}`;
+                        const url = `https://api.dicebear.com/9.x/thumbs/png?seed=${seed}`;
                         const isUpdating = updatingAvatar === seed;
 
                         return (

@@ -32,8 +32,9 @@ export function formatPaymentMethod(provider: string, providerRef: string | null
 
 export function getAvatarUrl(url: string | null | undefined): string {
   if (!url) return "";
-  if (url.includes("api.dicebear.com") && url.includes("/svg")) {
-    return url.replace("/svg", "/webp");
+  if (url.includes("api.dicebear.com")) {
+    if (url.includes("/svg")) return url.replace("/svg", "/png");
+    if (url.includes("/webp")) return url.replace("/webp", "/png");
   }
   return url;
 }
