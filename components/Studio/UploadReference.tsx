@@ -137,6 +137,7 @@ export function UploadReferencePreview({
                 src={referenceUrl}
                 alt="Reference"
                 fill
+                sizes="40px"
                 className="object-cover"
               />
             </div>

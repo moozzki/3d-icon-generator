@@ -18,6 +18,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -40,7 +41,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, ImageIcon, Download, Wand2, MoreVertical, Trash2, Eraser, Loader2, ZoomIn, ChevronDown, Globe, Lock, Share2 } from "lucide-react";
+import { Search, ImageIcon, Download, Wand2, MoreVertical, Trash2, Eraser, Loader2, ZoomIn, ChevronDown, Globe, Lock, Share2, Copy, X } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ShareCard } from "@/components/share-card";
@@ -142,6 +143,11 @@ export default function SpotlightPage() {
   const filteredLibrary = completedGenerations.filter((item) =>
     (item.userPrompt || item.prompt).toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleCopyPrompt = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Prompt copied to clipboard!");
+  };
 
   const handleDownload = async (item: Generation) => {
     if (!item.resultImageUrl) return;
@@ -418,13 +424,13 @@ export default function SpotlightPage() {
                       <div className="absolute top-2 left-2 flex flex-wrap gap-1.5 z-[1]">
                         <Badge
                           variant="secondary"
-                          className="bg-background/95 backdrop-blur-md border border-border/20 text-[10px] h-5 px-2 shadow-md font-bold text-foreground"
+                          className="bg-background/95 backdrop-blur-md border border-border/20 text-[10px] h-5 px-2 shadow-md font-bold text-foreground hidden md:inline-flex"
                         >
                           {styleInfo?.icon} {styleInfo?.label}
                         </Badge>
                         <Badge
                           variant="secondary"
-                          className="bg-background/95 backdrop-blur-md border border-border/20 text-[10px] h-5 px-2 shadow-md font-bold text-foreground capitalize"
+                          className="bg-background/95 backdrop-blur-md border border-border/20 text-[10px] h-5 px-2 shadow-md font-bold text-foreground capitalize hidden md:inline-flex"
                         >
                           {item.position.replace('_', ' ')}
                         </Badge>
@@ -438,59 +444,7 @@ export default function SpotlightPage() {
                         )}
                       </div>
 
-                      {/* Action Button */}
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-[2]" onClick={(e) => e.stopPropagation()}>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="secondary" size="icon" className="h-7 w-7 rounded-full bg-background/80 backdrop-blur-xl border-none shadow-sm text-foreground">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="min-w-[110px] w-auto p-1 border-border/50 rounded-xl" align="end" onClick={(e) => e.stopPropagation()}>
-                            <ButtonGroup orientation="vertical" className="w-full">
-                              <Button asChild variant="ghost" size="sm" className="h-8 w-full justify-start gap-2 text-xs">
-                                <Link href={`/${item.jobId}?action=refine`}>
-                                  <Wand2 className="h-3.5 w-3.5 text-foreground/80" />
-                                  Refine
-                                </Link>
-                              </Button>
-                              <Button variant="ghost" size="sm" className="h-8 w-full justify-start gap-2 text-xs" onClick={() => handleDownload(item)}>
-                                <Download className="h-3.5 w-3.5 text-foreground/80" />
-                                Download Original
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-full justify-start gap-2 text-xs"
-                                onClick={() => handleDownloadTransparent(item)}
-                                disabled={removingBgJobId === item.jobId}
-                              >
-                                {removingBgJobId === item.jobId ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-foreground/80" />
-                                ) : (
-                                  <Eraser className="h-3.5 w-3.5 text-foreground/80" />
-                                )}
-                                {removingBgJobId === item.jobId ? "Processing..." : "Download Transparent"}
-                              </Button>
-                              <ButtonGroupSeparator orientation="horizontal" />
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 w-full justify-start gap-2 text-xs"
-                                onClick={() => handleShareToIG(item)}
-                                disabled={isSharing}
-                              >
-                                {isSharing && selectedImageForShare?.jobId === item.jobId ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <Share2 className="h-3.5 w-3.5" /> 
-                                )}
-                                Share to IG Story
-                              </Button>
-                            </ButtonGroup>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
+
 
                       {/* Zoom In Icon Overlay */}
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-[1]">
@@ -550,8 +504,20 @@ export default function SpotlightPage() {
 
       {/* ── Image Detail Dialog ────────────────────────────── */}
       <Dialog open={!!selectedImage} onOpenChange={(open) => { if (!open) setSelectedImage(null); }}>
-        <DialogContent className="sm:max-w-4xl w-full border-border/50 bg-card p-0 overflow-hidden shadow-2xl">
+        <DialogContent className="sm:max-w-4xl w-full border-border/50 bg-card p-0 overflow-hidden shadow-2xl" showCloseButton={false}>
+          <DialogClose asChild>
+            <Button 
+              variant="secondary" 
+              size="icon" 
+              className="absolute top-4 right-4 z-50 rounded-full h-10 w-10 shadow-lg border border-border/20 bg-background/80 backdrop-blur-md hover:bg-background transition-all"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </DialogClose>
           <DialogTitle className="sr-only">Image Details</DialogTitle>
+          <DialogDescription className="sr-only">
+            View details and community interactions for this generated 3D icon.
+          </DialogDescription>
           {selectedImage && (
             <div className="grid grid-cols-1 md:grid-cols-5 min-h-0">
               {/* Left: Image */}
@@ -562,6 +528,7 @@ export default function SpotlightPage() {
                       src={selectedImage.resultImageUrl}
                       alt={selectedImage.prompt}
                       fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 50vw"
                       className="object-contain"
                     />
                   )}
@@ -587,7 +554,17 @@ export default function SpotlightPage() {
 
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground/70 mb-2">Prompt</p>
+                    <div className="flex items-center justify-between mb-2">
+                       <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground/70">Prompt</p>
+                       <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                        onClick={() => handleCopyPrompt(selectedImage.userPrompt || selectedImage.prompt)}
+                       >
+                        <Copy className="h-3.5 w-3.5" />
+                       </Button>
+                    </div>
                     <p className="text-base font-medium leading-relaxed text-foreground/90 max-h-[40vh] overflow-y-auto pr-2">
                       {selectedImage.userPrompt || selectedImage.prompt}
                     </p>
@@ -596,34 +573,18 @@ export default function SpotlightPage() {
 
                 {/* Actions */}
                 <div className="flex flex-row gap-2 pt-4 border-t border-border/40 mt-auto items-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="sm" variant="outline" className="flex-1 font-semibold rounded-xl h-10 shadow-sm text-xs gap-2" disabled={removingBgJobId === selectedImage.jobId}>
-                        {removingBgJobId === selectedImage.jobId ? (
-                          <><Loader2 className="w-4 h-4 animate-spin" /> Removing Background...</>
-                        ) : (
-                          <><Download className="w-4 h-4" /> Download Image <ChevronDown className="w-3 h-3 opacity-60 ml-auto" /></>
-                        )}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-[200px] sm:w-[240px] rounded-xl">
-                      <DropdownMenuItem onClick={() => handleDownload(selectedImage)} className="gap-3 py-2.5 cursor-pointer">
-                        <Download className="w-4 h-4 text-muted-foreground" />
-                        <div className="flex flex-col">
-                          <span className="text-[13px] font-medium">Original Background</span>
-                          <span className="text-[11px] text-muted-foreground">White background · PNG</span>
-                        </div>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleDownloadTransparent(selectedImage)} disabled={removingBgJobId === selectedImage.jobId} className="gap-3 py-2.5 cursor-pointer">
-                        <Eraser className="w-4 h-4 text-muted-foreground" />
-                        <div className="flex flex-col">
-                          <span className="text-[13px] font-medium">Transparent Background</span>
-                          <span className="text-[11px] text-muted-foreground">No background · PNG</span>
-                        </div>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <Button 
+                    onClick={() => handleDownload(selectedImage)} 
+                    size="sm" 
+                    className="flex-1 font-semibold rounded-xl h-10 shadow-sm text-xs gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+                    disabled={removingBgJobId === selectedImage.jobId}
+                  >
+                    {removingBgJobId === selectedImage.jobId ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
+                    ) : (
+                      <><Download className="w-4 h-4" /> Download Image</>
+                    )}
+                  </Button>
 
                   <Button asChild size="icon" variant="secondary" className="h-10 w-10 flex-shrink-0 rounded-xl" title="Refine">
                     <Link href={`/${selectedImage.jobId}?action=refine`}>

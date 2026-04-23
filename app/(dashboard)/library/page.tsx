@@ -432,20 +432,20 @@ export default function LibraryPage() {
                             variant="secondary"
                             className="bg-indigo-500/10 text-indigo-500 backdrop-blur-md border border-indigo-500/20 text-[10px] h-5 px-2 shadow-md font-bold"
                           >
-                            <Globe className="w-3 h-3 mr-1" /> Spotlight
+                            <Globe className="w-3 h-3 sm:mr-1" /> <span className="hidden sm:inline">Spotlight</span>
                           </Badge>
                         ) : (
                           <Badge
                             variant="secondary"
                             className="bg-background/95 backdrop-blur-md border border-border/20 text-[10px] h-5 px-2 shadow-md font-bold text-muted-foreground"
                           >
-                            <Lock className="w-3 h-3 mr-1" /> Private
+                            <Lock className="w-3 h-3 sm:mr-1" /> <span className="hidden sm:inline">Private</span>
                           </Badge>
                         )}
                       </div>
 
                       {/* Action Button */}
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-[2]" onClick={(e) => e.stopPropagation()}>
+                      <div className="absolute top-2 right-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-[2]" onClick={(e) => e.stopPropagation()}>
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button variant="secondary" size="icon" className="h-7 w-7 rounded-full bg-background/80 backdrop-blur-xl border-none shadow-sm text-foreground">
@@ -526,7 +526,13 @@ export default function LibraryPage() {
                       {/* Hover Overlay w/ text & date */}
                       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 pointer-events-none z-[1]">
                         <p className="text-xs text-white/90 font-medium line-clamp-2 mb-1">
-                          {item.userPrompt || item.prompt}
+                          {item.referenceImage && !item.userPrompt ? (
+                            <span className="flex items-center gap-1.5 italic opacity-80">
+                              <ImageIcon className="w-3 h-3" /> Icon from reference image
+                            </span>
+                          ) : (
+                            item.userPrompt || item.prompt
+                          )}
                         </p>
                         <span className="text-[10px] text-white/70">
                           {mounted ? formatRelativeDate(item.createdAt) : ""}
@@ -576,6 +582,9 @@ export default function LibraryPage() {
       <Dialog open={!!selectedImage} onOpenChange={(open) => { if (!open) setSelectedImage(null); }}>
         <DialogContent className="sm:max-w-4xl w-full border-border/50 bg-card p-0 overflow-hidden shadow-2xl">
           <DialogTitle className="sr-only">Image Details</DialogTitle>
+          <DialogDescription className="sr-only">
+            View details and actions for this generated 3D icon.
+          </DialogDescription>
           {selectedImage && (
             <div className="grid grid-cols-1 md:grid-cols-5 min-h-0">
               {/* Left: Image */}
@@ -586,6 +595,7 @@ export default function LibraryPage() {
                       src={selectedImage.resultImageUrl}
                       alt={selectedImage.prompt}
                       fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 50vw"
                       className="object-contain"
                     />
                   )}
@@ -612,7 +622,13 @@ export default function LibraryPage() {
                   <div>
                     <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground/70 mb-2">Prompt</p>
                     <p className="text-base font-medium leading-relaxed text-foreground/90 max-h-[40vh] overflow-y-auto pr-2">
-                      {selectedImage.userPrompt || selectedImage.prompt}
+                      {selectedImage.referenceImage && !selectedImage.userPrompt ? (
+                        <span className="flex items-center gap-1.5 italic opacity-80">
+                          <ImageIcon className="w-4 h-4" /> Icon from reference image
+                        </span>
+                      ) : (
+                        selectedImage.userPrompt || selectedImage.prompt
+                      )}
                     </p>
                   </div>
                 </div>

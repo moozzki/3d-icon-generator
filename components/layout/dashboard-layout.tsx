@@ -37,6 +37,7 @@ import {
   SheetContent,
   SheetTitle,
   SheetTrigger,
+  SheetDescription,
 } from "@/components/ui/sheet";
 import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare, Receipt, Globe } from "lucide-react";
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
@@ -406,6 +407,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                   </SheetTrigger>
                   <SheetContent side="left" className="w-[260px] p-0 flex flex-col border-r-border/50">
                     <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+                    <SheetDescription className="sr-only">Mobile navigation menu links and workspace switcher.</SheetDescription>
                     {renderSidebarContent(true)}
                   </SheetContent>
                 </Sheet>

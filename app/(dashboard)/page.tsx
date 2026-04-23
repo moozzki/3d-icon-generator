@@ -937,7 +937,13 @@ export default function StudioPage() {
                 </button>
               </div>
               <div className="text-[12px] leading-relaxed text-foreground/90 bg-muted/30 p-3 rounded-xl border border-border/40 font-medium italic">
-                &quot;{prompt}&quot;
+                {referenceImage && !prompt ? (
+                  <span className="flex items-center gap-1.5 opacity-80">
+                    <ImageIcon className="w-3.5 h-3.5" /> Icon from reference image
+                  </span>
+                ) : (
+                  <>"{prompt}"</>
+                )}
               </div>
             </div>
 
