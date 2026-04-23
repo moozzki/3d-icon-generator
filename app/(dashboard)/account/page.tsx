@@ -7,7 +7,7 @@ import { authClient, useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import { cn, getAvatarUrl } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
@@ -140,7 +140,7 @@ export default function AccountPage() {
   };
 
   const handleSelectAvatar = async (seed: string) => {
-    const newImageUrl = `https://api.dicebear.com/9.x/thumbs/svg?seed=${seed}`;
+    const newImageUrl = `https://api.dicebear.com/9.x/thumbs/webp?seed=${seed}`;
     setUpdatingAvatar(seed);
     try {
       await authClient.updateUser({
@@ -269,7 +269,7 @@ export default function AccountPage() {
             {/* Avatar preview */}
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16">
-                <AvatarImage src={imageUrl || session.user.image || ""} />
+                <AvatarImage src={getAvatarUrl(imageUrl || session.user.image)} />
                 <AvatarFallback className="text-lg uppercase">
                   {session.user.name?.substring(0, 2) || "U"}
                 </AvatarFallback>
@@ -313,7 +313,7 @@ export default function AccountPage() {
                   <div className="flex-1 overflow-y-auto px-6 py-4">
                     <div className="grid grid-cols-5 gap-3">
                       {avatarSeeds.map((seed) => {
-                        const url = `https://api.dicebear.com/9.x/thumbs/svg?seed=${seed}`;
+                        const url = `https://api.dicebear.com/9.x/thumbs/webp?seed=${seed}`;
                         const isUpdating = updatingAvatar === seed;
 
                         return (

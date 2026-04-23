@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
+import { cn, getAvatarUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -245,7 +245,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 {isCollapsed ? (
                   <button className="hover:opacity-80 transition-opacity focus:outline-none">
                     <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarImage src={session.user.image || ""} />
+                      <AvatarImage src={getAvatarUrl(session.user.image)} />
                       <AvatarFallback className="text-[10px] uppercase">
                         {session.user.name?.substring(0, 2) || "U"}
                       </AvatarFallback>
@@ -255,7 +255,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                   <button className="w-full text-left group focus:outline-none focus:ring-0">
                     <div className="flex items-center gap-2.5 hover:bg-muted/60 p-2 -mx-2 rounded-lg transition-colors border border-transparent hover:border-border/40">
                       <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarImage src={session.user.image || ""} />
+                        <AvatarImage src={getAvatarUrl(session.user.image)} />
                         <AvatarFallback className="text-[10px] uppercase">
                           {session.user.name?.substring(0, 2) || "U"}
                         </AvatarFallback>
@@ -279,7 +279,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 <div className="px-3.5 py-3.5 bg-muted/30">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-9 w-9 shrink-0 ring-2 ring-background shadow-sm">
-                      <AvatarImage src={session.user.image || ""} />
+                      <AvatarImage src={getAvatarUrl(session.user.image)} />
                       <AvatarFallback className="text-xs uppercase bg-primary/10 text-primary font-bold">
                         {session.user.name?.substring(0, 2) || "U"}
                       </AvatarFallback>

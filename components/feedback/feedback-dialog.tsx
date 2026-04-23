@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Star } from "lucide-react";
 import { toast } from "sonner";
 import { submitFeedback } from "@/app/actions/feedback";
-import { cn } from "@/lib/utils";
+import { cn, getAvatarUrl } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface FeedbackDialogProps extends React.ComponentPropsWithoutRef<typeof Dialog> {
@@ -87,7 +87,7 @@ export function FeedbackDialog({ children, open, onOpenChange, ...props }: Feedb
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="flex items-center gap-2.5 p-2 px-3 rounded-lg bg-muted/30 border border-border/50">
               <Avatar className="h-7 w-7 ring-1 ring-background shadow-sm">
-                <AvatarImage src={session?.user?.image || ""} />
+                <AvatarImage src={getAvatarUrl(session?.user?.image)} />
                 <AvatarFallback className="bg-primary/10 text-primary font-bold text-[10px]">{session?.user?.name?.charAt(0) || session?.user?.email?.charAt(0).toUpperCase() || "U"}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col overflow-hidden">
