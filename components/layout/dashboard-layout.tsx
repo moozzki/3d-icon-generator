@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/sheet";
 import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare, Receipt, Globe } from "lucide-react";
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
+import { AuthLoadingOverlay } from "@/components/auth-loading-overlay";
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -59,6 +60,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [enableTransition, setEnableTransition] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
@@ -343,7 +345,11 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                   <DropdownMenuSeparator className="-mx-1.5 my-1.5" />
 
                   <DropdownMenuItem
-                    onClick={async () => { await signOut(); router.push("/sign-in"); }}
+                    onClick={async () => {
+                      setIsSigningOut(true);
+                      await signOut();
+                      router.push("/sign-in");
+                    }}
                     className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-colors cursor-pointer group/item"
                   >
                     <LogOut className="h-4 w-4 group-hover/item:-translate-x-1 transition-transform" />
@@ -360,6 +366,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <TooltipProvider>
+      <AuthLoadingOverlay isVisible={isSigningOut} message="Signing out..." />
       <div className="flex min-h-screen bg-background text-foreground">
         {/* ── Sidebar (Desktop) ─────────────────────────────────────────── */}
         <aside className={cn(

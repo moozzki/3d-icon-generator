@@ -276,7 +276,7 @@ function TransactionsContent() {
                       Status
                     </TableHead>
                     <TableHead className="text-xs font-semibold text-muted-foreground uppercase tracking-wider pr-5 text-right">
-                      Download
+                      Invoice
                     </TableHead>
                   </TableRow>
                 </TableHeader>
