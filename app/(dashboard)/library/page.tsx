@@ -18,6 +18,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -40,7 +41,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, ImageIcon, Download, Wand2, MoreVertical, Trash2, Eraser, Loader2, ZoomIn, ChevronDown, Globe, Lock, Share2 } from "lucide-react";
+import { Search, ImageIcon, Download, Wand2, MoreVertical, Trash2, Eraser, Loader2, ZoomIn, ChevronDown, Globe, Lock, Share2, X, Copy } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ShareCard } from "@/components/share-card";
@@ -141,6 +142,11 @@ export default function LibraryPage() {
   const filteredLibrary = completedGenerations.filter((item) =>
     (item.userPrompt || item.prompt).toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleCopyPrompt = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Prompt copied to clipboard!");
+  };
 
   const handleDownload = async (item: Generation) => {
     if (!item.resultImageUrl) return;
@@ -417,13 +423,13 @@ export default function LibraryPage() {
                       <div className="absolute top-2 left-2 flex flex-wrap gap-1.5 z-[1]">
                         <Badge
                           variant="secondary"
-                          className="bg-background/95 backdrop-blur-md border border-border/20 text-[10px] h-5 px-2 shadow-md font-bold text-foreground"
+                          className="bg-background/95 backdrop-blur-md border border-border/20 text-[10px] h-5 px-2 shadow-md font-bold text-foreground hidden md:inline-flex"
                         >
                           {styleInfo?.icon} {styleInfo?.label}
                         </Badge>
                         <Badge
                           variant="secondary"
-                          className="bg-background/95 backdrop-blur-md border border-border/20 text-[10px] h-5 px-2 shadow-md font-bold text-foreground"
+                          className="bg-background/95 backdrop-blur-md border border-border/20 text-[10px] h-5 px-2 shadow-md font-bold text-foreground hidden md:inline-flex"
                         >
                           {item.quality}
                         </Badge>
@@ -580,7 +586,16 @@ export default function LibraryPage() {
 
       {/* ── Image Detail Dialog ────────────────────────────── */}
       <Dialog open={!!selectedImage} onOpenChange={(open) => { if (!open) setSelectedImage(null); }}>
-        <DialogContent className="sm:max-w-4xl w-full border-border/50 bg-card p-0 overflow-hidden shadow-2xl">
+        <DialogContent className="sm:max-w-4xl w-full border-border/50 bg-card p-0 overflow-hidden shadow-2xl" showCloseButton={false}>
+          <DialogClose asChild>
+            <Button 
+              variant="secondary" 
+              size="icon" 
+              className="absolute top-4 right-4 z-50 rounded-full h-10 w-10 shadow-lg border border-border/20 bg-background/80 backdrop-blur-md hover:bg-background transition-all"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </DialogClose>
           <DialogTitle className="sr-only">Image Details</DialogTitle>
           <DialogDescription className="sr-only">
             View details and actions for this generated 3D icon.
@@ -620,7 +635,17 @@ export default function LibraryPage() {
                     )}
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground/70 mb-2">Prompt</p>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground/70">Prompt</p>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                        onClick={() => handleCopyPrompt(selectedImage.userPrompt || selectedImage.prompt)}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                     <p className="text-base font-medium leading-relaxed text-foreground/90 max-h-[40vh] overflow-y-auto pr-2">
                       {selectedImage.referenceImage && !selectedImage.userPrompt ? (
                         <span className="flex items-center gap-1.5 italic opacity-80">
