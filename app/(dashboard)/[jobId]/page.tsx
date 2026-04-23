@@ -181,6 +181,11 @@ export default function StudioDetailPage() {
   const [lastJobId, setLastJobId] = useState<string | null>(null);
   const [lastQuality, setLastQuality] = useState<string | null>(null);
 
+  // Progress bar state
+  const [progress, setProgress] = useState(0);
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const selectedModel = AI_MODELS.find((m) => m.id === aiModel)!;
   const creditCost = getCreditCost(aiModel, quality);
 
@@ -194,6 +199,25 @@ export default function StudioDetailPage() {
         .join("")
     ).toUpperCase();
   };
+
+  // Estimated durations in ms per pipeline combination
+  function getEstimatedDuration(model: AiModelId, q: string, hasReference: boolean): number {
+    if (hasReference) {
+      if (model === "flux-2-pro") return q === "4K" ? 45000 : 40000;
+      if (model === "nano-banana-2") return q === "4K" ? 50000 : 45000;
+      return 45000;
+    }
+    if (model === "flux-2-pro") return q === "4K" ? 36000 : 32000;
+    if (model === "nano-banana-2") return q === "4K" ? 40000 : 36000;
+    return 36000;
+  }
+
+  // Phase label based on % progress
+  function getPhaseLabel(pct: number, q: string): string {
+    if (pct < 40) return "Generating base image...";
+    if (pct < 70) return `Upscaling to ${q}...`;
+    return "Finalizing & saving...";
+  }
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const workAreaRef = useRef<HTMLDivElement>(null);
@@ -284,9 +308,22 @@ export default function StudioDetailPage() {
   }, []);
 
   const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+    // Allow generation if there's a prompt OR a reference image (refine mode)
+    if (!prompt.trim() && !referenceImage) return;
     setIsGenerating(true);
     setResultImage(null);
+    setProgress(0);
+
+    // Start progress timer
+    const estimatedDuration = getEstimatedDuration(aiModel, quality, !!referenceImage);
+    const startTime = Date.now();
+    const TARGET_PCT = 92; // cap at 92% during polling, jump to 100% on complete
+    progressTimerRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const pct = Math.min((elapsed / estimatedDuration) * TARGET_PCT, TARGET_PCT);
+      setProgress(pct);
+      setRemainingSeconds(Math.max(0, Math.round((estimatedDuration - elapsed) / 1000)));
+    }, 200);
 
     try {
       // Convert 'Front Facing' -> 'front_facing'
@@ -313,41 +350,76 @@ export default function StudioDetailPage() {
         throw new Error(data.error || "Failed to start generation.");
       }
 
-      const { jobId } = data;
+      // eslint-disable-next-line @typescript-eslint/no-shadow
+      const { jobId: newJobId } = data;
 
-      // Polling loop
+      // Polling loop — resilient to transient network errors
       let status = "pending";
       let finalImageUrl = null;
+      let consecutiveErrors = 0;
+      const MAX_ERRORS = 5;
 
       while (status === "pending") {
-        await new Promise((resolve) => setTimeout(resolve, 2000)); // wait 2s
-        const pollRes = await fetch(`/api/job-status?jobId=${jobId}`);
-        if (!pollRes.ok) {
-          throw new Error("Failed to check job status.");
-        }
-        const pollData = await pollRes.json();
-        status = pollData.status;
+        await new Promise((resolve) => setTimeout(resolve, 3000)); // wait 3s
+        try {
+          const pollRes = await fetch(`/api/job-status?jobId=${newJobId}`);
 
-        if (status === "completed") {
-          finalImageUrl = pollData.resultImageUrl;
-        } else if (status === "failed") {
-          const reason = pollData.failReason ?? "Generation job failed on the server.";
-          throw new Error(reason);
+          if (pollRes.status === 404) {
+            // Job row not yet written to DB — treat as still pending
+            consecutiveErrors = 0;
+            continue;
+          }
+
+          if (!pollRes.ok) {
+            consecutiveErrors++;
+            if (consecutiveErrors >= MAX_ERRORS) {
+              throw new Error("Failed to check job status after multiple attempts.");
+            }
+            continue; // retry on transient server errors
+          }
+
+          consecutiveErrors = 0;
+          const pollData = await pollRes.json();
+          status = pollData.status;
+
+          if (status === "completed") {
+            finalImageUrl = pollData.resultImageUrl;
+          } else if (status === "failed") {
+            const reason = pollData.failReason ?? "Generation failed. Your credits have been refunded.";
+            throw new Error(reason);
+          }
+        } catch (pollErr) {
+          // Re-throw known terminal errors
+          if (status === "failed") throw pollErr;
+          if (pollErr instanceof Error && pollErr.message.includes("multiple attempts")) throw pollErr;
+          // Network-level error (e.g. TimeoutError) — increment and retry
+          consecutiveErrors++;
+          if (consecutiveErrors >= MAX_ERRORS) {
+            throw new Error("Failed to check job status after multiple attempts.");
+          }
         }
       }
 
+      // Job done — clear timer and jump to 100%
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+      setProgress(100);
+      setRemainingSeconds(0);
+
       setResultImage(finalImageUrl);
-      setLastJobId(jobId);
+      setLastJobId(newJobId);
       setLastQuality(quality);
       window.dispatchEvent(new Event("credits-updated"));
       toast.success("Icon generated successfully!");
-      router.push(`/${jobId}`);
+      router.push(`/${newJobId}`);
     } catch (err) {
       console.error("Generation error:", err);
       const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
       toast.error(errorMessage);
     } finally {
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
       setIsGenerating(false);
+      // Small delay before resetting progress so 100% flash is visible
+      setTimeout(() => setProgress(0), 600);
     }
   };
 
@@ -561,7 +633,7 @@ export default function StudioDetailPage() {
                 </motion.div>
               )}
 
-              {/* Generating state */}
+              {/* Generating state — progress bar */}
               {isGenerating && (
                 <motion.div
                   key="generating"
@@ -569,34 +641,56 @@ export default function StudioDetailPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 1.05 }}
                   transition={{ duration: 0.3 }}
-                  className="flex flex-col items-center gap-5 mt-10"
+                  className="flex flex-col items-center gap-6 mt-10 w-72"
                 >
-                  <div className="relative w-28 h-28">
-                    {/* Outer spinning ring */}
+                  {/* Spinning icon */}
+                  <div className="relative w-24 h-24">
                     <motion.div
                       className="absolute inset-0 rounded-full border-2 border-primary/20 border-t-primary"
                       animate={{ rotate: 360 }}
                       transition={{ repeat: Infinity, duration: 1.4, ease: "linear" }}
                     />
-                    {/* Inner spinning ring */}
                     <motion.div
                       className="absolute inset-3 rounded-full border-2 border-primary/10 border-b-primary/60"
                       animate={{ rotate: -360 }}
                       transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
                     />
-                    {/* Center icon */}
                     <div className="absolute inset-0 flex items-center justify-center">
                       <Wand2 className="w-7 h-7 text-primary/70" />
                     </div>
                   </div>
 
+                  {/* Animated phase label */}
                   <motion.p
-                    className="text-sm font-medium text-muted-foreground"
-                    animate={{ opacity: [0.4, 1, 0.4] }}
-                    transition={{ repeat: Infinity, duration: 2.2 }}
+                    key={getPhaseLabel(progress, quality)}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="text-sm font-semibold text-foreground"
                   >
-                    Crafting your 3D icon with {selectedModel.label}...
+                    {getPhaseLabel(progress, quality)}
                   </motion.p>
+
+                  {/* Progress bar */}
+                  <div className="w-full">
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <motion.div
+                        className="h-full rounded-full bg-primary"
+                        animate={{ width: `${progress}%` }}
+                        transition={{ ease: "linear", duration: 0.2 }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-[11px] text-muted-foreground tabular-nums font-medium">
+                        {Math.round(progress)}%
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {remainingSeconds > 0
+                          ? `~${remainingSeconds}s remaining`
+                          : "Finishing up..."}
+                      </span>
+                    </div>
+                  </div>
                 </motion.div>
               )}
 

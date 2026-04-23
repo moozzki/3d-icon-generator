@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { generations } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or } from "drizzle-orm";
 import { deleteFromR2 } from "@/lib/r2";
 
 export async function GET(
@@ -27,7 +27,10 @@ export async function GET(
       .where(
         and(
           eq(generations.jobId, jobId),
-          eq(generations.userId, session.user.id)
+          or(
+            eq(generations.userId, session.user.id),
+            eq(generations.isPublic, true)
+          )
         )
       )
       .limit(1);
