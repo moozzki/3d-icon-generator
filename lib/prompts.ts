@@ -104,6 +104,11 @@ function buildColorClause(color: string | null | undefined): string {
   return ` The dominant color scheme must be ${color}, apply this color to the main material and surface of the subject.`;
 }
 
+function buildMultiplePeopleClause(keepMultiplePeople?: boolean): string {
+  if (!keepMultiplePeople) return "";
+  return " CRITICAL INSTRUCTION: The reference image features multiple people. You MUST preserve, include, and render ALL individuals present in the original image. Maintain the group dynamic and do not simplify to a single character. Group composition.";
+}
+
 export function buildEngineeredPrompt(
   userPrompt: string,
   style: StyleKey,
@@ -125,7 +130,8 @@ export function buildRefEngineeredPrompt(
   style: StyleKey,
   position: string,
   quality: string,
-  color?: string | null
+  color?: string | null,
+  keepMultiplePeople?: boolean
 ): string {
   // Graceful fallback for empty inputs
   const rawSubject = userPrompt?.trim() || "";
@@ -141,7 +147,7 @@ export function buildRefEngineeredPrompt(
     .replace("{subject}", finalSubject)
     .replace("{position}", positionLabel)
     .replace("{quality}", quality);
-  return base + buildColorClause(color);
+  return base + buildColorClause(color) + buildMultiplePeopleClause(keepMultiplePeople);
 }
 
 export function buildRefineEngineeredPrompt(

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
+import { ImageCropModal } from "@/components/Studio/ImageCropModal";
 
 interface UploadReferenceProps {
   referenceUrl: string | null;
@@ -20,26 +21,33 @@ export function UploadReferenceTrigger({
   className,
 }: UploadReferenceProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // ─── Called when the user clicks "Apply Crop" in the modal ───────────────
+  const handleCropApply = async (croppedBase64: string) => {
+    setPendingFile(null); // close modal
 
     try {
       setIsUploading(true);
 
-      // 1. Client-side resize (Max 1024x1024)
+      // 1. Convert base64 data-URL → Blob → File
+      const res = await fetch(croppedBase64);
+      const blob = await res.blob();
+      const croppedFile = new File([blob], "cropped-reference.png", {
+        type: "image/png",
+      });
+
+      // 2. Client-side compress (max 1 MB / 1024 px)
       const options = {
-        maxSizeMB: 1, // Target max 1MB
-        maxWidthOrHeight: 1024, // Lock to 1K
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1024,
         useWebWorker: true,
       };
-      
-      const compressedFile = await imageCompression(file, options);
+      const compressedFile = await imageCompression(croppedFile, options);
 
-      // 2. Get Presigned URL
-      const res = await fetch("/api/upload", {
+      // 3. Get presigned upload URL from our API
+      const uploadMetaRes = await fetch("/api/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -48,19 +56,17 @@ export function UploadReferenceTrigger({
         }),
       });
 
-      if (!res.ok) {
+      if (!uploadMetaRes.ok) {
         throw new Error("Failed to get upload URL");
       }
 
-      const { uploadUrl, fileUrl } = await res.json();
+      const { uploadUrl, fileUrl } = await uploadMetaRes.json();
 
-      // 3. Upload to Cloudflare R2
+      // 4. PUT to Cloudflare R2
       const uploadRes = await fetch(uploadUrl, {
         method: "PUT",
         body: compressedFile,
-        headers: {
-          "Content-Type": compressedFile.type,
-        },
+        headers: { "Content-Type": compressedFile.type },
       });
 
       if (!uploadRes.ok) {
@@ -69,17 +75,20 @@ export function UploadReferenceTrigger({
 
       onReferenceChanged(fileUrl);
       toast.success("Reference image uploaded");
-
     } catch (err) {
       console.error(err);
       toast.error("Failed to upload reference image");
     } finally {
       setIsUploading(false);
-      // Reset input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  };
+
+  // ─── Called when the user selects a file via <input> ─────────────────────
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPendingFile(file); // opens the crop modal
   };
 
   return (
@@ -101,7 +110,9 @@ export function UploadReferenceTrigger({
         ) : (
           <ImageUp className="h-3.5 w-3.5" />
         )}
-        <span className="hidden xs:inline">{isUploading ? "Uploading..." : "Reference"}</span>
+        <span className="hidden xs:inline">
+          {isUploading ? "Uploading..." : "Reference"}
+        </span>
       </button>
 
       <input
@@ -110,6 +121,16 @@ export function UploadReferenceTrigger({
         onChange={handleFileChange}
         accept="image/png, image/jpeg, image/webp"
         className="hidden"
+      />
+
+      {/* Crop modal — shown when a file is pending crop confirmation */}
+      <ImageCropModal
+        file={pendingFile}
+        onApply={handleCropApply}
+        onCancel={() => {
+          setPendingFile(null);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        }}
       />
     </>
   );

@@ -6,6 +6,8 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { UploadReferenceTrigger, UploadReferencePreview } from "@/components/Studio/UploadReference";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
@@ -125,6 +127,7 @@ export default function StudioPage() {
   const [aiModel] = useState<AiModelId>("flux-2-pro");
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [isRefineMode, setIsRefineMode] = useState(false);
+  const [keepMultiplePeople, setKeepMultiplePeople] = useState(false);
   const [isPromptExpanded, setIsPromptExpanded] = useState(true);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -261,6 +264,7 @@ export default function StudioPage() {
           referenceImage,
           isRefine: isRefineMode,
           color,
+          keepMultiplePeople,
         }),
       });
 
@@ -656,8 +660,32 @@ export default function StudioPage() {
                       onClear={() => {
                         setReferenceImage(null);
                         setIsRefineMode(false);
+                        setKeepMultiplePeople(false);
                       }}
                     />
+
+                    {/* Experimental: keep all people toggle — only shown when a reference image is set */}
+                    {referenceImage && (
+                      <div className="flex items-center gap-3 px-3 sm:px-4 pt-2 pb-1">
+                        <Switch
+                          id="keep-multiple-people"
+                          checked={keepMultiplePeople}
+                          onCheckedChange={setKeepMultiplePeople}
+                        />
+                        <div className="flex flex-col gap-0.5">
+                          <Label
+                            htmlFor="keep-multiple-people"
+                            className="text-[11px] sm:text-xs font-medium leading-none cursor-pointer"
+                          >
+                            Keep all people in icon{" "}
+                            <span className="text-muted-foreground font-normal">(Experimental)</span>
+                          </Label>
+                          <p className="text-[10px] text-muted-foreground">
+                            Best for 2–3 people. Default focuses on main person.
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Textarea row */}
                     <div className={cn("px-3 sm:px-4 pb-1 sm:pb-2", referenceImage ? "pt-1" : "pt-7 sm:pt-8")}>

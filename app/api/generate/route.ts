@@ -75,6 +75,7 @@ export async function POST(request: Request) {
       referenceImage = null,
       isRefine = false,
       color = null,
+      keepMultiplePeople = false,
     } = await request.json();
 
     // 2. Validate parameters
@@ -141,7 +142,8 @@ export async function POST(request: Request) {
         style as StyleKey,
         position,
         quality,
-        color
+        color,
+        keepMultiplePeople
       );
     } else {
       engineeredPrompt = buildEngineeredPrompt(
@@ -182,6 +184,7 @@ export async function POST(request: Request) {
         resolution: quality,
         referenceImage,
         creditCost,
+        keepMultiplePeople,
       },
     });
 
