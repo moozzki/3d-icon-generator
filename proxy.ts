@@ -55,6 +55,7 @@ export async function proxy(request: NextRequest) {
   const isProtectedPage =
     pathname === "/" ||
     pathname === "/library" ||
+    pathname === "/spotlight" ||
     pathname === "/account" ||
     pathname === "/transactions" ||
     isCheckoutPage;

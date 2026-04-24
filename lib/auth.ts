@@ -6,7 +6,7 @@ import { sendEmail } from "@/lib/resend";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: "pg" }),
-  
+
   emailVerification: {
     sendOnSignUp: false, // Magic link already verifies email
     autoSignInAfterVerification: true,
@@ -104,10 +104,24 @@ export const auth = betterAuth({
     },
   },
 
-  baseURL: process.env.BETTER_AUTH_URL,
+  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+
   trustedOrigins: [
     ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
     "https://*.vercel.app",
     "http://localhost:3000",
+    "http://localhost:3001",
+    "https://useaudora.com",
+    "https://app.useaudora.com",
+    "https://www.useaudora.com"
   ],
+
+  // Advanced settings for Cross-Subdomain authentication in Production
+  advanced: {
+    crossSubDomainCookies: {
+      enabled: true,
+      // Only enforce the custom domain in production so localhost doesn't break
+      domain: process.env.NODE_ENV === "production" ? ".useaudora.com" : undefined,
+    }
+  }
 });

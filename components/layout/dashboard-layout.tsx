@@ -55,6 +55,13 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
+
+  // Auth guard: redirect to sign-in when session has resolved and there is no user
+  useEffect(() => {
+    if (!sessionLoading && !session?.user) {
+      router.push("/sign-in");
+    }
+  }, [sessionLoading, session, router]);
   const [credits, setCredits] = useState<number | null>(null);
   const [zeroCreditWarning, setZeroCreditWarning] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
