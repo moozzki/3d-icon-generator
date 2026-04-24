@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import QRCode from "react-qr-code";
 import {
   Loader2,
   AlertCircle,
   CheckCircle2,
+  CheckCircle,
   Copy,
   Check,
   X,
@@ -38,6 +39,7 @@ interface PaymentResponse {
 type Step =
   | { kind: "select" }
   | { kind: "paying"; data: PaymentResponse }
+  | { kind: "success" }
   | { kind: "expired" }
   | { kind: "cancelled" }
   | { kind: "error"; message: string };
@@ -108,7 +110,7 @@ function useCountdown(expiresAt: string | null) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function CopyButton({ text }: { text: string }) {
+function CopyButton({ text, className }: { text: string; className?: string }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     await navigator.clipboard.writeText(text);
@@ -118,7 +120,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={copy}
-      className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      className={`flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ${className}`}
     >
       {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
       {copied ? "Copied!" : "Copy"}
@@ -164,6 +166,49 @@ export function InHouseCheckout({ packageId, userEmail }: InHouseCheckoutProps) 
     }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seconds]);
+
+  // ── Payment status polling ───────────────────────────────────────────────
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    // Only poll while in the "paying" state
+    if (step.kind !== "paying") {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+      return;
+    }
+
+    const transactionId = step.data.transactionId;
+
+    const checkStatus = async () => {
+      try {
+        const res = await fetch(
+          `/api/payment/status?transactionId=${transactionId}`
+        );
+        if (!res.ok) return; // transient error — keep polling
+        const data = await res.json();
+        if (data.status === "paid") {
+          setStep({ kind: "success" });
+        }
+      } catch {
+        // Network error — keep polling silently
+      }
+    };
+
+    // Immediate first check, then every 3 seconds
+    checkStatus();
+    pollingRef.current = setInterval(checkStatus, 3000);
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step.kind]);
 
   // ── Confirm & Pay ──────────────────────────────────────────────────────────
   const handleConfirm = useCallback(async () => {
@@ -295,11 +340,6 @@ export function InHouseCheckout({ packageId, userEmail }: InHouseCheckoutProps) 
   if (step.kind === "paying") {
     const { data } = step;
     const isQris = data.paymentMethod === "qris";
-    const totalFormatted = new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(data.totalPayment);
 
     const urgentCountdown = seconds < 300; // less than 5 min
 
@@ -397,6 +437,31 @@ export function InHouseCheckout({ packageId, userEmail }: InHouseCheckoutProps) 
             Cancel Payment
           </button>
         </div>
+      </div>
+    );
+  }
+
+  // ─── Render: Success ──────────────────────────────────────────────────────
+  if (step.kind === "success") {
+    // Auto-redirect to main route
+    if (typeof window !== "undefined") {
+      setTimeout(() => router.push("/"), 2000);
+    }
+    return (
+      <div className="flex flex-col items-center gap-5 w-full text-center py-4">
+        <div className="relative flex items-center justify-center">
+          <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center animate-in zoom-in-50 duration-500">
+            <CheckCircle className="w-10 h-10 text-emerald-500" />
+          </div>
+          <div className="absolute inset-0 rounded-full border-2 border-emerald-500/20 animate-ping" />
+        </div>
+        <div className="space-y-1.5">
+          <p className="text-xl font-bold text-foreground">Payment Successful!</p>
+          <p className="text-sm text-muted-foreground">
+            Your credits have been added. Redirecting you now…
+          </p>
+        </div>
+        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
       </div>
     );
   }

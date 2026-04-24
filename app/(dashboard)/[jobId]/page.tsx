@@ -186,7 +186,6 @@ export default function StudioDetailPage() {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const selectedModel = AI_MODELS.find((m) => m.id === aiModel)!;
   const creditCost = getCreditCost(aiModel, quality);
 
   // Helper: convert [r, g, b, a] array from ColorPicker onChange to a HEX string
@@ -350,7 +349,6 @@ export default function StudioDetailPage() {
         throw new Error(data.error || "Failed to start generation.");
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-shadow
       const { jobId: newJobId } = data;
 
       // Polling loop — resilient to transient network errors
@@ -566,9 +564,10 @@ export default function StudioDetailPage() {
           document.body.removeChild(link);
           toast.success("Story card downloaded!");
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error("IG Share Error", err);
-        if (err.name === "NotAllowedError" || err.message?.includes("user gesture")) {
+        const isUserGestureError = err instanceof Error && (err.name === "NotAllowedError" || err.message?.includes("user gesture"));
+        if (isUserGestureError) {
           if (shareFile) {
             setShareFallbackFile(shareFile);
           } else if (shareDataUrl) {

@@ -147,8 +147,7 @@ function TransactionsContent() {
       url.searchParams.delete("customer_session_token"); // strip Polar's token too
       window.history.replaceState({}, "", url.toString());
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -170,7 +169,7 @@ function TransactionsContent() {
       .then((data: Transaction[]) => setTransactions(data))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [session?.user?.id]);
+  }, [session?.user]);
 
   // Download invoice as PDF
   const handleDownloadInvoice = async (tx: Transaction) => {

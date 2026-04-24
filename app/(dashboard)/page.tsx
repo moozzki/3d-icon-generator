@@ -942,7 +942,7 @@ export default function StudioPage() {
                     <ImageIcon className="w-3.5 h-3.5" /> Icon from reference image
                   </span>
                 ) : (
-                  <>"{prompt}"</>
+                  <>&quot;{prompt}&quot;</>
                 )}
               </div>
             </div>

@@ -1,22 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -30,22 +23,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  ButtonGroup,
-  ButtonGroupSeparator,
-} from "@/components/ui/button-group";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Search, ImageIcon, Download, Wand2, MoreVertical, Trash2, Eraser, Loader2, ZoomIn, ChevronDown, Globe, Lock, Share2, Copy, X } from "lucide-react";
+import { Search, Download, Wand2, ZoomIn, Globe, Copy, X, ImageIcon } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ShareCard } from "@/components/share-card";
-import { useSession } from "@/lib/auth-client";
 
 interface Generation {
   id: number;
@@ -67,8 +47,6 @@ interface Generation {
   userName?: string;
 }
 
-
-
 const STYLE_LABELS: Record<string, { label: string; icon: string }> = {
   plastic: { label: "Plastic", icon: "🫧" },
   clay: { label: "Clay", icon: "🏺" },
@@ -77,8 +55,6 @@ const STYLE_LABELS: Record<string, { label: string; icon: string }> = {
   toy_block: { label: "Toy Block", icon: "🧱" },
   metallic: { label: "Metallic", icon: "⚙️" },
 };
-
-
 
 function formatRelativeDate(dateString: string) {
   const date = new Date(dateString);
@@ -95,27 +71,13 @@ function formatRelativeDate(dateString: string) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-
-
 export default function SpotlightPage() {
   const queryClient = useQueryClient();
-  const { data: session } = useSession();
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [deleteTarget, setDeleteTarget] = useState<Generation | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [removingBgJobId, setRemovingBgJobId] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<Generation | null>(null);
-  
-  const shareCardRef = useRef<HTMLDivElement>(null);
-  const [selectedImageForShare, setSelectedImageForShare] = useState<Generation | null>(null);
-  const [isSharing, setIsSharing] = useState(false);
-  
-  const [shareFallbackFile, setShareFallbackFile] = useState<File | null>(null);
-  
   const [visibilityTarget, setVisibilityTarget] = useState<Generation | null>(null);
-  const [isUpdatingVisibility, setIsUpdatingVisibility] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -168,61 +130,7 @@ export default function SpotlightPage() {
     }
   };
 
-  const handleDownloadTransparent = async (item: Generation) => {
-    if (!item.jobId) return;
-    setRemovingBgJobId(item.jobId);
-    try {
-      const res = await fetch("/api/remove-bg", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobId: item.jobId }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to remove background");
-
-      const filename = `audora-${item.quality.toLowerCase()}-${item.jobId}-transparent.png`;
-      const downloadUrl = `/api/download?url=${encodeURIComponent(data.url)}&filename=${filename}`;
-
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      toast.success("Transparent download started!");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to remove background";
-      toast.error(message);
-    } finally {
-      setRemovingBgJobId(null);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setIsDeleting(true);
-    try {
-      const response = await fetch(`/api/library/${deleteTarget.jobId}`, {
-        method: "DELETE",
-      });
-      if (response.ok) {
-        toast.success("Image deleted successfully");
-        queryClient.invalidateQueries({ queryKey: ["library"] });
-      } else {
-        toast.error("Failed to delete image");
-      }
-    } catch {
-      toast.error("Failed to delete image");
-    } finally {
-      setIsDeleting(false);
-      setDeleteTarget(null);
-    }
-  };
-
   const handleToggleVisibilityDirectly = async (item: Generation) => {
-    setIsUpdatingVisibility(true);
     try {
       const res = await fetch("/api/library/visibility", {
         method: "POST",
@@ -235,8 +143,6 @@ export default function SpotlightPage() {
       queryClient.invalidateQueries({ queryKey: ["spotlight"] });
     } catch {
       toast.error("Failed to update visibility");
-    } finally {
-      setIsUpdatingVisibility(false);
     }
   };
 
@@ -246,89 +152,6 @@ export default function SpotlightPage() {
       setVisibilityTarget(null);
     }
   };
-
-  const handleShareToIG = async (item: Generation) => {
-    if (!item.resultImageUrl) return;
-    setIsSharing(true);
-    let shareFile: File | null = null;
-    let shareDataUrl: string | null = null;
-
-    try {
-      // Pre-fetch the icon image as a data URL so html-to-image doesn't hit CORS
-      const iconRes = await fetch(`/api/download?url=${encodeURIComponent(item.resultImageUrl)}&filename=icon.png`);
-      const iconBlob = await iconRes.blob();
-      const iconDataUrl = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(iconBlob);
-      });
-
-      // Set state to render the card with the data URL
-      setSelectedImageForShare({ ...item, resultImageUrl: iconDataUrl });
-
-      // Wait for next render tick + a small buffer for layout
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      if (!shareCardRef.current) {
-        toast.error("Share card failed to render.");
-        return;
-      }
-
-      const { toJpeg } = await import("html-to-image");
-      
-      // Safari hack: Webkit often paints a blank canvas on the first run of SVG-based cloning
-      await toJpeg(shareCardRef.current, { width: 1080, height: 1920, skipFonts: true });
-      await new Promise(resolve => setTimeout(resolve, 150));
-
-      shareDataUrl = await toJpeg(shareCardRef.current, {
-        quality: 0.95,
-        width: 1080,
-        height: 1920,
-        skipFonts: true,
-      });
-
-      const blob = await (await fetch(shareDataUrl)).blob();
-      shareFile = new File([blob], `audora-story-${item.jobId}.jpg`, { type: "image/jpeg" });
-
-      if (navigator.canShare && navigator.canShare({ files: [shareFile] })) {
-        await navigator.share({
-          files: [shareFile],
-          title: "Crafted on Audora",
-          text: "Check out this 3D icon I made on Audora!",
-        });
-        toast.success("Shared successfully!");
-      } else {
-        const link = document.createElement("a");
-        link.href = shareDataUrl;
-        link.download = `audora-story-${item.jobId}.jpg`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.success("Story card downloaded!");
-      }
-    } catch (err: any) {
-      console.error("IG Share Error", err);
-      // Wait, if it's a NotAllowedError, user gesture expired, offer the fallback modal
-      if (err.name === "NotAllowedError" || err.message?.includes("user gesture")) {
-        if (shareFile) {
-          setShareFallbackFile(shareFile);
-        } else if (shareDataUrl) {
-           const link = document.createElement("a");
-           link.href = shareDataUrl;
-           link.download = `audora-story-${item.jobId}.jpg`;
-           link.click();
-           toast.success("Story card downloaded!");
-        }
-      } else {
-        toast.error("Failed to generate share card.");
-      }
-    } finally {
-      setIsSharing(false);
-      setSelectedImageForShare(null);
-    }
-  };
-
 
   return (
     <>
@@ -444,8 +267,6 @@ export default function SpotlightPage() {
                         )}
                       </div>
 
-
-
                       {/* Zoom In Icon Overlay */}
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-[1]">
                         <div className="bg-black/40 backdrop-blur-md p-3 rounded-full text-white">
@@ -456,7 +277,13 @@ export default function SpotlightPage() {
                       {/* Hover Overlay w/ text & date */}
                       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 pointer-events-none z-[1]">
                         <p className="text-xs text-white/90 font-medium line-clamp-2 mb-1">
-                          {item.userPrompt || item.prompt}
+                          {item.referenceImage && !item.userPrompt ? (
+                            <span className="flex items-center gap-1.5 italic opacity-80">
+                              <ImageIcon className="w-3 h-3" /> Icon from reference image
+                            </span>
+                          ) : (
+                            item.userPrompt || item.prompt
+                          )}
                         </p>
                         <span className="text-[10px] text-white/70">
                           {mounted ? formatRelativeDate(item.createdAt) : ""}
@@ -566,7 +393,13 @@ export default function SpotlightPage() {
                        </Button>
                     </div>
                     <p className="text-base font-medium leading-relaxed text-foreground/90 max-h-[40vh] overflow-y-auto pr-2">
-                      {selectedImage.userPrompt || selectedImage.prompt}
+                      {selectedImage.referenceImage && !selectedImage.userPrompt ? (
+                        <span className="flex items-center gap-1.5 italic opacity-80">
+                          <ImageIcon className="w-4 h-4" /> Icon from reference image
+                        </span>
+                      ) : (
+                        selectedImage.userPrompt || selectedImage.prompt
+                      )}
                     </p>
                   </div>
                 </div>
@@ -577,13 +410,8 @@ export default function SpotlightPage() {
                     onClick={() => handleDownload(selectedImage)} 
                     size="sm" 
                     className="flex-1 font-semibold rounded-xl h-10 shadow-sm text-xs gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
-                    disabled={removingBgJobId === selectedImage.jobId}
                   >
-                    {removingBgJobId === selectedImage.jobId ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
-                    ) : (
-                      <><Download className="w-4 h-4" /> Download Image</>
-                    )}
+                    <Download className="w-4 h-4" /> Download Image
                   </Button>
 
                   <Button asChild size="icon" variant="secondary" className="h-10 w-10 flex-shrink-0 rounded-xl" title="Refine">
@@ -595,63 +423,6 @@ export default function SpotlightPage() {
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Delete Confirmation Dialog ─────────────────────── */}
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="font-heading text-lg">
-              Delete this icon?
-            </DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
-              This will permanently delete the 3D asset and remove it from your library. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-
-          {deleteTarget?.resultImageUrl && (
-            <div className="flex justify-center py-2">
-              <Image
-                src={deleteTarget.resultImageUrl}
-                alt="Icon to delete"
-                width={96}
-                height={96}
-                className="rounded-xl object-cover border border-border/40 shadow-sm opacity-70"
-              />
-            </div>
-          )}
-
-          <DialogFooter className="flex gap-2 sm:gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="flex-1"
-              onClick={() => setDeleteTarget(null)}
-              disabled={isDeleting}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="flex-1 gap-1.5"
-              onClick={handleDelete}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <>
-                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Delete Permanently
-                </>
-              )}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -672,72 +443,6 @@ export default function SpotlightPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* ── Share Fallback Modal ──────────────────── */}
-      <Dialog open={!!shareFallbackFile} onOpenChange={(open) => { if (!open) setShareFallbackFile(null); }}>
-        <DialogContent className="sm:max-w-sm rounded-xl text-center flex flex-col items-center">
-          <DialogHeader>
-            <DialogTitle>Share to Instagram</DialogTitle>
-            <DialogDescription>
-              Your beautifully crafted story card is ready!
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col items-center gap-4 py-4 w-full">
-            {shareFallbackFile && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img 
-                src={URL.createObjectURL(shareFallbackFile)} 
-                alt="Story card preview" 
-                className="w-48 h-auto rounded-xl border border-border/50 shadow-md mb-2" 
-              />
-            )}
-            <Button
-              size="lg"
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-full"
-              onClick={() => {
-                if (shareFallbackFile && navigator.canShare && navigator.canShare({ files: [shareFallbackFile] })) {
-                  navigator.share({
-                    files: [shareFallbackFile],
-                    title: "Crafted on Audora",
-                    text: "Check out this 3D icon I made on Audora!",
-                  }).then(() => {
-                    toast.success("Shared successfully!");
-                    setShareFallbackFile(null);
-                  }).catch(() => {
-                    toast.error("Share cancelled.");
-                  });
-                }
-              }}
-            >
-              Share Now
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Hidden Share Card (off-screen, NOT opacity-0 which causes blank captures) */}
-      <div
-        style={{
-          position: "fixed",
-          top: "-9999px",
-          left: "-9999px",
-          width: "1080px",
-          height: "1920px",
-          overflow: "hidden",
-          pointerEvents: "none",
-          zIndex: -1,
-        }}
-      >
-        {selectedImageForShare && (
-          <ShareCard 
-            imageUrl={selectedImageForShare.resultImageUrl!}
-            style={selectedImageForShare.style}
-            position={selectedImageForShare.position}
-            userName={session?.user?.name || undefined}
-            ref={shareCardRef}
-          />
-        )}
-      </div>
     </>
   );
 }

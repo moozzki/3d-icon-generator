@@ -80,7 +80,7 @@ export function FeedbackDialog({ children, open, onOpenChange, ...props }: Feedb
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-xl font-bold tracking-tight">Share Your Feedback</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground/80">
-              Your feedback directly shapes Audora's future.
+              Your feedback directly shapes Audora&apos;s future.
             </DialogDescription>
           </DialogHeader>
 

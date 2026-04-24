@@ -306,10 +306,11 @@ export default function LibraryPage() {
         document.body.removeChild(link);
         toast.success("Story card downloaded!");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("IG Share Error", err);
       // Wait, if it's a NotAllowedError, user gesture expired, offer the fallback modal
-      if (err.name === "NotAllowedError" || err.message?.includes("user gesture")) {
+      const isUserGestureError = err instanceof Error && (err.name === "NotAllowedError" || err.message?.includes("user gesture"));
+      if (isUserGestureError) {
         if (shareFile) {
           setShareFallbackFile(shareFile);
         } else if (shareDataUrl) {

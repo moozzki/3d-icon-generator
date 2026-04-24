@@ -15,7 +15,7 @@ export { redis };
 // Purpose: Prevent spam-clicking "Generate" that drains Fal.ai budget
 export const generationRateLimit = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(3, "60 s"),
+  limiter: Ratelimit.slidingWindow(30, "60 s"), // 30 requests per minute selama demo day, balikin ke 3 setelahnya
   analytics: true,
   prefix: "ratelimit:generate",
 });
@@ -26,7 +26,7 @@ export const generationRateLimit = new Ratelimit({
 // Purpose: Block bots/scripts while staying safe for organic users on shared IPs
 export const globalIpRateLimit = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(50, "60 s"),
+  limiter: Ratelimit.slidingWindow(1000, "60 s"),// 1000 requests per minute selama demo day, balikin ke 50 setelahnya
   analytics: true,
   prefix: "ratelimit:global-ip",
 });
@@ -38,7 +38,7 @@ export const globalIpRateLimit = new Ratelimit({
 // Note: Account #6+ from same IP can still sign up, but gets 0 credits
 export const sybilDefenseLimit = new Ratelimit({
   redis,
-  limiter: Ratelimit.slidingWindow(5, "86400 s"), // 24 hours
+  limiter: Ratelimit.slidingWindow(100, "86400 s"), // 100 accounts per day selama demo day, balikin ke 5 setelahnya
   analytics: true,
   prefix: "ratelimit:sybil-defense",
 });
