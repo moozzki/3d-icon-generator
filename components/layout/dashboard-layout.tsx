@@ -24,14 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTheme } from "next-themes";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+
 import {
   Sheet,
   SheetContent,
@@ -39,7 +32,7 @@ import {
   SheetTrigger,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Wand2, Images, Sparkles, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare, Receipt, Globe } from "lucide-react";
+import { Wand2, Images, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare, Receipt, Globe } from "lucide-react";
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 import { AuthLoadingOverlay } from "@/components/auth-loading-overlay";
 
@@ -464,39 +457,17 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
               </div>
 
               {/* Top Up CTA */}
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button
-                    size="sm"
-                    data-topup-trigger
-                    className="h-7 sm:h-8 rounded-full text-[11px] sm:text-xs font-semibold gap-1 sm:gap-1.5 shadow-sm hover:shadow-primary/25 transition-shadow px-3 sm:px-4"
-                  >
-                    <Zap className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
-                    <span className="hidden sm:inline">Top Up</span>
-                    <span className="inline sm:hidden">Top Up</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-sm w-[95vw] rounded-xl mx-auto">
-                  <DialogHeader>
-                    <DialogTitle className="font-heading text-xl">Top Up Credits</DialogTitle>
-                    <DialogDescription>
-                      Get more credits to generate high-quality 3D icons.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="py-4">
-                    <div className="border-2 border-primary rounded-xl p-5 flex flex-col items-center justify-center text-center relative overflow-hidden bg-primary/5">
-                      <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-bl-lg font-medium">
-                        Popular
-                      </div>
-                      <Sparkles className="h-8 w-8 text-primary mb-2" />
-                      <h3 className="font-heading text-2xl font-bold mb-1">10 Credits</h3>
-                      <p className="text-sm text-muted-foreground mb-4">Perfect for quick projects.</p>
-                      <div className="text-xl font-bold mb-4">Rp 30.000</div>
-                      <Button className="w-full">Purchase via QRIS</Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <Button
+                asChild
+                size="sm"
+                className="h-7 sm:h-8 rounded-full text-[11px] sm:text-xs font-semibold gap-1 sm:gap-1.5 shadow-sm hover:shadow-primary/25 transition-shadow px-3 sm:px-4"
+              >
+                <Link href="https://useaudora.com/pricing" data-topup-trigger>
+                  <Zap className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
+                  <span className="hidden sm:inline">Top Up</span>
+                  <span className="inline sm:hidden">Top Up</span>
+                </Link>
+              </Button>
             </div>
           </header>
 
@@ -508,15 +479,12 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 <div className="flex-1 text-sm">
                   <p className="text-amber-200 leading-relaxed">
                     <span className="font-semibold">Hi!</span> t looks like your current network has reached its daily limit for free credits. But do not worry, your account is fully active! You can start generating 3D icons right away by doing a{" "}
-                    <button
+                    <Link
+                      href="https://useaudora.com/pricing"
                       className="underline underline-offset-2 font-semibold text-amber-400 hover:text-amber-300 transition-colors"
-                      onClick={() => {
-                        // Trigger top-up dialog by dispatching a custom event
-                        document.querySelector<HTMLButtonElement>('[data-topup-trigger]')?.click();
-                      }}
                     >
                       Credit Top-up
-                    </button>
+                    </Link>
                     {" "}or contact{" "}
                     <a
                       href="mailto:support@useaudora.com"
