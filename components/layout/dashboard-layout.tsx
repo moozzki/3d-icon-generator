@@ -35,8 +35,9 @@ import {
 import { Wand2, Images, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare, Receipt, Globe } from "lucide-react";
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 import { AuthLoadingOverlay } from "@/components/auth-loading-overlay";
+import { PricingDialog } from "@/components/pricing/pricing-dialog";
 
-export function DashboardLayout({ children }: { children: ReactNode }) {
+export function DashboardLayout({ children, country }: { children: ReactNode; country?: string }) {
   const pathname = usePathname();
 
   const { data: session, isPending: sessionLoading } = useSession();
@@ -61,6 +62,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const [enableTransition, setEnableTransition] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isPricingOpen, setIsPricingOpen] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
@@ -458,15 +460,13 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
               {/* Top Up CTA */}
               <Button
-                asChild
                 size="sm"
+                onClick={() => setIsPricingOpen(true)}
                 className="h-7 sm:h-8 rounded-full text-[11px] sm:text-xs font-semibold gap-1 sm:gap-1.5 shadow-sm hover:shadow-primary/25 transition-shadow px-3 sm:px-4"
               >
-                <Link href="https://useaudora.com/pricing" data-topup-trigger>
-                  <Zap className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
-                  <span className="hidden sm:inline">Top Up</span>
-                  <span className="inline sm:hidden">Top Up</span>
-                </Link>
+                <Zap className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
+                <span className="hidden sm:inline">Top Up</span>
+                <span className="inline sm:hidden">Top Up</span>
               </Button>
             </div>
           </header>
@@ -479,12 +479,12 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 <div className="flex-1 text-sm">
                   <p className="text-amber-200 leading-relaxed">
                     <span className="font-semibold">Hi!</span> It looks like your current network has reached its daily limit for free credits. But do not worry, your account is fully active! You can start generating 3D icons right away by doing a{" "}
-                    <Link
-                      href="https://useaudora.com/pricing"
+                    <button
+                      onClick={() => setIsPricingOpen(true)}
                       className="underline underline-offset-2 font-semibold text-amber-400 hover:text-amber-300 transition-colors"
                     >
                       Credit Top-up
-                    </Link>
+                    </button>
                     {" "}or contact{" "}
                     <a
                       href="mailto:support@useaudora.com"
@@ -511,6 +511,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
           </main>
         </div>
       </div>
+      <PricingDialog open={isPricingOpen} onOpenChange={setIsPricingOpen} country={country} />
     </TooltipProvider>
   );
 }

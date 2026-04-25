@@ -1,9 +1,13 @@
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { headers } from "next/headers";
 
-export default function DashboardGroup({
+export default async function DashboardGroup({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return <DashboardLayout>{children}</DashboardLayout>;
+  const headersList = await headers();
+  const country = headersList.get("x-vercel-ip-country") ?? "ID";
+
+  return <DashboardLayout country={country}>{children}</DashboardLayout>;
 }
