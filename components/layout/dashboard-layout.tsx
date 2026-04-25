@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "@/lib/auth-client";
+import { usePostHog } from 'posthog-js/react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -44,6 +45,16 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
+  const posthog = usePostHog();
+
+  useEffect(() => {
+    if (session?.user) {
+      posthog.identify(session.user.id, {
+        email: session.user.email,
+        name: session.user.name,
+      });
+    }
+  }, [session?.user, posthog]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -350,6 +361,7 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
                     onClick={async () => {
                       setIsSigningOut(true);
                       await signOut();
+                      posthog.reset();
                       router.push("/sign-in");
                     }}
                     className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-colors cursor-pointer group/item"

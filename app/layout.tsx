@@ -9,6 +9,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-heading' });
 
+import { PostHogProvider } from "./providers/PostHogProvider";
+
 export const metadata: Metadata = {
   title: "AI 3D Icon Generator",
   description: "High quality 3D icon generator MVP",
@@ -36,8 +38,10 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            {children}
-            <Toaster />
+            <PostHogProvider>
+              {children}
+              <Toaster />
+            </PostHogProvider>
           </ThemeProvider>
         </QueryProvider>
       </body>
