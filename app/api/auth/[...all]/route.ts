@@ -1,8 +1,13 @@
 import { auth } from "@/lib/auth";
 import { toNextJsHandler } from "better-auth/next-js";
 
-// 1. Bungkus auth lu pake handler khusus Next.js App Router
-const handler = toNextJsHandler(auth);
+// Destructure individual method handlers so each export is a plain function,
+// which satisfies Next.js 16's strict RouteHandlerConfig type constraint.
+const { GET, POST } = toNextJsHandler(auth);
 
-// 2. Export buat semua method, termasuk OPTIONS buat nembus CORS Landing Page lu
-export { handler as GET, handler as POST, handler as OPTIONS };
+export { GET, POST };
+
+// OPTIONS handler for CORS preflight (cross-subdomain auth from landing page)
+export async function OPTIONS() {
+  return new Response(null, { status: 204 });
+}
