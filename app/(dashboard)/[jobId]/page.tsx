@@ -240,7 +240,7 @@ export default function StudioDetailPage() {
   useEffect(() => {
     if (generation && !hasInitialized.current) {
       if (!isRefine) {
-        setPrompt(generation.userPrompt || generation.prompt || "");
+        setPrompt("");
       } else {
         setPrompt("");
         // Use baseImageUrl for lower cost, fallback to resultImageUrl
@@ -865,6 +865,9 @@ export default function StudioDetailPage() {
                         value={prompt}
                         onChange={(e) => setPrompt(e.target.value)}
                         onKeyDown={handleKeyDown}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                        }}
                         rows={3}
                         placeholder="Describe your 3D icon..."
                         className="w-full resize-none bg-transparent text-base sm:text-[15px] font-medium text-foreground placeholder:text-muted-foreground/45 outline-none leading-relaxed pr-24"
@@ -1118,7 +1121,7 @@ export default function StudioDetailPage() {
             </div>
 
             {/* Actions Accordion */}
-            <Accordion type="single" collapsible defaultValue="actions" className="border border-border/40 rounded-xl overflow-hidden">
+            <Accordion type="single" collapsible className="border border-border/40 rounded-xl overflow-hidden">
               <AccordionItem value="actions" className="border-0">
                 <AccordionTrigger className="px-3 py-3 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70 hover:no-underline hover:bg-muted/30 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:text-muted-foreground/50">
                   <div className="flex items-center gap-2">
@@ -1152,8 +1155,8 @@ export default function StudioDetailPage() {
                       Refine Icon
                     </Button>
 
-                    {/* Spotlight */}
-                    {generation && (
+                    {/* Spotlight — only show if current user owns this generation */}
+                    {generation && generation.userId === session?.user?.id && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -1169,17 +1172,19 @@ export default function StudioDetailPage() {
                       </Button>
                     )}
 
-                    {/* Share to IG Story */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full font-semibold rounded-lg h-9 text-xs gap-2 justify-start bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border-indigo-200 dark:bg-indigo-950/20 dark:text-indigo-400 dark:border-indigo-900"
-                      onClick={handleShareToIG}
-                      disabled={isSharing || !resultImage}
-                    >
-                      {isSharing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
-                      Share to IG Story
-                    </Button>
+                    {/* Share to IG Story — only show if current user owns this generation */}
+                    {generation && generation.userId === session?.user?.id && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full font-semibold rounded-lg h-9 text-xs gap-2 justify-start bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border-indigo-200 dark:bg-indigo-950/20 dark:text-indigo-400 dark:border-indigo-900"
+                        onClick={handleShareToIG}
+                        disabled={isSharing || !resultImage}
+                      >
+                        {isSharing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
+                        Share to IG Story
+                      </Button>
+                    )}
                   </div>
                 </AccordionContent>
               </AccordionItem>
