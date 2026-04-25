@@ -478,7 +478,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
                 <div className="flex-1 text-sm">
                   <p className="text-amber-200 leading-relaxed">
-                    <span className="font-semibold">Hi!</span> t looks like your current network has reached its daily limit for free credits. But do not worry, your account is fully active! You can start generating 3D icons right away by doing a{" "}
+                    <span className="font-semibold">Hi!</span> It looks like your current network has reached its daily limit for free credits. But do not worry, your account is fully active! You can start generating 3D icons right away by doing a{" "}
                     <Link
                       href="https://useaudora.com/pricing"
                       className="underline underline-offset-2 font-semibold text-amber-400 hover:text-amber-300 transition-colors"

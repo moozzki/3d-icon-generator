@@ -28,6 +28,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   CornerRightUp,
   Coins,
   Wand2,
@@ -44,6 +67,10 @@ import {
   Eraser,
   Palette,
   X,
+  Globe,
+  Lock,
+  Share2,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -54,6 +81,7 @@ import {
   ColorPickerOutput,
   ColorPickerFormat,
 } from "@/components/kibo-ui/color-picker";
+import { ShareCard } from "@/components/share-card";
 
 const POSITIONS = [
   "Isometric",
@@ -132,6 +160,16 @@ export default function StudioPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isRemovingBg, setIsRemovingBg] = useState(false);
+
+  // Share to IG Story state
+  const shareCardRef = useRef<HTMLDivElement>(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareImageUrl, setShareImageUrl] = useState<string | null>(null);
+  const [shareFallbackFile, setShareFallbackFile] = useState<File | null>(null);
+
+  // Spotlight state
+  const [visibilityTarget, setVisibilityTarget] = useState<string | null>(null);
+  const [isUpdatingVisibility, setIsUpdatingVisibility] = useState(false);
 
   // Progress bar state
   const [progress, setProgress] = useState(0);
@@ -416,6 +454,97 @@ export default function StudioPage() {
     }
   };
 
+  const handleToggleVisibilityDirectly = async () => {
+    if (!currentJobId) return;
+    setIsUpdatingVisibility(true);
+    try {
+      // Fetch current visibility state first
+      const statusRes = await fetch(`/api/library/${currentJobId}`);
+      if (!statusRes.ok) throw new Error();
+      const { data: gen } = await statusRes.json();
+      const res = await fetch("/api/library/visibility", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: currentJobId, isPublic: !gen.isPublic }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(!gen.isPublic ? "Asset added to Spotlight!" : "Asset is now private");
+    } catch {
+      toast.error("Failed to update visibility");
+    } finally {
+      setIsUpdatingVisibility(false);
+    }
+  };
+
+  const handleConfirmSpotlight = () => {
+    if (visibilityTarget) {
+      handleToggleVisibilityDirectly();
+      setVisibilityTarget(null);
+    }
+  };
+
+  const handleShareToIG = async () => {
+    if (!resultImage || !currentJobId) return;
+    setIsSharing(true);
+    try {
+      const iconRes = await fetch(`/api/download?url=${encodeURIComponent(resultImage)}&filename=icon.png`);
+      const iconBlob = await iconRes.blob();
+      const iconDataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(iconBlob);
+      });
+      setShareImageUrl(iconDataUrl);
+      setTimeout(async () => {
+        let shareFile: File | null = null;
+        let shareDataUrl: string | null = null;
+        if (!shareCardRef.current) { setIsSharing(false); return; }
+        try {
+          const { toJpeg } = await import("html-to-image");
+          await toJpeg(shareCardRef.current, { quality: 0.95 });
+          await new Promise(resolve => setTimeout(resolve, 150));
+          shareDataUrl = await toJpeg(shareCardRef.current, { quality: 0.95 });
+          const blob = await (await fetch(shareDataUrl)).blob();
+          shareFile = new File([blob], `audora-story-${currentJobId}.jpg`, { type: "image/jpeg" });
+          if (navigator.canShare && navigator.canShare({ files: [shareFile] })) {
+            await navigator.share({ files: [shareFile], title: "Crafted on Audora", text: "Check out this 3D icon I made on Audora!" });
+            toast.success("Shared successfully!");
+          } else {
+            const link = document.createElement("a");
+            link.href = shareDataUrl;
+            link.download = `audora-story-${currentJobId}.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success("Story card downloaded!");
+          }
+        } catch (err) {
+          const isUserGestureError = err instanceof Error && (err.name === "NotAllowedError" || err.message?.includes("user gesture"));
+          if (isUserGestureError) {
+            if (shareFile) setShareFallbackFile(shareFile);
+            else if (shareDataUrl) {
+              const link = document.createElement("a");
+              link.href = shareDataUrl;
+              link.download = `audora-story-${currentJobId}.jpg`;
+              link.click();
+              toast.success("Story card downloaded!");
+            }
+          } else {
+            toast.error("Failed to generate share card.");
+          }
+        } finally {
+          setIsSharing(false);
+          setShareImageUrl(null);
+        }
+      }, 0);
+    } catch {
+      toast.error("Failed to initialize share.");
+      setIsSharing(false);
+      setShareImageUrl(null);
+    }
+  };
+
   return (
     <>
       {/* ── Full-canvas work area ───────────────────────────── */}
@@ -657,7 +786,17 @@ export default function StudioPage() {
                     {/* Reference Image Preview */}
                     <UploadReferencePreview
                       referenceUrl={referenceImage}
+                      isRefineMode={isRefineMode}
                       onClear={() => {
+                        // If we're in refine mode, the reference IS the previously
+                        // generated icon — removing it means the user is cancelling
+                        // the refine. Clear the canvas too so state is unambiguous.
+                        if (isRefineMode) {
+                          setResultImage(null);
+                          setBaseImage(null);
+                          setCurrentJobId(null);
+                          setCurrentJobQuality(null);
+                        }
                         setReferenceImage(null);
                         setIsRefineMode(false);
                         setKeepMultiplePeople(false);
@@ -918,7 +1057,7 @@ export default function StudioPage() {
           <SheetTitle className="sr-only">Generation Details</SheetTitle>
           <SheetDescription className="sr-only">View icon generation settings and actions.</SheetDescription>
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto no-scrollbar p-5 pb-0 space-y-5">
+          <div className="flex-1 overflow-y-auto no-scrollbar p-5 space-y-4">
             {/* Info list */}
             <div className="flex flex-col text-[13px]">
               <div className="flex justify-between items-center py-2.5 border-b border-border/40">
@@ -929,9 +1068,7 @@ export default function StudioPage() {
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/40">
                 <span className="text-muted-foreground font-medium">Camera Angle</span>
-                <span className="font-semibold text-foreground">
-                  {position}
-                </span>
+                <span className="font-semibold text-foreground">{position}</span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/40">
                 <span className="text-muted-foreground font-medium">Quality</span>
@@ -945,8 +1082,69 @@ export default function StudioPage() {
               </div>
             </div>
 
+            {/* Actions Accordion */}
+            <Accordion type="single" collapsible defaultValue="actions" className="border border-border/40 rounded-xl overflow-hidden">
+              <AccordionItem value="actions" className="border-0">
+                <AccordionTrigger className="px-3 py-3 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70 hover:no-underline hover:bg-muted/30 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:text-muted-foreground/50">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-3.5 w-3.5" />
+                    Actions
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-3 pb-3">
+                  <div className="flex flex-col gap-1.5">
+                    {/* Refine */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full font-semibold rounded-lg h-9 text-xs gap-2 justify-start"
+                      onClick={() => {
+                        if (resultImage) {
+                          setReferenceImage(baseImage || resultImage);
+                          setIsRefineMode(true);
+                          setPrompt("");
+                          setIsSheetOpen(false);
+                          setIsPromptExpanded(true);
+                          setTimeout(() => textareaRef.current?.focus(), 100);
+                        }
+                      }}
+                    >
+                      <Wand2 className="w-3.5 h-3.5 text-primary" />
+                      Refine Icon
+                    </Button>
+
+                    {/* Spotlight */}
+                    {currentJobId && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full font-semibold rounded-lg h-9 text-xs gap-2 justify-start"
+                        onClick={() => setVisibilityTarget(currentJobId)}
+                        disabled={isUpdatingVisibility}
+                      >
+                        <Globe className="h-3.5 w-3.5" />
+                        Spotlight
+                      </Button>
+                    )}
+
+                    {/* Share to IG Story */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full font-semibold rounded-lg h-9 text-xs gap-2 justify-start bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border-indigo-200 dark:bg-indigo-950/20 dark:text-indigo-400 dark:border-indigo-900"
+                      onClick={handleShareToIG}
+                      disabled={isSharing || !resultImage}
+                    >
+                      {isSharing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
+                      Share to IG Story
+                    </Button>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+
             {/* Prompt Section */}
-            <div className="space-y-2 pt-1">
+            <div className="space-y-2">
               <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground/70 uppercase tracking-widest px-1">
                 <div className="flex items-center gap-2">
                   <MessageSquareText className="h-3.5 w-3.5" /> Prompt
@@ -964,7 +1162,7 @@ export default function StudioPage() {
                   {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
                 </button>
               </div>
-              <div className="text-[12px] leading-relaxed text-foreground/90 bg-muted/30 p-3 rounded-xl border border-border/40 font-medium italic">
+              <div className="text-[12px] leading-relaxed text-foreground/90 bg-muted/30 p-3 rounded-xl border border-border/40 font-medium italic max-h-[120px] sm:max-h-[140px] overflow-y-auto no-scrollbar">
                 {referenceImage && !prompt ? (
                   <span className="flex items-center gap-1.5 opacity-80">
                     <ImageIcon className="w-3.5 h-3.5" /> Icon from reference image
@@ -974,29 +1172,10 @@ export default function StudioPage() {
                 )}
               </div>
             </div>
-
           </div>
 
-          {/* Export at bottom */}
-          <div className="p-4 pt-3 border-t border-border/50 bg-background mt-auto flex flex-col gap-2">
-            <Button
-              variant="outline"
-              className="w-full font-semibold rounded-xl h-10 shadow-sm text-sm gap-2"
-              onClick={() => {
-                if (resultImage) {
-                  setReferenceImage(baseImage || resultImage);
-                  setIsRefineMode(true);
-                  setPrompt("");
-                  setIsSheetOpen(false);
-                  setIsPromptExpanded(true);
-                  // Optional: Focus textarea after a short delay to allow animation
-                  setTimeout(() => textareaRef.current?.focus(), 100);
-                }
-              }}
-            >
-              <Wand2 className="w-4 h-4 text-primary" />
-              Refine Icon
-            </Button>
+          {/* Download at bottom */}
+          <div className="p-4 pt-3 border-t border-border/50 bg-background mt-auto">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="w-full font-semibold rounded-xl h-10 shadow-sm text-sm gap-2" disabled={isRemovingBg}>
@@ -1028,6 +1207,87 @@ export default function StudioPage() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* ── Spotlight Confirmation Dialog ──────────────────── */}
+      <AlertDialog open={!!visibilityTarget} onOpenChange={(open) => { if (!open) setVisibilityTarget(null); }}>
+        <AlertDialogContent className="sm:max-w-sm rounded-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to spotlight this icon?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will make your generation visible to others in the community spotlight feed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSpotlight} className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
+              Yes, Spotlight it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Share Fallback Modal ──────────────────── */}
+      <Dialog open={!!shareFallbackFile} onOpenChange={(open) => { if (!open) setShareFallbackFile(null); }}>
+        <DialogContent className="sm:max-w-sm rounded-xl text-center flex flex-col items-center">
+          <DialogHeader>
+            <DialogTitle>Share to Instagram</DialogTitle>
+            <DialogDescription>Your beautifully crafted story card is ready!</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-4 w-full">
+            {shareFallbackFile && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={URL.createObjectURL(shareFallbackFile)}
+                alt="Story card preview"
+                className="w-48 h-auto rounded-xl border border-border/50 shadow-md mb-2"
+              />
+            )}
+            <Button
+              size="lg"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-full"
+              onClick={() => {
+                if (shareFallbackFile && navigator.canShare && navigator.canShare({ files: [shareFallbackFile] })) {
+                  navigator.share({
+                    files: [shareFallbackFile],
+                    title: "Crafted on Audora",
+                    text: "Check out this 3D icon I made on Audora!",
+                  }).then(() => {
+                    toast.success("Shared successfully!");
+                    setShareFallbackFile(null);
+                  }).catch(() => {
+                    toast.error("Share cancelled.");
+                  });
+                }
+              }}
+            >
+              Share Now
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Hidden Share Card (off-screen) ──────────────────── */}
+      <div
+        style={{
+          position: "fixed",
+          top: "-9999px",
+          left: "-9999px",
+          width: "1080px",
+          height: "1920px",
+          overflow: "hidden",
+          pointerEvents: "none",
+          zIndex: -1,
+        }}
+      >
+        {resultImage && currentJobId && (shareImageUrl || !isSharing) && (
+          <ShareCard
+            ref={shareCardRef}
+            imageUrl={shareImageUrl || resultImage}
+            style={style}
+            position={position.toLowerCase().replace(" ", "_")}
+          />
+        )}
+      </div>
     </>
   );
 }

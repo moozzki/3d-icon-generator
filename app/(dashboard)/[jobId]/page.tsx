@@ -64,8 +64,15 @@ import {
   X,
   Globe,
   Lock,
-  Share2
+  Share2,
+  Zap,
 } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { toast } from "sonner";
 import {
   ColorPicker,
@@ -833,7 +840,19 @@ export default function StudioDetailPage() {
                     {/* Reference Image Preview */}
                     <UploadReferencePreview
                       referenceUrl={referenceImage}
+                      isRefineMode={isRefineMode}
                       onClear={() => {
+                        // If we're in refine mode, the reference IS the previously
+                        // generated icon — removing it means the user is cancelling
+                        // the refine. Clear the canvas too so state is unambiguous.
+                        if (isRefineMode) {
+                          setResultImage(null);
+                          setLastJobId(null);
+                          setLastQuality(null);
+                          // Strip ?action=refine from the URL so a page refresh
+                          // doesn't re-trigger the refine initialization.
+                          router.replace(`/${jobId}`, { scroll: false });
+                        }
                         setReferenceImage(null);
                         setIsRefineMode(false);
                       }}
@@ -1071,10 +1090,9 @@ export default function StudioDetailPage() {
           <SheetTitle className="sr-only">Generation Details</SheetTitle>
           <SheetDescription className="sr-only">View icon generation settings and actions.</SheetDescription>
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto no-scrollbar p-5 pb-0 space-y-5">
+          <div className="flex-1 overflow-y-auto no-scrollbar p-5 space-y-4">
             {/* Info list */}
             <div className="flex flex-col text-[13px]">
-
               <div className="flex justify-between items-center py-2.5 border-b border-border/40">
                 <span className="text-muted-foreground font-medium">Style</span>
                 <span className="font-semibold text-foreground">
@@ -1099,8 +1117,76 @@ export default function StudioDetailPage() {
               </div>
             </div>
 
+            {/* Actions Accordion */}
+            <Accordion type="single" collapsible defaultValue="actions" className="border border-border/40 rounded-xl overflow-hidden">
+              <AccordionItem value="actions" className="border-0">
+                <AccordionTrigger className="px-3 py-3 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70 hover:no-underline hover:bg-muted/30 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:text-muted-foreground/50">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-3.5 w-3.5" />
+                    Actions
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-3 pb-3">
+                  <div className="flex flex-col gap-1.5">
+                    {/* Refine */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full font-semibold rounded-lg h-9 text-xs gap-2 justify-start"
+                      onClick={() => {
+                        const imageToRefine = resultImage || generation?.baseImageUrl || generation?.resultImageUrl;
+                        if (imageToRefine) {
+                          setReferenceImage(imageToRefine);
+                          setIsRefineMode(true);
+                          setPrompt("");
+                          setIsSheetOpen(false);
+                          setIsPromptExpanded(true);
+                          // Sync URL so ?action=refine is visible — consistent with
+                          // Library/Spotlight flow, and refresh will restore refine state.
+                          router.replace(`/${jobId}?action=refine`, { scroll: false });
+                          setTimeout(() => textareaRef.current?.focus(), 100);
+                        }
+                      }}
+                    >
+                      <Wand2 className="w-3.5 h-3.5 text-primary" />
+                      Refine Icon
+                    </Button>
+
+                    {/* Spotlight */}
+                    {generation && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full font-semibold rounded-lg h-9 text-xs gap-2 justify-start"
+                        onClick={() => {
+                          if (!generation.isPublic) setVisibilityTarget(generation.jobId);
+                          else handleToggleVisibilityDirectly();
+                        }}
+                        disabled={isUpdatingVisibility}
+                      >
+                        {generation.isPublic ? <Lock className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
+                        {generation.isPublic ? "Make Private" : "Spotlight"}
+                      </Button>
+                    )}
+
+                    {/* Share to IG Story */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full font-semibold rounded-lg h-9 text-xs gap-2 justify-start bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border-indigo-200 dark:bg-indigo-950/20 dark:text-indigo-400 dark:border-indigo-900"
+                      onClick={handleShareToIG}
+                      disabled={isSharing || !resultImage}
+                    >
+                      {isSharing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
+                      Share to IG Story
+                    </Button>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+
             {/* Prompt Section */}
-            <div className="space-y-2 pt-1">
+            <div className="space-y-2">
               <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground/70 uppercase tracking-widest px-1">
                 <div className="flex items-center gap-2">
                   <MessageSquareText className="h-3.5 w-3.5" /> Prompt
@@ -1118,7 +1204,7 @@ export default function StudioDetailPage() {
                   {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
                 </button>
               </div>
-              <div className="text-[12px] leading-relaxed text-foreground/90 bg-muted/30 p-3 rounded-xl border border-border/40 font-medium italic">
+              <div className="text-[12px] leading-relaxed text-foreground/90 bg-muted/30 p-3 rounded-xl border border-border/40 font-medium italic max-h-[120px] sm:max-h-[140px] overflow-y-auto no-scrollbar">
                 {generation?.referenceImage && !generation?.userPrompt ? (
                   <span className="flex items-center gap-1.5 opacity-80">
                     <ImageIcon className="w-3.5 h-3.5" /> Icon from reference image
@@ -1128,37 +1214,10 @@ export default function StudioDetailPage() {
                 )}
               </div>
             </div>
-
           </div>
 
-          {/* Export at bottom */}
-          <div className="p-4 pt-3 border-t border-border/50 bg-background mt-auto flex flex-col gap-2">
-             {generation && (
-               <>
-                 <Button
-                    variant="outline"
-                    className="w-full font-semibold rounded-xl h-10 shadow-sm text-sm gap-2"
-                    onClick={() => {
-                      if (!generation.isPublic) setVisibilityTarget(generation.jobId);
-                      else handleToggleVisibilityDirectly();
-                    }}
-                    disabled={isUpdatingVisibility}
-                  >
-                    {generation.isPublic ? <Lock className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
-                    {generation.isPublic ? "Make Private" : "Spotlight"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full font-semibold rounded-xl h-10 shadow-sm text-sm gap-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border-indigo-200 dark:bg-indigo-950/20 dark:text-indigo-400 dark:border-indigo-900"
-                    onClick={handleShareToIG}
-                    disabled={isSharing || !resultImage}
-                  >
-                    {isSharing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
-                    Share to IG Story
-                  </Button>
-               </>
-             )}
-
+          {/* Download at bottom */}
+          <div className="p-4 pt-3 border-t border-border/50 bg-background mt-auto">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="w-full font-semibold rounded-xl h-10 shadow-sm text-sm gap-2" disabled={isRemovingBg}>

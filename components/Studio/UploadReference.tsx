@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { ImageUp, Loader2, X, FileImage } from "lucide-react";
+import { ImageUp, Loader2, X, FileImage, Wand2 } from "lucide-react";
 import imageCompression from "browser-image-compression";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -139,9 +139,11 @@ export function UploadReferenceTrigger({
 export function UploadReferencePreview({
   referenceUrl,
   onClear,
+  isRefineMode = false,
 }: {
   referenceUrl: string | null;
   onClear: () => void;
+  isRefineMode?: boolean;
 }) {
   return (
     <AnimatePresence>
@@ -163,9 +165,17 @@ export function UploadReferencePreview({
               />
             </div>
             <div className="flex flex-col gap-0.5 justify-center flex-1 min-w-0 pr-6">
-              <span className="text-[11px] font-semibold text-foreground flex items-center gap-1">
-                <FileImage className="w-3 h-3 text-muted-foreground" /> Reference
-              </span>
+              {isRefineMode ? (
+                <span className="text-[11px] font-semibold text-foreground flex items-center gap-1">
+                  <Wand2 className="w-3 h-3 text-primary" />
+                  <span>Refine Target</span>
+                  <span className="text-[9px] font-semibold bg-primary/10 text-primary px-1.5 py-0.5 rounded-full leading-none">REFINE</span>
+                </span>
+              ) : (
+                <span className="text-[11px] font-semibold text-foreground flex items-center gap-1">
+                  <FileImage className="w-3 h-3 text-muted-foreground" /> Reference
+                </span>
+              )}
               <span className="text-[10px] text-muted-foreground/80 truncate w-32 break-all">
                 {referenceUrl.split("/").pop()}
               </span>
