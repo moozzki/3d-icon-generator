@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { usePostHog } from 'posthog-js/react';
 import QRCode from "react-qr-code";
 import {
   Loader2,
@@ -136,6 +137,7 @@ interface InHouseCheckoutProps {
 }
 
 export function InHouseCheckout({ packageId, userEmail }: InHouseCheckoutProps) {
+  const posthog = usePostHog();
   const router = useRouter();
   const pkg = IDR_PACKAGES[packageId];
 
@@ -209,6 +211,17 @@ export function InHouseCheckout({ packageId, userEmail }: InHouseCheckoutProps) 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step.kind]);
+
+  // ── PostHog tracking ───────────────────────────────────────────────────────
+  useEffect(() => {
+    if (step.kind === "success") {
+      posthog.capture("payment_success", {
+        package_id: packageId,
+        method: "pakasir",
+        currency: "IDR",
+      });
+    }
+  }, [step.kind, packageId, posthog]);
 
   // ── Confirm & Pay ──────────────────────────────────────────────────────────
   const handleConfirm = useCallback(async () => {

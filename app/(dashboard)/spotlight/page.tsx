@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePostHog } from 'posthog-js/react';
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,7 @@ function formatRelativeDate(dateString: string) {
 }
 
 export default function SpotlightPage() {
+  const posthog = usePostHog();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -114,6 +116,7 @@ export default function SpotlightPage() {
   const handleDownload = async (item: Generation) => {
     if (!item.resultImageUrl) return;
     try {
+      posthog.capture('asset_downloaded', { file_type: 'png' });
       const filename = `audora-${item.quality.toLowerCase()}-${item.jobId}.png`;
       const downloadUrl = `/api/download?url=${encodeURIComponent(item.resultImageUrl)}&filename=${filename}`;
 

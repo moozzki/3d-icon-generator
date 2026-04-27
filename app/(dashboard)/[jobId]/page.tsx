@@ -5,6 +5,7 @@ import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePostHog } from 'posthog-js/react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { UploadReferenceTrigger, UploadReferencePreview } from "@/components/Studio/UploadReference";
@@ -133,6 +134,7 @@ function getCreditCost(aiModel: AiModelId, quality: string): number {
 }
 
 export default function StudioDetailPage() {
+  const posthog = usePostHog();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
@@ -335,6 +337,7 @@ export default function StudioDetailPage() {
       // Convert 'Front Facing' -> 'front_facing'
       const formattedPosition = position.toLowerCase().replace(" ", "_");
 
+      posthog.capture('generate_icon_started');
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -438,6 +441,7 @@ export default function StudioDetailPage() {
   const handleDownload = async () => {
     if (!resultImage) return;
     try {
+      posthog.capture('asset_downloaded', { file_type: 'png' });
       const q = lastQuality || generation?.quality || quality;
       const id = lastJobId || jobId;
       const filename = `audora-${q.toLowerCase()}-${id}.png`;
@@ -461,6 +465,7 @@ export default function StudioDetailPage() {
     if (!id) return;
     setIsRemovingBg(true);
     try {
+      posthog.capture('asset_downloaded', { file_type: 'png' });
       const res = await fetch("/api/remove-bg", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
