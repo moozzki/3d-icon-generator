@@ -129,7 +129,7 @@ function TransactionsContent() {
   const router = useRouter();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
   const searchParams = useSearchParams();
@@ -195,7 +195,7 @@ function TransactionsContent() {
   };
 
   // ── Loading state ───────────────────────────────────────────────────
-  if (sessionLoading || (loading && !error)) {
+  if (sessionLoading || (loading && !transactions.length && !error)) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
