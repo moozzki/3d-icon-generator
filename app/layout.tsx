@@ -12,8 +12,10 @@ const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-headi
 import { PostHogProvider } from "./providers/PostHogProvider";
 
 export const metadata: Metadata = {
-  title: "AI 3D Icon Generator",
-  description: "High quality 3D icon generator MVP",
+  title: {
+    template: "%s | AI 3D Isometric Icon Generator | Audora",
+    default: "Dashboard | AI 3D Isometric Icon Generator | Audora",
+  },
 };
 
 export default function RootLayout({
@@ -27,7 +29,7 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn("h-full", "antialiased", spaceGrotesk.variable, inter.variable)}
     >
-      <body 
+      <body
         className="font-sans min-h-full flex flex-col bg-background text-foreground"
         suppressHydrationWarning
       >

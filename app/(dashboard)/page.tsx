@@ -713,7 +713,7 @@ export default function StudioPage() {
               <DropdownMenuItem onClick={handleZoomToFit}>
                 <Maximize className="mr-2 h-4 w-4" />
                 <span>Zoom to Fit</span>
-                <DropdownMenuShortcut>Shift 1</DropdownMenuShortcut>
+
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

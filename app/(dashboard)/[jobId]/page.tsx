@@ -144,12 +144,12 @@ export default function StudioDetailPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [isRefineMode, setIsRefineMode] = useState(isRefine);
-  
+
   const shareCardRef = useRef<HTMLDivElement>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [shareImageUrl, setShareImageUrl] = useState<string | null>(null);
   const [shareFallbackFile, setShareFallbackFile] = useState<File | null>(null);
-  
+
   const [visibilityTarget, setVisibilityTarget] = useState<string | null>(null);
   const [isUpdatingVisibility, setIsUpdatingVisibility] = useState(false);
 
@@ -543,59 +543,59 @@ export default function StudioDetailPage() {
       setTimeout(async () => {
         let shareFile: File | null = null;
         let shareDataUrl: string | null = null;
-        
+
         if (!shareCardRef.current) {
           setIsSharing(false);
           return;
         }
-      try {
-        const { toJpeg } = await import("html-to-image");
-        
-        // Safari hack: prime cache
-        await toJpeg(shareCardRef.current, { quality: 0.95 });
-        await new Promise(resolve => setTimeout(resolve, 150));
-        
-        shareDataUrl = await toJpeg(shareCardRef.current, { quality: 0.95 });
-        
-        const blob = await (await fetch(shareDataUrl)).blob();
-        shareFile = new File([blob], `audora-story-${generation.jobId}.jpg`, { type: 'image/jpeg' });
-        
-        if (navigator.canShare && navigator.canShare({ files: [shareFile] })) {
-          await navigator.share({
-            files: [shareFile],
-            title: 'Crafted on Audora',
-            text: 'Check out this 3D icon I made on Audora!',
-          });
-          toast.success("Shared successfully!");
-        } else {
-          const link = document.createElement("a");
-          link.href = shareDataUrl;
-          link.download = `audora-story-${generation.jobId}.jpg`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          toast.success("Story card downloaded!");
-        }
-      } catch (err) {
-        console.error("IG Share Error", err);
-        const isUserGestureError = err instanceof Error && (err.name === "NotAllowedError" || err.message?.includes("user gesture"));
-        if (isUserGestureError) {
-          if (shareFile) {
-            setShareFallbackFile(shareFile);
-          } else if (shareDataUrl) {
+        try {
+          const { toJpeg } = await import("html-to-image");
+
+          // Safari hack: prime cache
+          await toJpeg(shareCardRef.current, { quality: 0.95 });
+          await new Promise(resolve => setTimeout(resolve, 150));
+
+          shareDataUrl = await toJpeg(shareCardRef.current, { quality: 0.95 });
+
+          const blob = await (await fetch(shareDataUrl)).blob();
+          shareFile = new File([blob], `audora-story-${generation.jobId}.jpg`, { type: 'image/jpeg' });
+
+          if (navigator.canShare && navigator.canShare({ files: [shareFile] })) {
+            await navigator.share({
+              files: [shareFile],
+              title: 'Crafted on Audora',
+              text: 'Check out this 3D icon I made on Audora!',
+            });
+            toast.success("Shared successfully!");
+          } else {
             const link = document.createElement("a");
             link.href = shareDataUrl;
             link.download = `audora-story-${generation.jobId}.jpg`;
+            document.body.appendChild(link);
             link.click();
+            document.body.removeChild(link);
             toast.success("Story card downloaded!");
           }
-        } else {
-          toast.error("Failed to generate share card.");
+        } catch (err) {
+          console.error("IG Share Error", err);
+          const isUserGestureError = err instanceof Error && (err.name === "NotAllowedError" || err.message?.includes("user gesture"));
+          if (isUserGestureError) {
+            if (shareFile) {
+              setShareFallbackFile(shareFile);
+            } else if (shareDataUrl) {
+              const link = document.createElement("a");
+              link.href = shareDataUrl;
+              link.download = `audora-story-${generation.jobId}.jpg`;
+              link.click();
+              toast.success("Story card downloaded!");
+            }
+          } else {
+            toast.error("Failed to generate share card.");
+          }
+        } finally {
+          setIsSharing(false);
+          setShareImageUrl(null);
         }
-      } finally {
-        setIsSharing(false);
-        setShareImageUrl(null);
-      }
       }, 0);
     } catch (err) {
       console.error("IG Share Init Error", err);
@@ -769,7 +769,7 @@ export default function StudioDetailPage() {
               <DropdownMenuItem onClick={handleZoomToFit}>
                 <Maximize className="mr-2 h-4 w-4" />
                 <span>Zoom to Fit</span>
-                <DropdownMenuShortcut>Shift 1</DropdownMenuShortcut>
+
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -1291,10 +1291,10 @@ export default function StudioDetailPage() {
           <div className="flex flex-col items-center gap-4 py-4 w-full">
             {shareFallbackFile && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img 
-                src={URL.createObjectURL(shareFallbackFile)} 
-                alt="Story card preview" 
-                className="w-48 h-auto rounded-xl border border-border/50 shadow-md mb-2" 
+              <img
+                src={URL.createObjectURL(shareFallbackFile)}
+                alt="Story card preview"
+                className="w-48 h-auto rounded-xl border border-border/50 shadow-md mb-2"
               />
             )}
             <Button
@@ -1320,7 +1320,7 @@ export default function StudioDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
-      
+
       {/* ── Hidden Share Card (off-screen, NOT opacity-0 which causes blank captures) */}
       <div
         style={{
@@ -1335,7 +1335,7 @@ export default function StudioDetailPage() {
         }}
       >
         {resultImage && generation && (shareImageUrl || !isSharing) && (
-          <ShareCard 
+          <ShareCard
             imageUrl={shareImageUrl || resultImage}
             style={generation.style || style}
             position={generation.position || position}
