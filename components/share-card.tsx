@@ -195,6 +195,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
                 height: "60px",
               }}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/assets/audora-square-logo.png"
                 alt="Audora"

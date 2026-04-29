@@ -1,13 +1,13 @@
 import { auth } from "@/lib/auth";
-import { toNextJsHandler } from "better-auth/next-js";
 
-// Destructure individual method handlers so each export is a plain function,
-// which satisfies Next.js 16's strict RouteHandlerConfig type constraint.
-const { GET, POST } = toNextJsHandler(auth);
+export async function GET(req: Request) {
+  return auth.handler(req);
+}
 
-export { GET, POST };
+export async function POST(req: Request) {
+  return auth.handler(req);
+}
 
-// OPTIONS handler for CORS preflight (cross-subdomain auth from landing page)
-export async function OPTIONS() {
-  return new Response(null, { status: 204 });
+export async function OPTIONS(req: Request) {
+  return auth.handler(req);
 }

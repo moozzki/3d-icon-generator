@@ -69,7 +69,6 @@ import {
   Palette,
   X,
   Globe,
-  Lock,
   Share2,
   Zap,
 } from "lucide-react";
