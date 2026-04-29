@@ -669,6 +669,7 @@ export default function StudioPage() {
                       height={512}
                       className="max-h-[300px] sm:max-h-[420px] w-auto max-w-[85vw] sm:max-w-none h-auto object-contain drop-shadow-2xl rounded-2xl"
                       priority
+                      unoptimized
                     />
                     <div className="absolute inset-0 rounded-2xl pointer-events-none bg-black/0 group-hover:bg-black/10 transition-colors duration-200" />
                   </button>

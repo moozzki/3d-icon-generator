@@ -421,6 +421,7 @@ export default function LibraryPage() {
                           fill
                           sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 20vw"
                           className="object-cover transition-transform duration-500 group-hover:scale-110"
+                          unoptimized
                         />
                       )}
 
@@ -617,6 +618,7 @@ export default function LibraryPage() {
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 50vw"
                       className="object-contain"
+                      unoptimized
                     />
                   )}
                 </div>
@@ -738,6 +740,7 @@ export default function LibraryPage() {
                 width={96}
                 height={96}
                 className="rounded-xl object-cover border border-border/40 shadow-sm opacity-70"
+                unoptimized
               />
             </div>
           )}

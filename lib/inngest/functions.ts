@@ -15,7 +15,7 @@ type IconGenerateEvent = {
     jobId: string;
     userId: string;
     prompt: string;
-    aiModel: "flux-2-pro" | "nano-banana-2";
+    aiModel: "flux-2-pro";
     resolution: "2K" | "4K";
     referenceImage?: string | null;
     creditCost: number;
@@ -226,17 +226,10 @@ async function falPostQueueInngest(
 // NOTE on Fal.ai Recraft Crisp Upscaler:
 //   - API only accepts `image_url` — there is NO configurable `scale` param.
 //   - Crisp is a confirmed 2x multiplier: 1024×1024 input → 2048×2048 output.
-//   - Therefore the strategy for flux-2-pro is:
+//   - Strategy for flux-2-pro:
 //       • Base generation: always at 1024×1024 (cheapest Flux cost ~$0.040)
-//       • To get 2K output: 1x Crisp call (1K→2K), total ~$0.044
-//       • To get 4K output: 2x Crisp calls "Double Crisp" (1K→2K, 2K→4K), ~$0.048
-//       This is far cheaper than generating natively at 2048×2048 (~$0.075).
-//
-// Pipeline matrix:
-//   flux-2-pro   + 2K → gen 1K → 1x Crisp (2K)                   → ~$0.044
-//   flux-2-pro   + 4K → gen 1K → 1x Crisp (2K) → 1x Crisp (4K)  → ~$0.048
-//   nano-banana-2 + 2K → native 2048×2048, skip Crisp             → ~$0.14
-//   nano-banana-2 + 4K → native 2048×2048 → 1x Crisp (4K)        → ~$0.144
+//       • To get 2K output: 1x SeedVR call (1K→2K), total ~$0.044
+//       • To get 4K output: 1x SeedVR call (1K→4K),              ~$0.048
 // ============================================================================
 
 export const iconGenerate = inngest.createFunction(
@@ -396,72 +389,6 @@ export const iconGenerate = inngest.createFunction(
       );
 
       return { jobId, url: r2Url, pipeline: "flux-2-pro", resolution };
-    }
-
-    // -------------------------------------------------------------------------
-    // Branch B: nano-banana-2
-    //
-    //   Native output is 2048×2048 (2K).
-    //   2K path: Use native output directly — Crisp is NOT called.
-    //   4K path: Native 2K output → Crisp upscale → ~4096×4096.
-    // -------------------------------------------------------------------------
-    if (aiModel === "nano-banana-2") {
-      // Phase 1: Base generation at native 2K (2048×2048)
-      const baseImageUrl = await step.run(
-        "generate-base-banana-2k",
-        async () => {
-          const body: Record<string, unknown> = {
-            prompt,
-            image_size: { width: 2048, height: 2048 },
-            safety_tolerance: "5",
-            enable_safety_checker: false,
-          };
-          if (referenceImage) body.image_url = referenceImage;
-
-          const json = await falPost("fal-ai/nano-banana-2", body);
-          const url =
-            json.images?.[0]?.url ?? json.image?.url ?? json.url;
-          if (!url) throw new Error("nano-banana-2 returned no image URL");
-          return url as string;
-        }
-      );
-
-      // Phase 2: Conditional upscale — only for 4K
-      const finalImageUrl = await step.run(
-        "conditional-upscale-banana",
-        async () => {
-          if (resolution === "4K") {
-            // Crisp: ~2048px input → ~4096px output (4K)
-            const json = await falPost("fal-ai/recraft/upscale/crisp", {
-              image_url: baseImageUrl,
-              safety_tolerance: "5",
-              enable_safety_checker: false,
-            });
-            const url =
-              json.image?.url ?? json.images?.[0]?.url ?? json.url;
-            if (!url)
-              throw new Error("Recraft Crisp upscaler returned no image URL");
-            return url as string;
-          }
-          // resolution === "2K": native 2K output — return directly, no API call
-          return baseImageUrl;
-        }
-      );
-
-      // Phase 3: R2 upload + DB finalize
-      const r2Url = await step.run(
-        "upload-to-r2-and-finalize",
-        async () => {
-          return finalizeJob({
-            jobId,
-            userId,
-            imageUrl: finalImageUrl,
-            resolution,
-          });
-        }
-      );
-
-      return { jobId, url: r2Url, pipeline: "nano-banana-2", resolution };
     }
 
     throw new Error(`Unknown aiModel: ${aiModel}`);
