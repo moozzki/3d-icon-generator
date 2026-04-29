@@ -42,7 +42,7 @@ export function ImageCropModal({ file, onApply, onCancel }: ImageCropModalProps)
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>Crop Reference Image</DialogTitle>
           <DialogDescription>
-            Adjust the crop area so the main subject fills the frame, then click{" "}
+            Drag the corners to freely adjust the crop area, then click{" "}
             <strong>Apply Crop</strong>.
           </DialogDescription>
         </DialogHeader>
@@ -53,8 +53,6 @@ export function ImageCropModal({ file, onApply, onCancel }: ImageCropModalProps)
             <ImageCrop
               file={file}
               onCrop={handleCrop}
-              /* 1:1 aspect keeps icon generation consistent */
-              aspect={1}
               keepSelection
             >
               {/* The interactive crop surface */}

@@ -328,21 +328,34 @@ export const ColorPickerOutput = ({
   );
 };
 
-type PercentageInputProps = ComponentProps<typeof Input>;
+type PercentageInputProps = ComponentProps<typeof Input> & {
+  onValueChange?: (value: number) => void;
+};
 
-const PercentageInput = ({ className, ...props }: PercentageInputProps) => {
+const PercentageInput = ({
+  className,
+  onValueChange,
+  onChange,
+  ...props
+}: PercentageInputProps) => {
   return (
     <div className="relative">
       <Input
-        readOnly
         type="text"
         {...props}
+        onChange={(e) => {
+          onChange?.(e);
+          const num = parseInt(e.target.value, 10);
+          if (!isNaN(num) && num >= 0 && num <= 100) {
+            onValueChange?.(num);
+          }
+        }}
         className={cn(
-          "h-8 w-[3.25rem] rounded-l-none bg-secondary px-2 text-xs shadow-none",
+          "h-8 w-16 rounded-l-none bg-secondary px-2 pr-6 text-xs shadow-none",
           className
         )}
       />
-      <span className="-translate-y-1/2 absolute top-1/2 right-2 text-muted-foreground text-xs">
+      <span className="-translate-y-1/2 pointer-events-none absolute top-1/2 right-2 text-muted-foreground text-xs">
         %
       </span>
     </div>
@@ -355,7 +368,17 @@ export const ColorPickerFormat = ({
   className,
   ...props
 }: ColorPickerFormatProps) => {
-  const { hue, saturation, lightness, alpha, mode } = useColorPicker();
+  const {
+    hue,
+    saturation,
+    lightness,
+    alpha,
+    mode,
+    setHue,
+    setSaturation,
+    setLightness,
+    setAlpha,
+  } = useColorPicker();
   const color = Color.hsl(hue, saturation, lightness, alpha / 100);
 
   if (mode === "hex") {
@@ -370,12 +393,28 @@ export const ColorPickerFormat = ({
         {...props}
       >
         <Input
-          className="h-8 rounded-r-none bg-secondary px-2 text-xs shadow-none"
-          readOnly
+          className="h-9 rounded-r-none bg-secondary px-2 text-xs shadow-none"
           type="text"
-          value={hex}
+          defaultValue={hex}
+          key={hex}
+          onBlur={(e) => {
+            try {
+              const parsed = Color(e.target.value.trim());
+              const [h, s, l] = parsed.hsl().array();
+              setHue(h);
+              setSaturation(s);
+              setLightness(l);
+            } catch {}
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          }}
         />
-        <PercentageInput value={alpha} />
+        <PercentageInput
+          value={alpha}
+          onValueChange={setAlpha}
+          className="h-9"
+        />
       </div>
     );
   }
@@ -385,6 +424,23 @@ export const ColorPickerFormat = ({
       .rgb()
       .array()
       .map((value) => Math.round(value));
+    const rgbSetters = [
+      (v: number) => {
+        const c = Color.rgb(v, rgb[1], rgb[2]);
+        const [h, s, l] = c.hsl().array();
+        setHue(h); setSaturation(s); setLightness(l);
+      },
+      (v: number) => {
+        const c = Color.rgb(rgb[0], v, rgb[2]);
+        const [h, s, l] = c.hsl().array();
+        setHue(h); setSaturation(s); setLightness(l);
+      },
+      (v: number) => {
+        const c = Color.rgb(rgb[0], rgb[1], v);
+        const [h, s, l] = c.hsl().array();
+        setHue(h); setSaturation(s); setLightness(l);
+      },
+    ];
 
     return (
       <div
@@ -397,17 +453,24 @@ export const ColorPickerFormat = ({
         {rgb.map((value, index) => (
           <Input
             className={cn(
-              "h-8 rounded-r-none bg-secondary px-2 text-xs shadow-none",
-              index && "rounded-l-none",
-              className
+              "h-9 min-w-0 flex-1 rounded-r-none bg-secondary px-2 text-xs shadow-none",
+              index && "rounded-l-none"
             )}
             key={index}
-            readOnly
-            type="text"
-            value={value}
+            type="number"
+            min={0}
+            max={255}
+            defaultValue={value}
+            onBlur={(e) => {
+              const num = parseInt(e.target.value, 10);
+              if (!isNaN(num)) rgbSetters[index](Math.min(255, Math.max(0, num)));
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            }}
           />
         ))}
-        <PercentageInput value={alpha} />
+        <PercentageInput value={alpha} onValueChange={setAlpha} className="h-9" />
       </div>
     );
   }
@@ -417,15 +480,15 @@ export const ColorPickerFormat = ({
       .rgb()
       .array()
       .map((value) => Math.round(value));
+    const cssValue = `rgba(${rgb.join(", ")}, ${alpha}%)`;
 
     return (
       <div className={cn("w-full rounded-md shadow-sm", className)} {...props}>
         <Input
-          className="h-8 w-full bg-secondary px-2 text-xs shadow-none"
+          className="h-9 w-full bg-secondary px-2 text-xs shadow-none"
           readOnly
           type="text"
-          value={`rgba(${rgb.join(", ")}, ${alpha}%)`}
-          {...props}
+          value={cssValue}
         />
       </div>
     );
@@ -436,6 +499,11 @@ export const ColorPickerFormat = ({
       .hsl()
       .array()
       .map((value) => Math.round(value));
+    const hslSetters = [
+      (v: number) => setHue(Math.min(360, Math.max(0, v))),
+      (v: number) => setSaturation(Math.min(100, Math.max(0, v))),
+      (v: number) => setLightness(Math.min(100, Math.max(0, v))),
+    ];
 
     return (
       <div
@@ -448,17 +516,24 @@ export const ColorPickerFormat = ({
         {hsl.map((value, index) => (
           <Input
             className={cn(
-              "h-8 rounded-r-none bg-secondary px-2 text-xs shadow-none",
-              index && "rounded-l-none",
-              className
+              "h-9 min-w-0 flex-1 rounded-r-none bg-secondary px-2 text-xs shadow-none",
+              index && "rounded-l-none"
             )}
             key={index}
-            readOnly
-            type="text"
-            value={value}
+            type="number"
+            min={index === 0 ? 0 : 0}
+            max={index === 0 ? 360 : 100}
+            defaultValue={value}
+            onBlur={(e) => {
+              const num = parseInt(e.target.value, 10);
+              if (!isNaN(num)) hslSetters[index](num);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+            }}
           />
         ))}
-        <PercentageInput value={alpha} />
+        <PercentageInput value={alpha} onValueChange={setAlpha} className="h-9" />
       </div>
     );
   }
