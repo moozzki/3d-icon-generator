@@ -33,7 +33,7 @@ import {
   SheetTrigger,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Wand2, Images, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare, Receipt, Globe } from "lucide-react";
+import { Wand2, Images, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare, Receipt, Globe, Headset } from "lucide-react";
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 import { AuthLoadingOverlay } from "@/components/auth-loading-overlay";
 import { PricingDialog } from "@/components/pricing/pricing-dialog";
@@ -214,28 +214,56 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
           })}
         </nav>
 
-        {/* Feedback Trigger */}
-        <div className={cn("px-3 mb-2", isCollapsed && "px-1.5")}>
+        {/* Support & Feedback Trigger */}
+        <div className={cn("px-3 mb-2 flex flex-col gap-1", isCollapsed && "px-1.5")}>
           {isCollapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <FeedbackDialog>
-                  <button className="flex items-center justify-center w-full rounded-lg py-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
-                    <MessageSquare className="h-4 w-4" />
-                  </button>
-                </FeedbackDialog>
-              </TooltipTrigger>
-              <TooltipContent side="right" sideOffset={8}>
-                Share Feedback
-              </TooltipContent>
-            </Tooltip>
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href="/support" onClick={() => isMobile && setMobileMenuOpen(false)} className={cn(
+                    "flex items-center justify-center w-full rounded-lg py-2.5 transition-colors",
+                    pathname === "/support" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  )}>
+                    <Headset className="h-4 w-4" />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  Support
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <FeedbackDialog>
+                    <button className="flex items-center justify-center w-full rounded-lg py-2.5 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+                      <MessageSquare className="h-4 w-4" />
+                    </button>
+                  </FeedbackDialog>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  Share Feedback
+                </TooltipContent>
+              </Tooltip>
+            </>
           ) : (
-            <FeedbackDialog>
-              <button className="flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
-                <MessageSquare className="h-4 w-4" />
-                <span>Share Feedback</span>
-              </button>
-            </FeedbackDialog>
+            <>
+              <Link href="/support" onClick={() => isMobile && setMobileMenuOpen(false)} className={cn(
+                "flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                pathname === "/support" 
+                  ? "bg-primary/10 text-primary" 
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              )}>
+                <Headset className="h-4 w-4 shrink-0" />
+                <span>Support</span>
+              </Link>
+              
+              <FeedbackDialog>
+                <button className="flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
+                  <MessageSquare className="h-4 w-4 shrink-0" />
+                  <span>Share Feedback</span>
+                </button>
+              </FeedbackDialog>
+            </>
           )}
         </div>
 
