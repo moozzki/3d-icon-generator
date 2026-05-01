@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Loader2, Mail, CheckCircle2, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import Image from "next/image";
 import { AuthLoadingOverlay } from "@/components/auth-loading-overlay";
 
@@ -85,7 +86,10 @@ function SignInForm() {
       <Card className="relative w-full max-w-sm border-border/60 shadow-2xl shadow-black/5">
         <CardHeader className="space-y-3 text-center pb-2">
           {/* Logo */}
-          <div className="flex justify-center mb-1">
+          <Link 
+            href={process.env.NODE_ENV === "development" ? "http://localhost:3001" : "https://useaudora.com"} 
+            className="flex justify-center mb-1 transition-opacity hover:opacity-80"
+          >
             <Image
               src="/assets/audora-square-logo.png"
               alt="Audora"
@@ -94,7 +98,7 @@ function SignInForm() {
               className="w-11 h-11 object-contain"
               priority
             />
-          </div>
+          </Link>
 
           <div>
             <CardTitle className="text-2xl font-bold font-heading">
