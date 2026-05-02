@@ -42,11 +42,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, ImageIcon, Download, Wand2, MoreVertical, Trash2, Eraser, Loader2, ZoomIn, ChevronDown, Globe, Lock, Share2, X, Copy } from "lucide-react";
+import { Search, ImageIcon, Download, Wand2, MoreVertical, Trash2, Eraser, Loader2, ZoomIn, ChevronDown, Globe, Lock, Share2, X, Copy, Video, Play } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ShareCard } from "@/components/share-card";
 import { useSession } from "@/lib/auth-client";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface Generation {
   id: number;
@@ -67,7 +68,19 @@ interface Generation {
   createdAt: string;
 }
 
-
+interface AnimationItem {
+  id: number;
+  jobId: string | null;
+  status: string | null;
+  actionPrompt: string;
+  resolution: string;
+  aspectRatio: string;
+  backgroundColor: string;
+  creditCost: number;
+  resultVideoUrl: string | null;
+  baseImageUrl: string | null;
+  createdAt: string | null;
+}
 
 const STYLE_LABELS: Record<string, { label: string; icon: string }> = {
   plastic: { label: "Plastic", icon: "🫧" },
@@ -122,6 +135,9 @@ export default function LibraryPage() {
     setMounted(true);
   }, []);
 
+  const [activeTab, setActiveTab] = useState("icons");
+  const [selectedVideo, setSelectedVideo] = useState<AnimationItem | null>(null);
+
   const {
     data: generations = [],
     isLoading,
@@ -143,6 +159,23 @@ export default function LibraryPage() {
 
   const filteredLibrary = completedGenerations.filter((item) =>
     (item.userPrompt || item.prompt).toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const {
+    data: animationItems = [],
+    isLoading: animationsLoading,
+  } = useQuery<AnimationItem[]>({
+    queryKey: ["library-animations"],
+    queryFn: async () => {
+      const res = await fetch("/api/library/animations");
+      if (!res.ok) throw new Error("Failed to fetch animations");
+      const json = await res.json();
+      return json.data;
+    },
+  });
+
+  const filteredAnimations = animationItems.filter((item) =>
+    item.actionPrompt.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleCopyPrompt = (text: string) => {
@@ -360,7 +393,14 @@ export default function LibraryPage() {
           </div>
         </div>
 
-        {/* ── Grid Section ───────────────────────────────────── */}
+        {/* ── Tabs ─────────────────────────────────────────── */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="mb-6 bg-muted/40 p-1 rounded-xl">
+            <TabsTrigger value="icons" className="rounded-lg text-xs font-semibold gap-1.5 data-[state=active]:shadow-sm"><ImageIcon className="h-3.5 w-3.5" />3D Icons</TabsTrigger>
+            <TabsTrigger value="animations" className="rounded-lg text-xs font-semibold gap-1.5 data-[state=active]:shadow-sm"><Video className="h-3.5 w-3.5" />Animated Icons</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="icons">
         <AnimatePresence mode="wait">
           {/* Loading Skeleton */}
           {isLoading && (
@@ -588,6 +628,76 @@ export default function LibraryPage() {
             </motion.div>
           )}
         </AnimatePresence>
+          </TabsContent>
+
+          <TabsContent value="animations">
+            <AnimatePresence mode="wait">
+              {animationsLoading && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="aspect-video rounded-2xl bg-muted/40 animate-pulse border border-border/20" />
+                  ))}
+                </motion.div>
+              )}
+
+              {!animationsLoading && filteredAnimations.length > 0 && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full">
+                  {filteredAnimations.map((item, index) => (
+                    <motion.div key={item.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                      transition={{ duration: 0.35, ease: "easeOut", delay: index * 0.04 }}
+                      className="group relative">
+                      <div onClick={() => setSelectedVideo(item)}
+                        className="relative aspect-video w-full rounded-2xl overflow-hidden bg-muted/30 border border-border/40 group-hover:border-primary/20 group-hover:shadow-2xl group-hover:shadow-primary/5 transition-all duration-300 cursor-pointer">
+                        {item.resultVideoUrl && (
+                          <video src={item.resultVideoUrl} muted loop playsInline
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            onMouseEnter={(e) => (e.target as HTMLVideoElement).play()}
+                            onMouseLeave={(e) => { const v = e.target as HTMLVideoElement; v.pause(); v.currentTime = 0; }} />
+                        )}
+                        <div className="absolute top-2 left-2 z-[1]">
+                          <Badge variant="secondary" className="bg-background/95 backdrop-blur-md border border-border/20 text-[10px] h-5 px-2 shadow-md font-bold text-foreground">
+                            {item.resolution} · {item.aspectRatio}
+                          </Badge>
+                        </div>
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-[1]">
+                          <div className="bg-black/40 backdrop-blur-md p-3 rounded-full text-white"><Play className="h-6 w-6" /></div>
+                        </div>
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 pointer-events-none z-[1]">
+                          <p className="text-xs text-white/90 font-medium line-clamp-2 mb-1">{item.actionPrompt}</p>
+                          <span className="text-[10px] text-white/70">{mounted && item.createdAt ? formatRelativeDate(item.createdAt) : ""}</span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+
+              {!animationsLoading && filteredAnimations.length === 0 && (
+                <motion.div key="anim-empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="flex flex-1 flex-col items-center justify-center w-full min-h-[50vh] gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-muted/40 flex items-center justify-center">
+                    <Video className="w-8 h-8 text-muted-foreground/30" />
+                  </div>
+                  <div className="text-center">
+                    <h3 className="font-heading text-lg font-semibold text-foreground/70">
+                      {searchQuery ? "No matches found" : "No animated icons yet"}
+                    </h3>
+                    <p className="text-muted-foreground text-sm mt-1 mb-6 max-w-[250px] mx-auto">
+                      {searchQuery ? "Try a different keyword." : "Animate your 3D icons to see them here."}
+                    </p>
+                  </div>
+                  {!searchQuery && (
+                    <Button asChild className="rounded-xl shadow-lg shadow-primary/20">
+                      <Link href="/animate">Go to Animate</Link>
+                    </Button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* ── Image Detail Dialog ────────────────────────────── */}
@@ -835,6 +945,82 @@ export default function LibraryPage() {
               Share Now
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Video Detail Dialog ─────────────────────────────── */}
+      <Dialog open={!!selectedVideo} onOpenChange={(open) => { if (!open) setSelectedVideo(null); }}>
+        <DialogContent className="sm:max-w-3xl w-full border-border/50 bg-card p-0 overflow-hidden shadow-2xl" showCloseButton={false}>
+          <DialogClose asChild>
+            <Button variant="secondary" size="icon"
+              className="absolute top-4 right-4 z-50 rounded-full h-10 w-10 shadow-lg border border-border/20 bg-background/80 backdrop-blur-md hover:bg-background transition-all">
+              <X className="h-5 w-5" />
+            </Button>
+          </DialogClose>
+          <DialogTitle className="sr-only">Animation Details</DialogTitle>
+          <DialogDescription className="sr-only">View details about this animated icon.</DialogDescription>
+          {selectedVideo && (
+            <div className="grid grid-cols-1 md:grid-cols-5 min-h-0">
+              <div className="flex items-center justify-center bg-muted/10 p-6 border-b md:border-b-0 md:border-r border-border/20 md:col-span-3">
+                {selectedVideo.resultVideoUrl && (
+                  <video src={selectedVideo.resultVideoUrl} autoPlay loop muted playsInline
+                    className="w-full max-h-[70vh] rounded-xl shadow-lg object-contain" />
+                )}
+              </div>
+              <div className="flex flex-col justify-between p-6 gap-6 md:col-span-2">
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary" className="text-xs h-6 px-2.5 bg-secondary/80 font-semibold">
+                      {selectedVideo.resolution}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs h-6 px-2.5 bg-secondary/80 font-semibold">
+                      {selectedVideo.aspectRatio}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs h-6 px-2.5 bg-secondary/80 font-semibold">
+                      4s Loop
+                    </Badge>
+                    {mounted && selectedVideo.createdAt && (
+                      <Badge variant="outline" className="text-xs h-6 px-2.5 text-muted-foreground">
+                        {formatRelativeDate(selectedVideo.createdAt)}
+                      </Badge>
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground/70">Action Prompt</p>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-lg"
+                        onClick={() => handleCopyPrompt(selectedVideo.actionPrompt)}>
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <p className="text-base font-medium leading-relaxed text-foreground/90 max-h-[30vh] overflow-y-auto pr-2">
+                      {selectedVideo.actionPrompt}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Background:</span>
+                    <div className="w-5 h-5 rounded-full border border-border/60" style={{ backgroundColor: selectedVideo.backgroundColor }} />
+                    <span className="text-xs font-mono text-muted-foreground">{selectedVideo.backgroundColor}</span>
+                  </div>
+                </div>
+                <div className="flex flex-row gap-2 pt-4 border-t border-border/40 mt-auto">
+                  <Button size="sm" className="flex-1 font-semibold rounded-xl h-10 text-xs gap-2"
+                    onClick={() => {
+                      if (!selectedVideo.resultVideoUrl) return;
+                      const link = document.createElement("a");
+                      link.href = `/api/download?url=${encodeURIComponent(selectedVideo.resultVideoUrl)}&filename=audora-animation-${selectedVideo.jobId}.mp4`;
+                      link.download = `audora-animation-${selectedVideo.jobId}.mp4`;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      toast.success("Download started!");
+                    }}>
+                    <Download className="w-4 h-4" />Download MP4
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

@@ -129,3 +129,35 @@ export const feedbacks = pgTable("feedbacks", {
 
 export type Feedback = typeof feedbacks.$inferSelect;
 export type NewFeedback = typeof feedbacks.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Animated Icons
+// ---------------------------------------------------------------------------
+
+export const animationResolutionEnum = pgEnum("animation_resolution", ["720p", "1080p"]);
+export const animationAspectRatioEnum = pgEnum("animation_aspect_ratio", ["16:9", "9:16"]);
+
+export const animations = pgTable("animations", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  jobId: text("job_id"),
+  status: statusEnum("status").default("pending"),
+  // Source — references the static generation that was animated
+  sourceGenerationId: integer("source_generation_id"),
+  baseImageUrl: text("base_image_url"),
+  // User inputs
+  actionPrompt: text("action_prompt").notNull(),
+  resolution: animationResolutionEnum("resolution").notNull(),
+  aspectRatio: animationAspectRatioEnum("aspect_ratio").notNull().default("16:9"),
+  backgroundColor: text("background_color").notNull(),
+  // Cost
+  creditCost: integer("credit_cost").notNull(),
+  creditRefunded: boolean("credit_refunded").default(false),
+  failReason: text("fail_reason"),
+  // Result
+  resultVideoUrl: text("result_video_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type Animation = typeof animations.$inferSelect;
+export type NewAnimation = typeof animations.$inferInsert;

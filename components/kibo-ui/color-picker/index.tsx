@@ -53,10 +53,10 @@ export const useColorPicker = () => {
   return context;
 };
 
-export type ColorPickerProps = HTMLAttributes<HTMLDivElement> & {
+export type ColorPickerProps = Omit<HTMLAttributes<HTMLDivElement>, "value" | "onChange"> & {
   value?: Parameters<typeof Color>[0];
   defaultValue?: Parameters<typeof Color>[0];
-  onChange?: (value: Parameters<typeof Color.rgb>[0]) => void;
+  onChange?: (value: number[]) => void;
 };
 
 export const ColorPicker = ({
@@ -86,12 +86,15 @@ export const ColorPicker = ({
   // Update color when controlled value changes
   useEffect(() => {
     if (value) {
-      const color = Color.rgb(value).rgb().object();
-
-      setHue(color.r);
-      setSaturation(color.g);
-      setLightness(color.b);
-      setAlpha(color.a);
+      try {
+        const selectedColor = Color(value);
+        setHue(selectedColor.hue() || 0);
+        setSaturation(selectedColor.saturationl() || 0);
+        setLightness(selectedColor.lightness() || 0);
+        setAlpha(selectedColor.alpha() * 100);
+      } catch {
+        // Ignore invalid colors
+      }
     }
   }, [value]);
 
@@ -283,8 +286,8 @@ export const ColorPickerEyeDropper = ({
       setSaturation(s);
       setLightness(l);
       setAlpha(100);
-    } catch (error) {
-      console.error("EyeDropper failed:", error);
+    } catch {
+      // Ignore user cancellation error
     }
   };
 
@@ -343,6 +346,7 @@ const PercentageInput = ({
       <Input
         type="text"
         {...props}
+        value={props.value ?? ""}
         onChange={(e) => {
           onChange?.(e);
           const num = parseInt(e.target.value, 10);

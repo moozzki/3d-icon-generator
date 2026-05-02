@@ -14,6 +14,8 @@ Audora is a SaaS platform designed for developers, designers, and marketers to g
 - **Background Jobs**: [Inngest](https://www.inngest.com/)
 - **AI Provider**: [Fal.ai](https://fal.ai/) (Models: Flux 2 Pro, Flux 2 Pro Edit, SeedVR2 Upscaler)
 - **Storage**: [Cloudflare R2](https://www.cloudflare.com/products/r2/) (S3-compatible, zero egress fees)
+- **Payment Gateway**: [Pakasir](https://pakasir.com/) (IDR Payments via QRIS & Bank Transfer)
+- **Analytics**: [PostHog](https://posthog.com/) (User behavior tracking)
 - **Email**: [Resend](https://resend.com/)
 - **Infrastructure**: [Upstash Redis](https://upstash.com/) (Rate limiting & caching)
 
@@ -28,6 +30,7 @@ Audora is a SaaS platform designed for developers, designers, and marketers to g
   - **Reference Image Upload**: Client-side compression to 1024x1024 before R2 upload.
   - **Refine Mode**: Iterative editing of existing assets using previous base renders.
   - **Unconstrained Canvas**: Smooth pan/zoom area.
+- **Support**: Dedicated support page with contact information and help resources.
 
 ### 2. AI Generation Pipeline (Inngest)
 The system uses a multi-branch workflow via Inngest to handle different generation types while maintaining cost control (~$0.03 per 1K edit).
@@ -45,16 +48,13 @@ The system uses a multi-branch workflow via Inngest to handle different generati
 
 *All final images are served via a custom CDN domain (`cdn.useaudora.com`).*
 
-### 3. Credit System
+### 3. Credit System & Payments
 - **Sign-up Bonus**: 2 Credits for new users.
 - **Generation Cost**:
   - **1K/2K Resolution**: 1 Credit.
   - **4K Resolution (SeedVR2)**: 2 Credits.
+- **Top-up**: Integrated with **Pakasir** for seamless IDR transactions.
 - **Fail-Safe**: Real-time validation and automated refunds for job failures or content policy blocks.
-
-### 4. Storage Architecture
-- **Reference Images**: Uploaded to R2 via Presigned URLs (Dimension locked at 1024px).
-- **Generated Assets**: Stored in R2. We maintain a `baseImageUrl` (1K) for refinement and a `resultImageUrl` for display/download.
 
 ---
 
@@ -68,7 +68,7 @@ The system uses a normalized PostgreSQL schema managed by Drizzle ORM:
   - `masterPrompt`: Style-engineered prompt.
   - `baseImageUrl`: 1K raw render (required for Refine/Edit).
   - `resultImageUrl`: High-res upscaled asset.
-- **`transactions`**: Payment and top-up history.
+- **`transactions`**: Payment history and package details.
 
 ---
 
@@ -77,7 +77,7 @@ The system uses a normalized PostgreSQL schema managed by Drizzle ORM:
 ```text
 ├── app/                  # Next.js App Router (Dashboard, Auth, API)
 ├── components/           # UI Components (Studio, Shared, Dashboard)
-├── doc/                  # Technical Documentation & PRDs
+├── doc/                  # Technical Documentation & User Flows
 ├── hooks/                # Custom React Hooks
 ├── lib/                  # Core Utilities
 │   ├── auth/            # Better Auth config (Magic Link + Social)
@@ -98,6 +98,8 @@ Required values in `.env.local`:
 - `BETTER_AUTH_SECRET`: Auth secret
 - `FAL_KEY`: Fal.ai API key
 - `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_ENDPOINT`: Cloudflare storage
+- `PAKASIR_API_KEY`: Payment gateway access
+- `NEXT_PUBLIC_POSTHOG_KEY`, `NEXT_PUBLIC_POSTHOG_HOST`: Analytics config
 
 ### Commands
 - `npm run dev`: Start Next.js dev server
@@ -109,8 +111,11 @@ Required values in `.env.local`:
 
 ## 📚 Related Documentation
 For more detailed information on specific modules, refer to:
+- [User Flow Documentation](doc/user-flow.md)
 - [Pipeline AI Integrations](doc/2pipeline-ai-integrations.md)
 - [SeedVR2 Upscaling & Edit](doc/seedvr-upscale.md)
 - [Auth Strategy](doc/security-auth-strategy.md)
+- [Pakasir Integration](doc/pakasir-integration.md)
+- [PostHog Analytics](doc/posthog-integration-backend.md)
 - [Master Prompt Engineering](doc/master-prompt.md)
 - [Product Requirements (PRD)](doc/prd.md)

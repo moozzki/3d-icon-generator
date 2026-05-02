@@ -78,6 +78,8 @@ function PopoverDescription({
   )
 }
 
+const PopoverClose = PopoverPrimitive.Close
+
 export {
   Popover,
   PopoverAnchor,
@@ -86,4 +88,5 @@ export {
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
+  PopoverClose,
 }
