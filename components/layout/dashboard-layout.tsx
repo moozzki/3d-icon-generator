@@ -120,7 +120,7 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
 
   const navItems = [
     { name: "Studio", href: "/", icon: Wand2 },
-    { name: "Animate", href: "/animate", icon: Clapperboard },
+    { name: "Animate", href: "/animate", icon: Clapperboard, disabled: true, tooltip: "Coming Soon" },
     { name: "Library", href: "/library", icon: Images },
     { name: "Spotlight", href: "/spotlight", icon: Globe },
   ];
@@ -180,14 +180,21 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
             const linkContent = (
               <Link
                 key={item.href}
-                href={item.href}
-                onClick={() => isMobile && setMobileMenuOpen(false)}
+                href={item.disabled ? "#" : item.href}
+                onClick={(e) => {
+                  if (item.disabled) {
+                    e.preventDefault();
+                    return;
+                  }
+                  if (isMobile) setMobileMenuOpen(false);
+                }}
                 className={cn(
                   "flex items-center rounded-lg text-sm font-medium transition-colors duration-150 whitespace-nowrap overflow-hidden",
                   isCollapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2",
                   isActive
                     ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                  item.disabled && "opacity-50 cursor-not-allowed hover:bg-transparent hover:text-muted-foreground"
                 )}
               >
                 <item.icon
@@ -200,12 +207,12 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
               </Link>
             );
 
-            if (isCollapsed) {
+            if (isCollapsed || item.disabled) {
               return (
                 <Tooltip key={item.href}>
                   <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
                   <TooltipContent side="right" sideOffset={8}>
-                    {item.name}
+                    {item.disabled ? (item.tooltip || "Coming Soon") : item.name}
                   </TooltipContent>
                 </Tooltip>
               );
@@ -250,14 +257,14 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
             <>
               <Link href="/support" onClick={() => isMobile && setMobileMenuOpen(false)} className={cn(
                 "flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                pathname === "/support" 
-                  ? "bg-primary/10 text-primary" 
+                pathname === "/support"
+                  ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               )}>
                 <Headset className="h-4 w-4 shrink-0" />
                 <span>Support</span>
               </Link>
-              
+
               <FeedbackDialog>
                 <button className="flex items-center gap-2.5 w-full rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">
                   <MessageSquare className="h-4 w-4 shrink-0" />

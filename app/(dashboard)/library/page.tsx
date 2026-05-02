@@ -397,7 +397,7 @@ export default function LibraryPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="mb-6 bg-muted/40 p-1 rounded-xl">
             <TabsTrigger value="icons" className="rounded-lg text-xs font-semibold gap-1.5 data-[state=active]:shadow-sm"><ImageIcon className="h-3.5 w-3.5" />3D Icons</TabsTrigger>
-            <TabsTrigger value="animations" className="rounded-lg text-xs font-semibold gap-1.5 data-[state=active]:shadow-sm"><Video className="h-3.5 w-3.5" />Animated Icons</TabsTrigger>
+            {/* <TabsTrigger value="animations" className="rounded-lg text-xs font-semibold gap-1.5 data-[state=active]:shadow-sm"><Video className="h-3.5 w-3.5" />Animated Icons</TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="icons">
@@ -630,7 +630,7 @@ export default function LibraryPage() {
         </AnimatePresence>
           </TabsContent>
 
-          <TabsContent value="animations">
+          {/* <TabsContent value="animations">
             <AnimatePresence mode="wait">
               {animationsLoading && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -696,7 +696,7 @@ export default function LibraryPage() {
                 </motion.div>
               )}
             </AnimatePresence>
-          </TabsContent>
+          </TabsContent> */}
         </Tabs>
       </div>
 
