@@ -33,7 +33,7 @@ import {
   SheetTrigger,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Wand2, Images, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare, Receipt, Globe, Headset, Clapperboard } from "lucide-react";
+import { Wand2, Images, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare, Receipt, Globe, Headset } from "lucide-react";
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 import { AuthLoadingOverlay } from "@/components/auth-loading-overlay";
 import { PricingDialog } from "@/components/pricing/pricing-dialog";
@@ -118,9 +118,8 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
     return () => window.removeEventListener("credits-updated", fetchCredits);
   }, [session, isAdmin]);
 
-  const navItems = [
+  const navItems: { name: string; href: string; icon: any; disabled?: boolean; tooltip?: string; }[] = [
     { name: "Studio", href: "/", icon: Wand2 },
-    { name: "Animate", href: "/animate", icon: Clapperboard, disabled: true, tooltip: "Coming Soon" },
     { name: "Library", href: "/library", icon: Images },
     { name: "Spotlight", href: "/spotlight", icon: Globe },
   ];
