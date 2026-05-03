@@ -67,6 +67,7 @@ import {
   Lock,
   Share2,
   Zap,
+  Package2,
 } from "lucide-react";
 import {
   Accordion,
@@ -186,6 +187,7 @@ export default function StudioDetailPage() {
   const [aiModel] = useState<AiModelId>("flux-2-pro");
   const [copied, setCopied] = useState(false);
   const [isRemovingBg, setIsRemovingBg] = useState(false);
+  const [isExportingPack, setIsExportingPack] = useState(false);
   const [isPromptExpanded, setIsPromptExpanded] = useState(true);
   const [lastJobId, setLastJobId] = useState<string | null>(null);
   const [lastQuality, setLastQuality] = useState<string | null>(null);
@@ -457,6 +459,32 @@ export default function StudioDetailPage() {
       toast.success("Download started!");
     } catch {
       toast.error("Failed to download image.");
+    }
+  };
+
+  const handleExportPack = async () => {
+    // Use baseImage (1K/1024×1024) as source — fastest fetch & resize, no quality loss for target sizes
+    const sourceUrl = generation?.baseImageUrl || resultImage || generation?.resultImageUrl;
+    if (!sourceUrl) return;
+    setIsExportingPack(true);
+    try {
+      const filename = `audora-icon-pack-${lastJobId || jobId}`;
+      const exportUrl = `/api/export-pack?url=${encodeURIComponent(sourceUrl)}&filename=${encodeURIComponent(filename)}`;
+      const res = await fetch(exportUrl);
+      if (!res.ok) throw new Error("Failed to generate icon pack");
+      const blob = await res.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${filename}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+      toast.success("Icon pack downloaded!");
+    } catch {
+      toast.error("Failed to generate pack. Please try again later.");
+    } finally {
+      setIsExportingPack(false);
     }
   };
 
@@ -1159,6 +1187,20 @@ export default function StudioDetailPage() {
                     >
                       <Wand2 className="w-3.5 h-3.5 text-primary" />
                       Refine Icon
+                    </Button>
+
+                    {/* Export App Icons Pack */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full font-semibold rounded-lg h-9 text-xs gap-2 justify-start"
+                      onClick={handleExportPack}
+                      disabled={isExportingPack || !(generation?.baseImageUrl || resultImage || generation?.resultImageUrl)}
+                      title="Includes iOS, Android, macOS, and Web Favicon sizes in a single ZIP."
+                    >
+                      {isExportingPack
+                        ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Zipping...</>
+                        : <><Package2 className="w-3.5 h-3.5" /> Export App Icons (.zip)</>}
                     </Button>
 
                     {/* Spotlight — only show if current user owns this generation */}

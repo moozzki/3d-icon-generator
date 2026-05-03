@@ -247,20 +247,8 @@ export default function SpotlightPage() {
                         />
                       )}
 
-                      {/* Badge Overlays: Style + Position + UserName */}
+                      {/* Badge Overlays: UserName */}
                       <div className="absolute top-2 left-2 flex flex-wrap gap-1.5 z-[1]">
-                        <Badge
-                          variant="secondary"
-                          className="bg-background/95 backdrop-blur-md border border-border/20 text-[10px] h-5 px-2 shadow-md font-bold text-foreground hidden md:inline-flex"
-                        >
-                          {styleInfo?.icon} {styleInfo?.label}
-                        </Badge>
-                        <Badge
-                          variant="secondary"
-                          className="bg-background/95 backdrop-blur-md border border-border/20 text-[10px] h-5 px-2 shadow-md font-bold text-foreground capitalize hidden md:inline-flex"
-                        >
-                          {item.position.replace('_', ' ')}
-                        </Badge>
                         {item.userName && (
                           <Badge
                             variant="secondary"
