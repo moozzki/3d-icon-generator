@@ -42,7 +42,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, ImageIcon, Download, Wand2, MoreVertical, Trash2, Eraser, Loader2, ZoomIn, ChevronDown, Globe, Lock, Share2, X, Copy, Video, Play } from "lucide-react";
+import { Search, ImageIcon, Download, Wand2, MoreVertical, Trash2, Eraser, Loader2, ZoomIn, ChevronDown, Globe, Lock, Share2, X, Copy, Video, Play, Package2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ShareCard } from "@/components/share-card";
@@ -64,6 +64,7 @@ interface Generation {
   cost: number;
   creditCost: number;
   resultImageUrl: string | null;
+  baseImageUrl?: string | null;
   isPublic: boolean;
   createdAt: string;
 }
@@ -120,6 +121,7 @@ export default function LibraryPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [removingBgJobId, setRemovingBgJobId] = useState<string | null>(null);
+  const [exportingPackJobId, setExportingPackJobId] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<Generation | null>(null);
   
   const shareCardRef = useRef<HTMLDivElement>(null);
@@ -233,6 +235,31 @@ export default function LibraryPage() {
       toast.error(message);
     } finally {
       setRemovingBgJobId(null);
+    }
+  };
+
+  const handleExportPack = async (item: Generation) => {
+    const sourceUrl = item.baseImageUrl || item.resultImageUrl;
+    if (!sourceUrl || !item.jobId) return;
+    setExportingPackJobId(item.jobId);
+    try {
+      const filename = `audora-icon-pack-${item.jobId}`;
+      const exportUrl = `/api/export-pack?url=${encodeURIComponent(sourceUrl)}&filename=${encodeURIComponent(filename)}`;
+      const res = await fetch(exportUrl);
+      if (!res.ok) throw new Error("Failed to generate icon pack");
+      const blob = await res.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${filename}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+      toast.success("Icon pack downloaded!");
+    } catch {
+      toast.error("Failed to generate pack. Please try again later.");
+    } finally {
+      setExportingPackJobId(null);
     }
   };
 
@@ -512,6 +539,20 @@ export default function LibraryPage() {
                                   Refine
                                 </Link>
                               </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-full justify-start gap-2 text-xs"
+                                onClick={() => handleExportPack(item)}
+                                disabled={exportingPackJobId === item.jobId}
+                              >
+                                {exportingPackJobId === item.jobId ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-foreground/80" />
+                                ) : (
+                                  <Package2 className="h-3.5 w-3.5 text-foreground/80" />
+                                )}
+                                {exportingPackJobId === item.jobId ? "Zipping..." : "Export App Icons"}
+                              </Button>
                               <Button variant="ghost" size="sm" className="h-8 w-full justify-start gap-2 text-xs" onClick={() => handleDownload(item)}>
                                 <Download className="h-3.5 w-3.5 text-foreground/80" />
                                 Download Original
@@ -788,6 +829,18 @@ export default function LibraryPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-[200px] sm:w-[240px] rounded-xl">
+                      <DropdownMenuItem onClick={() => handleExportPack(selectedImage)} disabled={exportingPackJobId === selectedImage.jobId} className="gap-3 py-2.5 cursor-pointer">
+                        {exportingPackJobId === selectedImage.jobId ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                        ) : (
+                          <Package2 className="w-4 h-4 text-muted-foreground" />
+                        )}
+                        <div className="flex flex-col">
+                          <span className="text-[13px] font-medium">Export App Icons (.zip)</span>
+                          <span className="text-[11px] text-muted-foreground">iOS, Android, & Web bundle</span>
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => handleDownload(selectedImage)} className="gap-3 py-2.5 cursor-pointer">
                         <Download className="w-4 h-4 text-muted-foreground" />
                         <div className="flex flex-col">
