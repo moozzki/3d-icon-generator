@@ -189,9 +189,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, jobId });
   } catch (error) {
     console.error("Generate error:", error);
-    return NextResponse.json({ 
-      error: error instanceof Error ? error.message : "Internal Server Error", 
-      details: error instanceof Error ? error.stack : String(error)
-    }, { status: 500 });
+    const isDev = process.env.NODE_ENV !== "production";
+    return NextResponse.json(
+      {
+        error: "Internal Server Error",
+        ...(isDev && error instanceof Error ? { details: error.stack } : {}),
+      },
+      { status: 500 }
+    );
   }
 }

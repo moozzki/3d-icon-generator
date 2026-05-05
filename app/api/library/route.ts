@@ -15,7 +15,27 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const history = await db.select()
+    const history = await db
+      .select({
+        id: generations.id,
+        jobId: generations.jobId,
+        status: generations.status,
+        aiModel: generations.aiModel,
+        // userPrompt only — engineered prompt is internal
+        userPrompt: generations.userPrompt,
+        position: generations.position,
+        style: generations.style,
+        quality: generations.quality,
+        color: generations.color,
+        baseImageUrl: generations.baseImageUrl,
+        resultImageUrl: generations.resultImageUrl,
+        transparentImageUrl: generations.transparentImageUrl,
+        referenceImage: generations.referenceImage,
+        isPublic: generations.isPublic,
+        batchId: generations.batchId,
+        failReason: generations.failReason,
+        createdAt: generations.createdAt,
+      })
       .from(generations)
       .where(eq(generations.userId, session.user.id))
       .orderBy(desc(generations.createdAt));

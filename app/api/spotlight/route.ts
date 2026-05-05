@@ -10,19 +10,15 @@ export async function GET() {
     const publicGenerations = await db
       .select({
         id: generations.id,
-        userId: generations.userId,
         jobId: generations.jobId,
         status: generations.status,
         aiModel: generations.aiModel,
-        prompt: generations.prompt,
+        // userPrompt only — NOT the full engineered prompt (proprietary)
         userPrompt: generations.userPrompt,
-        referenceImage: generations.referenceImage,
         position: generations.position,
         style: generations.style,
         quality: generations.quality,
         color: generations.color,
-        cost: generations.cost,
-        creditCost: generations.creditCost,
         resultImageUrl: generations.resultImageUrl,
         isPublic: generations.isPublic,
         createdAt: generations.createdAt,

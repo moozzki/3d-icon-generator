@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { db } from "../../../lib/db";
 import { generations } from "../../../lib/db/schema";
 import { eq } from "drizzle-orm";
@@ -20,6 +22,12 @@ async function queryWithRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T> 
 
 export async function GET(req: NextRequest) {
   try {
+    // ── 0. Auth guard ─────────────────────────────────────────────────────
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const jobId = searchParams.get("jobId");
 
@@ -31,6 +39,7 @@ export async function GET(req: NextRequest) {
       db.query.generations.findFirst({
         where: eq(generations.jobId, jobId),
         columns: {
+          userId: true,
           status: true,
           baseImageUrl: true,
           resultImageUrl: true,
@@ -41,6 +50,12 @@ export async function GET(req: NextRequest) {
 
     if (!job) {
       return NextResponse.json({ error: "Job not found" }, { status: 404 });
+    }
+
+    // ── Ownership check (IDOR prevention) ────────────────────────────────
+    const isAdmin = (session.user as { role?: string }).role === "admin";
+    if (job.userId !== session.user.id && !isAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     return NextResponse.json({

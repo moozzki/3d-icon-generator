@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, pgEnum, boolean, numeric } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, bigint, timestamp, pgEnum, boolean, numeric } from "drizzle-orm/pg-core";
 
 export const positionEnum = pgEnum("position", [
   "isometric", "front_facing", "back_facing", "side_facing",
@@ -95,6 +95,8 @@ export const generations = pgTable("generations", {
   resultImageUrl: text("result_image_url"),
   transparentImageUrl: text("transparent_image_url"),
   isPublic: boolean("is_public").default(false),
+  batchId: text("batch_id"),          // null for single gen; shared UUID for all items in a batch
+  seed: bigint("seed", { mode: "number" }),  // Fal.ai seed — same for all items in a batch (visual consistency)
   createdAt: timestamp("created_at").defaultNow(),
 });
 

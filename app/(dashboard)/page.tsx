@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { usePostHog } from 'posthog-js/react';
@@ -72,6 +72,9 @@ import {
   Share2,
   Zap,
   Package2,
+  Layers,
+  ArchiveIcon,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -83,6 +86,7 @@ import {
   ColorPickerFormat,
 } from "@/components/kibo-ui/color-picker";
 import { ShareCard } from "@/components/share-card";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const POSITIONS = [
   "Isometric",
@@ -124,11 +128,30 @@ const AI_MODELS = [
 
 type AiModelId = (typeof AI_MODELS)[number]["id"];
 
+// ---------------------------------------------------------------------------
+// Batch generation constants & types
+// ---------------------------------------------------------------------------
+
+/** Maximum icons per batch. Increase this constant when scaling plans in future. */
+const MAX_BATCH_SIZE = 9;
+
+type BatchItemStatus = "pending" | "loading" | "completed" | "failed";
+
+type BatchItem = {
+  jobId: string;
+  itemName: string;
+  status: BatchItemStatus;
+  imageUrl: string | null;
+  baseImageUrl: string | null;
+  failReason: string | null;
+};
+
 function getCreditCost(aiModel: AiModelId, quality: string): number {
   const model = AI_MODELS.find((m) => m.id === aiModel);
   if (!model) return 1;
   return model.costs[quality as "2K" | "4K"] ?? 1;
 }
+
 
 export default function StudioPage() {
   const posthog = usePostHog();
@@ -178,6 +201,27 @@ export default function StudioPage() {
   const [progress, setProgress] = useState(0);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ---------------------------------------------------------------------------
+  // Batch mode state
+  // ---------------------------------------------------------------------------
+  const [isBatchMode, setIsBatchMode] = useState(false);
+  const [itemsInput, setItemsInput] = useState(""); // raw comma-separated input
+  const [batchItems, setBatchItems] = useState<BatchItem[]>([]); // result cards
+  const [isBatchGenerating, setIsBatchGenerating] = useState(false);
+  const [isDownloadingZip, setIsDownloadingZip] = useState(false);
+  const batchPollRefs = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
+
+  // Derived: parsed item names from comma-separated input
+  const parsedItems = itemsInput
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+  // Selected batch item — drives the batch detail side sheet
+  const [selectedBatchItem, setSelectedBatchItem] = useState<BatchItem | null>(null);
+  const [isBatchSheetOpen, setIsBatchSheetOpen] = useState(false);
+
 
   const creditCost = getCreditCost(aiModel, quality);
 
@@ -398,7 +442,224 @@ export default function StudioPage() {
     }
   };
 
+  // ---------------------------------------------------------------------------
+  // Batch Generate handler
+  // ---------------------------------------------------------------------------
+  const handleBatchGenerate = useCallback(async () => {
+    if (parsedItems.length === 0) return;
+    if (parsedItems.length > MAX_BATCH_SIZE) {
+      toast.error(`Maximum ${MAX_BATCH_SIZE} icons per batch.`);
+      return;
+    }
+
+    setIsBatchGenerating(true);
+    // Clear previous batch results and show skeleton placeholders immediately
+    setBatchItems(
+      parsedItems.map((itemName) => ({
+        jobId: "",
+        itemName,
+        status: "loading",
+        imageUrl: null,
+        baseImageUrl: null,
+        failReason: null,
+      }))
+    );
+
+    // Clear any existing poll intervals
+    batchPollRefs.current.forEach((interval) => clearInterval(interval));
+    batchPollRefs.current.clear();
+
+    const formattedPosition = position.toLowerCase().replace(/ /g, "_");
+
+    try {
+      posthog.capture("batch_generate_started", { item_count: parsedItems.length });
+
+      const res = await fetch("/api/batch-generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stylePrompt: "", // icon names are already in parsedItems; master style comes from lib/prompts
+          items: parsedItems,
+          position: formattedPosition,
+          style,
+          quality,
+          aiModel,
+          color,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        const errMsg = data.error || "Failed to start batch generation.";
+        if (res.status === 403) {
+          toast.error(
+            `Not enough credits. Need ${data.required}, have ${data.available}.`,
+            { duration: 5000 }
+          );
+        } else {
+          toast.error(errMsg);
+        }
+        setBatchItems([]);
+        return;
+      }
+
+      const { jobIds } = data as { jobIds: { jobId: string; itemName: string }[] };
+
+      // Initialize batch items with real jobIds
+      setBatchItems(
+        jobIds.map(({ jobId, itemName }) => ({
+          jobId,
+          itemName,
+          status: "loading",
+          imageUrl: null,
+          baseImageUrl: null,
+          failReason: null,
+        }))
+      );
+
+      // Poll each job independently — update cards as they complete one by one
+      let completedCount = 0;
+      const totalJobs = jobIds.length;
+
+      jobIds.forEach(({ jobId }) => {
+        let consecutiveErrors = 0;
+        const MAX_ERRORS = 5;
+
+        const pollInterval = setInterval(async () => {
+          try {
+            const pollRes = await fetch(`/api/job-status?jobId=${jobId}`);
+
+            if (pollRes.status === 404) return; // Job row not yet written — keep polling
+
+            if (!pollRes.ok) {
+              consecutiveErrors++;
+              if (consecutiveErrors >= MAX_ERRORS) {
+                clearInterval(pollInterval);
+                batchPollRefs.current.delete(jobId);
+                setBatchItems((prev) =>
+                  prev.map((item) =>
+                    item.jobId === jobId
+                      ? { ...item, status: "failed", failReason: "Failed to check status" }
+                      : item
+                  )
+                );
+                completedCount++;
+                if (completedCount >= totalJobs) {
+                  setIsBatchGenerating(false);
+                  window.dispatchEvent(new Event("credits-updated"));
+                }
+              }
+              return;
+            }
+
+            consecutiveErrors = 0;
+            const pollData = await pollRes.json();
+            const status: string = pollData.status;
+
+            if (status === "completed") {
+              clearInterval(pollInterval);
+              batchPollRefs.current.delete(jobId);
+              setBatchItems((prev) =>
+                prev.map((item) =>
+                  item.jobId === jobId
+                    ? {
+                        ...item,
+                        status: "completed",
+                        imageUrl: pollData.resultImageUrl,
+                        baseImageUrl: pollData.baseImageUrl,
+                      }
+                    : item
+                )
+              );
+              completedCount++;
+              if (completedCount >= totalJobs) {
+                setIsBatchGenerating(false);
+                window.dispatchEvent(new Event("credits-updated"));
+                toast.success(`Batch complete! ${totalJobs} icons generated.`);
+              }
+            } else if (status === "failed") {
+              clearInterval(pollInterval);
+              batchPollRefs.current.delete(jobId);
+              setBatchItems((prev) =>
+                prev.map((item) =>
+                  item.jobId === jobId
+                    ? {
+                        ...item,
+                        status: "failed",
+                        failReason: pollData.failReason ?? "Generation failed",
+                      }
+                    : item
+                )
+              );
+              completedCount++;
+              if (completedCount >= totalJobs) {
+                setIsBatchGenerating(false);
+                window.dispatchEvent(new Event("credits-updated"));
+              }
+            }
+          } catch {
+            consecutiveErrors++;
+          }
+        }, 3000);
+
+        batchPollRefs.current.set(jobId, pollInterval);
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      toast.error(msg);
+      setBatchItems([]);
+      setIsBatchGenerating(false);
+    }
+  }, [parsedItems, position, style, quality, aiModel, color, posthog]);
+
+  // ---------------------------------------------------------------------------
+  // Download All (ZIP) — client-side using jszip
+  // ---------------------------------------------------------------------------
+  const handleDownloadAllZip = useCallback(async () => {
+    const completed = batchItems.filter(
+      (item) => item.status === "completed" && item.imageUrl
+    );
+    if (completed.length === 0) return;
+
+    setIsDownloadingZip(true);
+    try {
+      const JSZip = (await import("jszip")).default;
+      const zip = new JSZip();
+
+      // Fetch all images in parallel from R2 CDN and add to zip
+      await Promise.all(
+        completed.map(async (item, idx) => {
+          const res = await fetch(
+            `/api/download?url=${encodeURIComponent(item.imageUrl!)}&filename=icon.png`
+          );
+          if (!res.ok) throw new Error(`Failed to fetch ${item.itemName}`);
+          const arrayBuffer = await res.arrayBuffer();
+          const safeFileName = item.itemName.replace(/[^a-z0-9_\-]/gi, "_").toLowerCase();
+          zip.file(`${String(idx + 1).padStart(2, "0")}_${safeFileName}.png`, arrayBuffer);
+        })
+      );
+
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `audora-batch-icons-${Date.now()}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success(`${completed.length} icons downloaded as ZIP!`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to create ZIP";
+      toast.error(msg);
+    } finally {
+      setIsDownloadingZip(false);
+    }
+  }, [batchItems]);
+
   const handleDownload = async () => {
+
     if (!resultImage) return;
     try {
       posthog.capture('asset_downloaded', { file_type: 'png' });
@@ -594,8 +855,132 @@ export default function StudioPage() {
             }}
           >
             <AnimatePresence mode="wait">
-              {/* Idle empty state */}
-              {!isGenerating && !resultImage && (
+              {/* ── BATCH MODE: Batch result grid ──────────────────── */}
+              {isBatchMode && batchItems.length > 0 && (
+                <motion.div
+                  key="batch-results"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.35 }}
+                  className="flex flex-col items-center gap-6 w-full px-6"
+                >
+                  {/* Batch header */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 bg-primary/10 text-primary rounded-full px-3 py-1.5 text-xs font-semibold">
+                      <Layers className="w-3.5 h-3.5" />
+                      {batchItems.filter(i => i.status === "completed").length}/{batchItems.length} generated
+                    </div>
+                    {isBatchGenerating && (
+                      <motion.div
+                        className="flex items-center gap-1.5 text-muted-foreground text-xs"
+                        animate={{ opacity: [1, 0.5, 1] }}
+                        transition={{ repeat: Infinity, duration: 1.5 }}
+                      >
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Generating...
+                      </motion.div>
+                    )}
+                  </div>
+
+                  {/* Horizontal scroll card grid */}
+                  <div className="flex flex-row gap-4 overflow-x-auto no-scrollbar pb-2 px-2 max-w-[min(900px,90vw)]">
+                    {batchItems.map((item, idx) => (
+                      <motion.div
+                        key={item.jobId || `placeholder-${idx}`}
+                        initial={{ opacity: 0, scale: 0.85, y: 16 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        transition={{ duration: 0.4, delay: idx * 0.05, ease: [0.16, 1, 0.3, 1] }}
+                        className="flex flex-col items-center gap-2 shrink-0"
+                      >
+                        {/* Card — clickable to open detail sheet (completed items only) */}
+                        <button
+                          onClick={() => {
+                            if (item.status === "completed" && item.imageUrl) {
+                              setSelectedBatchItem(item);
+                              setIsBatchSheetOpen(true);
+                            }
+                          }}
+                          className={cn(
+                            "relative w-[160px] h-[160px] rounded-2xl border border-border/50 bg-card overflow-hidden shadow-sm transition-all duration-200",
+                            item.status === "completed" && item.imageUrl
+                              ? "cursor-pointer hover:ring-2 hover:ring-primary/40 hover:shadow-lg hover:border-primary/30"
+                              : "cursor-default"
+                          )}
+                          disabled={item.status !== "completed" || !item.imageUrl}
+                        >
+                          {item.status === "loading" && (
+                            <Skeleton className="w-full h-full rounded-2xl" />
+                          )}
+                          {item.status === "completed" && item.imageUrl && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={item.imageUrl}
+                              alt={item.itemName}
+                              className="w-full h-full object-contain rounded-2xl"
+                            />
+                          )}
+                          {item.status === "failed" && (
+                            <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-3 text-center">
+                              <X className="w-6 h-6 text-destructive/60" />
+                              <p className="text-[10px] text-muted-foreground leading-snug">
+                                {item.failReason || "Failed"}
+                              </p>
+                            </div>
+                          )}
+                        </button>
+
+                        {/* Item label */}
+                        <p className="text-[11px] font-medium text-foreground/80 truncate max-w-[160px] text-center">
+                          {item.itemName}
+                        </p>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* Download All ZIP button */}
+                  {batchItems.some(i => i.status === "completed") && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2 font-semibold rounded-full px-5 h-9 text-xs border-primary/30 hover:bg-primary/5 hover:border-primary/50"
+                      onClick={handleDownloadAllZip}
+                      disabled={isDownloadingZip || isBatchGenerating}
+                    >
+                      {isDownloadingZip ? (
+                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Zipping...</>
+                      ) : (
+                        <><ArchiveIcon className="w-3.5 h-3.5" /> Download All ({batchItems.filter(i => i.status === "completed").length}) as ZIP</>
+                      )}
+                    </Button>
+                  )}
+                </motion.div>
+              )}
+
+              {/* ── BATCH MODE: Empty state ──────────────────────── */}
+              {isBatchMode && batchItems.length === 0 && (
+                <motion.div
+                  key="batch-empty"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex flex-col items-center gap-3 select-none"
+                >
+                  <div className="w-20 h-20 rounded-2xl bg-primary/5 border border-primary/20 flex items-center justify-center mb-1 shadow-sm">
+                    <Layers className="w-8 h-8 text-primary/40" />
+                  </div>
+                  <p className="text-sm font-medium text-muted-foreground/70">
+                    Your icon set will appear here
+                  </p>
+                  <p className="text-xs text-muted-foreground/40 text-center max-w-[220px]">
+                    Enter a style prompt + item names below, then press Generate Batch
+                  </p>
+                </motion.div>
+              )}
+
+              {/* ── SINGLE MODE: Idle empty state ───────────────── */}
+              {!isBatchMode && !isGenerating && !resultImage && (
                 <motion.div
                   key="empty"
                   initial={{ opacity: 0, y: 8 }}
@@ -616,8 +1001,8 @@ export default function StudioPage() {
                 </motion.div>
               )}
 
-              {/* Generating state — progress bar */}
-              {isGenerating && (
+              {/* ── SINGLE MODE: Generating state — progress bar ── */}
+              {!isBatchMode && isGenerating && (
                 <motion.div
                   key="generating"
                   initial={{ opacity: 0, scale: 0.92 }}
@@ -677,8 +1062,8 @@ export default function StudioPage() {
                 </motion.div>
               )}
 
-              {/* Result image */}
-              {resultImage && !isGenerating && (
+              {/* ── SINGLE MODE: Result image ──────────────────── */}
+              {!isBatchMode && resultImage && !isGenerating && (
                 <motion.div
                   key="result"
                   initial={{ opacity: 0, scale: 0.88, y: 12 }}
@@ -808,12 +1193,21 @@ export default function StudioPage() {
                   </div>
 
                   <div className="w-full">
-                    {/* Credits badge - Top Right */}
+                    {/* Credits badge - Top Right (dynamic in batch mode) */}
                     <div className="absolute top-3 right-3 sm:top-4 sm:right-4 pointer-events-none">
-                      <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
-                        <Coins className="w-3 h-3" />
-                        {creditCost} Credit{creditCost > 1 ? "s" : ""}
-                      </div>
+                      {isBatchMode ? (
+                        <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
+                          <Coins className="w-3 h-3" />
+                          {parsedItems.length > 0
+                            ? `${parsedItems.length} × ${creditCost} = ${parsedItems.length * creditCost} Credits`
+                            : `${creditCost} Credit${creditCost > 1 ? "s" : ""} each`}
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
+                          <Coins className="w-3 h-3" />
+                          {creditCost} Credit{creditCost > 1 ? "s" : ""}
+                        </div>
+                      )}
                     </div>
 
                     {/* Reference Image Preview */}
@@ -859,34 +1253,94 @@ export default function StudioPage() {
                       </div>
                     )}
 
-                    {/* Textarea row */}
-                    <div className={cn("px-3 sm:px-4 pb-1 sm:pb-2", referenceImage ? "pt-1" : "pt-7 sm:pt-8")}>
+                    {/* ── Single | Batch mode toggle pill ── */}
+                    <div className={cn(
+                      "flex items-center gap-0 mx-3 sm:mx-4 rounded-full border border-border/50 bg-muted/30 p-0.5 w-fit",
+                      referenceImage ? "mt-1" : "mt-7 sm:mt-8"
+                    )}>
+                      <button
+                        onClick={() => { setIsBatchMode(false); setBatchItems([]); }}
+                        className={cn(
+                          "h-6 px-3 rounded-full text-[11px] font-semibold transition-all",
+                          !isBatchMode
+                            ? "bg-background shadow-sm text-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        Single
+                      </button>
+                      <button
+                        onClick={() => { setIsBatchMode(true); setResultImage(null); }}
+                        className={cn(
+                          "h-6 px-3 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1",
+                          isBatchMode
+                            ? "bg-background shadow-sm text-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        <Layers className="w-3 h-3" />
+                        Batch
+                      </button>
+                    </div>
+
+                    {/* Textarea row — in batch mode, this IS the item list input */}
+                    <div className={cn("px-3 sm:px-4 pb-1 sm:pb-2 pt-2 relative")}>
                       <textarea
                         ref={textareaRef}
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
+                        value={isBatchMode ? itemsInput : prompt}
+                        onChange={(e) =>
+                          isBatchMode
+                            ? setItemsInput(e.target.value)
+                            : setPrompt(e.target.value)
+                        }
                         onKeyDown={handleKeyDown}
                         onDrop={(e) => {
                           e.preventDefault();
                         }}
                         rows={3}
-                        placeholder="Describe your 3D icon..."
+                        placeholder={
+                          isBatchMode
+                            ? `Icon names, comma-separated (max ${MAX_BATCH_SIZE})\ne.g. House, Star, User Avatar, Gear`
+                            : "Describe your 3D icon..."
+                        }
                         className="w-full resize-none bg-transparent text-base sm:text-[15px] font-medium text-foreground placeholder:text-muted-foreground/45 outline-none leading-relaxed pr-24"
                       />
+                      {/* Item count badge — only in batch mode */}
+                      {isBatchMode && (
+                        <div className={cn(
+                          "absolute bottom-3 right-3 text-[10px] font-semibold rounded-full px-2 py-0.5 pointer-events-none",
+                          parsedItems.length > MAX_BATCH_SIZE
+                            ? "bg-destructive/10 text-destructive"
+                            : parsedItems.length > 0
+                              ? "bg-primary/10 text-primary"
+                              : "bg-muted text-muted-foreground/50"
+                        )}>
+                          {parsedItems.length}/{MAX_BATCH_SIZE}
+                        </div>
+                      )}
                     </div>
+
+                    {/* Batch over-limit warning */}
+                    {isBatchMode && parsedItems.length > MAX_BATCH_SIZE && (
+                      <p className="text-[10px] text-destructive px-3 sm:px-4 -mt-1 mb-1">
+                        Too many items. Max {MAX_BATCH_SIZE} per batch.
+                      </p>
+                    )}
 
                     {/* Controls row */}
                     <div className="flex items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 pb-3 pt-1">
                       <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 flex-1 pr-2">
 
-                        {/* Upload reference (ImageUp) */}
-                        <UploadReferenceTrigger
-                          referenceUrl={referenceImage}
-                          onReferenceChanged={(url) => {
-                            setReferenceImage(url);
-                            setIsRefineMode(false);
-                          }}
-                        />
+                        {/* Upload reference (ImageUp) — hidden in batch mode */}
+                        {!isBatchMode && (
+                          <UploadReferenceTrigger
+                            referenceUrl={referenceImage}
+                            onReferenceChanged={(url) => {
+                              setReferenceImage(url);
+                              setIsRefineMode(false);
+                            }}
+                          />
+                        )}
 
                         {/* Style popover */}
                         <Popover open={isStyleOpen} onOpenChange={setIsStyleOpen}>
@@ -1058,19 +1512,38 @@ export default function StudioPage() {
                       </div>
 
 
-                      {/* Generate button (Icon only) */}
-                      <Button
-                        size="icon"
-                        onClick={handleGenerate}
-                        disabled={isGenerating || (!prompt.trim() && !referenceImage)}
-                        className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl shadow-sm hover:shadow-primary/20 transition-all shrink-0 ml-auto"
-                      >
-                        {isGenerating ? (
-                          <CornerRightUp className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
-                        ) : (
-                          <CornerRightUp className="w-4 h-4 sm:w-5 sm:h-5" />
-                        )}
-                      </Button>
+                      {/* Generate button — switches between single and batch mode */}
+                      {isBatchMode ? (
+                        <Button
+                          size="sm"
+                          onClick={handleBatchGenerate}
+                          disabled={
+                            isBatchGenerating ||
+                            parsedItems.length === 0 ||
+                            parsedItems.length > MAX_BATCH_SIZE
+                          }
+                          className="h-9 sm:h-10 px-3 rounded-xl shadow-sm hover:shadow-primary/20 transition-all shrink-0 ml-auto text-xs font-semibold gap-1.5"
+                        >
+                          {isBatchGenerating ? (
+                            <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...</>
+                          ) : (
+                            <><Layers className="w-3.5 h-3.5" /> Generate {parsedItems.length > 0 ? `${parsedItems.length}` : ""} Batch</>
+                          )}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="icon"
+                          onClick={handleGenerate}
+                          disabled={isGenerating || (!prompt.trim() && !referenceImage)}
+                          className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl shadow-sm hover:shadow-primary/20 transition-all shrink-0 ml-auto"
+                        >
+                          {isGenerating ? (
+                            <CornerRightUp className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
+                          ) : (
+                            <CornerRightUp className="w-4 h-4 sm:w-5 sm:h-5" />
+                          )}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -1082,6 +1555,128 @@ export default function StudioPage() {
           </p>
         </div>
       </div>
+      {/* ── Batch Item Detail Side Sheet ────────────────── */}
+      <Sheet open={isBatchSheetOpen} onOpenChange={(open) => {
+        setIsBatchSheetOpen(open);
+        if (!open) setSelectedBatchItem(null);
+      }} modal={false}>
+        <SheetContent
+          side="right"
+          showCloseButton={false}
+          hideOverlay={true}
+          className="!inset-y-auto !right-4 !top-20 !bottom-4 !h-auto w-[260px] sm:w-[280px] rounded-2xl border border-border/50 bg-background/95 backdrop-blur-xl shadow-2xl p-0 flex flex-col overflow-hidden"
+        >
+          <SheetTitle className="sr-only">Batch Item Details</SheetTitle>
+          <SheetDescription className="sr-only">View icon generation details and download options.</SheetDescription>
+
+          {/* Header with close button */}
+          <div className="flex items-center justify-between px-5 pt-5 pb-0">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">
+              Icon Detail
+            </p>
+            <button
+              onClick={() => { setIsBatchSheetOpen(false); setSelectedBatchItem(null); }}
+              className="p-1 rounded-md hover:bg-muted/60 transition-colors text-muted-foreground/50 hover:text-foreground"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto no-scrollbar p-5 space-y-4">
+            {/* Image preview */}
+            {selectedBatchItem?.imageUrl && (
+              <div className="w-full aspect-square rounded-xl overflow-hidden border border-border/40 bg-muted/20">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={selectedBatchItem.imageUrl}
+                  alt={selectedBatchItem.itemName}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            )}
+
+            {/* Info rows */}
+            <div className="flex flex-col text-[13px]">
+              <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                <span className="text-muted-foreground font-medium">Icon</span>
+                <span className="font-semibold text-foreground capitalize">
+                  {selectedBatchItem?.itemName || "—"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                <span className="text-muted-foreground font-medium">Style</span>
+                <span className="font-semibold text-foreground">
+                  {STYLES.find(s => s.id === style)?.label || "Plastic"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                <span className="text-muted-foreground font-medium">Camera</span>
+                <span className="font-semibold text-foreground">{position}</span>
+              </div>
+              <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                <span className="text-muted-foreground font-medium">Quality</span>
+                <span className="font-semibold text-foreground">{quality}</span>
+              </div>
+              <div className="flex justify-between items-center py-2.5">
+                <span className="text-muted-foreground font-medium">Job ID</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono text-[11px] text-foreground/70 max-w-[110px] truncate">
+                    {selectedBatchItem?.jobId?.slice(0, 8)}…
+                  </span>
+                  <button
+                    onClick={() => {
+                      if (selectedBatchItem?.jobId) {
+                        navigator.clipboard.writeText(selectedBatchItem.jobId);
+                        toast.success("Job ID copied!");
+                      }
+                    }}
+                    className="p-1 hover:bg-muted/80 rounded-md transition-colors text-muted-foreground/50 hover:text-foreground"
+                    title="Copy full Job ID"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Open full detail page link */}
+            {selectedBatchItem?.jobId && (
+              <a
+                href={`/${selectedBatchItem.jobId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 w-full text-[11px] font-semibold text-muted-foreground/60 hover:text-foreground transition-colors py-1"
+              >
+                <ExternalLink className="w-3 h-3" />
+                View full detail page
+              </a>
+            )}
+          </div>
+
+          {/* Download at bottom */}
+          <div className="p-4 pt-3 border-t border-border/50 bg-background mt-auto">
+            <Button
+              className="w-full font-semibold rounded-xl h-10 shadow-sm text-sm gap-2"
+              onClick={() => {
+                if (!selectedBatchItem?.imageUrl) return;
+                const safeFileName = selectedBatchItem.itemName.replace(/[^a-z0-9_\-]/gi, "_").toLowerCase();
+                const link = document.createElement("a");
+                link.href = `/api/download?url=${encodeURIComponent(selectedBatchItem.imageUrl)}&filename=${safeFileName}.png`;
+                link.download = `${safeFileName}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }}
+              disabled={!selectedBatchItem?.imageUrl}
+            >
+              <Download className="w-4 h-4" />
+              Download Image
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {/* ── Detail Side Sheet ────────────────── */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen} modal={false}>
         <SheetContent

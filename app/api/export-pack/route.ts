@@ -1,7 +1,29 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { PassThrough } from "node:stream";
 import archiver from "archiver";
 import sharp from "sharp";
+
+// ---------------------------------------------------------------------------
+// Trusted origins — same list as /api/download
+// ---------------------------------------------------------------------------
+const ALLOWED_ORIGINS = new Set([
+  "cdn.useaudora.com",
+  "fal.media",
+  "v3.fal.media",
+  "storage.googleapis.com",
+]);
+
+function isAllowedUrl(raw: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(raw);
+    if (protocol !== "https:") return false;
+    return ALLOWED_ORIGINS.has(hostname);
+  } catch {
+    return false;
+  }
+}
 
 // Icon size definitions
 const ICON_SIZES: Array<{ folder: string; filename: string; size: number }> = [
@@ -19,12 +41,23 @@ const ICON_SIZES: Array<{ folder: string; filename: string; size: number }> = [
 ];
 
 export async function GET(request: Request) {
+  // ── 0. Auth guard ─────────────────────────────────────────────────────
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const imageUrl = searchParams.get("url");
   const filenameParam = searchParams.get("filename") || "audora-icon-pack";
 
   if (!imageUrl) {
     return NextResponse.json({ error: "Missing image URL" }, { status: 400 });
+  }
+
+  // ── 1. SSRF guard ─────────────────────────────────────────────────────
+  if (!isAllowedUrl(imageUrl)) {
+    return NextResponse.json({ error: "Forbidden: URL not allowed" }, { status: 403 });
   }
 
   // 1. Fetch the base image (1K/1024×1024) from R2 into memory

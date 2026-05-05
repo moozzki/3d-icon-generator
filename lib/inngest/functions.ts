@@ -19,6 +19,8 @@ type IconGenerateEvent = {
     resolution: "2K" | "4K";
     referenceImage?: string | null;
     creditCost: number;
+    seed?: number;    // Shared seed for all items in a batch — guarantees visual consistency
+    batchId?: string; // Shared batch identifier — null for single generations
   };
 };
 
@@ -298,6 +300,7 @@ export const iconGenerate = inngest.createFunction(
       aiModel,
       resolution,
       referenceImage,
+      seed,
     } = event.data as IconGenerateEvent["data"];
 
     // -------------------------------------------------------------------------
@@ -345,6 +348,10 @@ export const iconGenerate = inngest.createFunction(
             output_format: "png",
             safety_tolerance: "5",
             enable_safety_checker: false,
+            // CRITICAL: inject the exact same seed for every item in a batch.
+            // This locks the lighting, texture, and color palette to be consistent
+            // across all icons in the same set.
+            ...(seed != null ? { seed } : {}),
           };
           const json = await falPost("fal-ai/flux-2-pro", payload);
           const url = json.images?.[0]?.url ?? json.image?.url ?? json.url;
