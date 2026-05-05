@@ -160,7 +160,7 @@ export default function LibraryPage() {
   );
 
   const filteredLibrary = completedGenerations.filter((item) =>
-    (item.userPrompt || item.prompt).toLowerCase().includes(searchQuery.toLowerCase())
+    (item.userPrompt || item.prompt || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const {

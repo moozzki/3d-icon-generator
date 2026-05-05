@@ -186,6 +186,10 @@ export default function StudioPage() {
   const [copied, setCopied] = useState(false);
   const [isRemovingBg, setIsRemovingBg] = useState(false);
   const [isExportingPack, setIsExportingPack] = useState(false);
+  // Batch sheet action states
+  const [isBatchExportingPack, setIsBatchExportingPack] = useState(false);
+  const [isBatchRemovingBg, setIsBatchRemovingBg] = useState(false);
+  const [batchCopied, setBatchCopied] = useState(false);
 
   // Share to IG Story state
   const shareCardRef = useRef<HTMLDivElement>(null);
@@ -657,6 +661,66 @@ export default function StudioPage() {
       setIsDownloadingZip(false);
     }
   }, [batchItems]);
+
+  // ---------------------------------------------------------------------------
+  // Batch item: Export App Icons Pack
+  // ---------------------------------------------------------------------------
+  const handleBatchExportPack = async () => {
+    if (!selectedBatchItem?.imageUrl) return;
+    setIsBatchExportingPack(true);
+    try {
+      const safeFileName = selectedBatchItem.itemName.replace(/[^a-z0-9_\-]/gi, "_").toLowerCase();
+      const filename = `audora-icon-pack-${safeFileName}`;
+      const exportUrl = `/api/export-pack?url=${encodeURIComponent(selectedBatchItem.imageUrl)}&filename=${encodeURIComponent(filename)}`;
+      const res = await fetch(exportUrl);
+      if (!res.ok) throw new Error("Failed to generate icon pack");
+      const blob = await res.blob();
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${filename}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+      toast.success("Icon pack downloaded!");
+    } catch {
+      toast.error("Failed to generate pack. Please try again.");
+    } finally {
+      setIsBatchExportingPack(false);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // Batch item: Download Transparent (remove-bg)
+  // ---------------------------------------------------------------------------
+  const handleBatchDownloadTransparent = async () => {
+    if (!selectedBatchItem?.jobId) return;
+    setIsBatchRemovingBg(true);
+    try {
+      const res = await fetch("/api/remove-bg", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: selectedBatchItem.jobId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to remove background");
+      const safeFileName = selectedBatchItem.itemName.replace(/[^a-z0-9_\-]/gi, "_").toLowerCase();
+      const filename = `${safeFileName}-transparent.png`;
+      const downloadUrl = `/api/download?url=${encodeURIComponent(data.url)}&filename=${filename}`;
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Transparent download started!");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to remove background";
+      toast.error(message);
+    } finally {
+      setIsBatchRemovingBg(false);
+    }
+  };
 
   const handleDownload = async () => {
 
@@ -1569,41 +1633,10 @@ export default function StudioPage() {
           <SheetTitle className="sr-only">Batch Item Details</SheetTitle>
           <SheetDescription className="sr-only">View icon generation details and download options.</SheetDescription>
 
-          {/* Header with close button */}
-          <div className="flex items-center justify-between px-5 pt-5 pb-0">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">
-              Icon Detail
-            </p>
-            <button
-              onClick={() => { setIsBatchSheetOpen(false); setSelectedBatchItem(null); }}
-              className="p-1 rounded-md hover:bg-muted/60 transition-colors text-muted-foreground/50 hover:text-foreground"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Scrollable content */}
+          {/* Scrollable content — same structure as single-mode sheet */}
           <div className="flex-1 overflow-y-auto no-scrollbar p-5 space-y-4">
-            {/* Image preview */}
-            {selectedBatchItem?.imageUrl && (
-              <div className="w-full aspect-square rounded-xl overflow-hidden border border-border/40 bg-muted/20">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={selectedBatchItem.imageUrl}
-                  alt={selectedBatchItem.itemName}
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            )}
-
-            {/* Info rows */}
+            {/* Info list */}
             <div className="flex flex-col text-[13px]">
-              <div className="flex justify-between items-center py-2.5 border-b border-border/40">
-                <span className="text-muted-foreground font-medium">Icon</span>
-                <span className="font-semibold text-foreground capitalize">
-                  {selectedBatchItem?.itemName || "—"}
-                </span>
-              </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/40">
                 <span className="text-muted-foreground font-medium">Style</span>
                 <span className="font-semibold text-foreground">
@@ -1611,68 +1644,156 @@ export default function StudioPage() {
                 </span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/40">
-                <span className="text-muted-foreground font-medium">Camera</span>
+                <span className="text-muted-foreground font-medium">Camera Angle</span>
                 <span className="font-semibold text-foreground">{position}</span>
               </div>
               <div className="flex justify-between items-center py-2.5 border-b border-border/40">
                 <span className="text-muted-foreground font-medium">Quality</span>
                 <span className="font-semibold text-foreground">{quality}</span>
               </div>
-              <div className="flex justify-between items-center py-2.5">
-                <span className="text-muted-foreground font-medium">Job ID</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-mono text-[11px] text-foreground/70 max-w-[110px] truncate">
-                    {selectedBatchItem?.jobId?.slice(0, 8)}…
-                  </span>
-                  <button
-                    onClick={() => {
-                      if (selectedBatchItem?.jobId) {
-                        navigator.clipboard.writeText(selectedBatchItem.jobId);
-                        toast.success("Job ID copied!");
-                      }
-                    }}
-                    className="p-1 hover:bg-muted/80 rounded-md transition-colors text-muted-foreground/50 hover:text-foreground"
-                    title="Copy full Job ID"
-                  >
-                    <Copy className="w-3 h-3" />
-                  </button>
-                </div>
+              <div className="flex justify-between items-center py-2.5 border-b border-border/40">
+                <span className="text-muted-foreground font-medium">Size</span>
+                <span className="font-semibold text-foreground">
+                  {quality === "4K" ? "4096 × 4096px" : "2048 × 2048px"}
+                </span>
               </div>
             </div>
 
-            {/* Open full detail page link */}
-            {selectedBatchItem?.jobId && (
-              <a
-                href={`/${selectedBatchItem.jobId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 w-full text-[11px] font-semibold text-muted-foreground/60 hover:text-foreground transition-colors py-1"
-              >
-                <ExternalLink className="w-3 h-3" />
-                View full detail page
-              </a>
-            )}
+            {/* Actions Accordion */}
+            <Accordion type="single" collapsible className="border border-border/40 rounded-xl overflow-hidden">
+              <AccordionItem value="actions" className="border-0">
+                <AccordionTrigger className="px-3 py-3 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/70 hover:no-underline hover:bg-muted/30 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:text-muted-foreground/50">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-3.5 w-3.5" />
+                    Actions
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-3 pb-3">
+                  <div className="flex flex-col gap-1.5">
+                    {/* Refine — use this batch item image as reference, switch to single mode */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full font-semibold rounded-lg h-9 text-xs gap-2 justify-start"
+                      onClick={() => {
+                        if (selectedBatchItem?.imageUrl) {
+                          setReferenceImage(selectedBatchItem.imageUrl);
+                          setIsRefineMode(true);
+                          setIsBatchMode(false);
+                          setPrompt("");
+                          setIsBatchSheetOpen(false);
+                          setSelectedBatchItem(null);
+                          setIsPromptExpanded(true);
+                          setTimeout(() => textareaRef.current?.focus(), 100);
+                        }
+                      }}
+                    >
+                      <Wand2 className="w-3.5 h-3.5 text-primary" />
+                      Refine Icon
+                    </Button>
+
+                    {/* Export App Icons Pack */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full font-semibold rounded-lg h-9 text-xs gap-2 justify-start"
+                      onClick={handleBatchExportPack}
+                      disabled={isBatchExportingPack || !selectedBatchItem?.imageUrl}
+                      title="Includes iOS, Android, macOS, and Web Favicon sizes in a single ZIP."
+                    >
+                      {isBatchExportingPack
+                        ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Zipping...</>
+                        : <><Package2 className="w-3.5 h-3.5" /> Export App Icons (.zip)</>}
+                    </Button>
+
+                    {/* Open detail page */}
+                    {selectedBatchItem?.jobId && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full font-semibold rounded-lg h-9 text-xs gap-2 justify-start"
+                        onClick={() => window.open(`/${selectedBatchItem.jobId}`, "_blank")}
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Open Detail Page
+                      </Button>
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+
+            {/* Prompt Section — shows the item name as prompt */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-bold text-muted-foreground/70 uppercase tracking-widest px-1">
+                <div className="flex items-center gap-2">
+                  <MessageSquareText className="h-3.5 w-3.5" /> Prompt
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(selectedBatchItem?.itemName || "");
+                    setBatchCopied(true);
+                    setTimeout(() => setBatchCopied(false), 2000);
+                    toast.success("Copied!");
+                  }}
+                  className="p-1 hover:bg-muted/80 rounded-md transition-colors text-muted-foreground/50 hover:text-foreground"
+                  title="Copy"
+                >
+                  {batchCopied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                </button>
+              </div>
+              <div className="text-[12px] leading-relaxed text-foreground/90 bg-muted/30 p-3 rounded-xl border border-border/40 font-medium italic">
+                &quot;{selectedBatchItem?.itemName}&quot;
+              </div>
+            </div>
           </div>
 
-          {/* Download at bottom */}
+          {/* Download dropdown — identical to single-mode sheet */}
           <div className="p-4 pt-3 border-t border-border/50 bg-background mt-auto">
-            <Button
-              className="w-full font-semibold rounded-xl h-10 shadow-sm text-sm gap-2"
-              onClick={() => {
-                if (!selectedBatchItem?.imageUrl) return;
-                const safeFileName = selectedBatchItem.itemName.replace(/[^a-z0-9_\-]/gi, "_").toLowerCase();
-                const link = document.createElement("a");
-                link.href = `/api/download?url=${encodeURIComponent(selectedBatchItem.imageUrl)}&filename=${safeFileName}.png`;
-                link.download = `${safeFileName}.png`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-              }}
-              disabled={!selectedBatchItem?.imageUrl}
-            >
-              <Download className="w-4 h-4" />
-              Download Image
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="w-full font-semibold rounded-xl h-10 shadow-sm text-sm gap-2" disabled={isBatchRemovingBg}>
+                  {isBatchRemovingBg ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Removing Background...</>
+                  ) : (
+                    <><Download className="w-4 h-4" /> Download Image <ChevronDown className="w-3 h-3 opacity-60 ml-auto" /></>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="w-[calc(260px-2rem)] sm:w-[calc(280px-2rem)] rounded-xl">
+                <DropdownMenuItem
+                  onClick={() => {
+                    if (!selectedBatchItem?.imageUrl) return;
+                    const safeFileName = selectedBatchItem.itemName.replace(/[^a-z0-9_\-]/gi, "_").toLowerCase();
+                    const link = document.createElement("a");
+                    link.href = `/api/download?url=${encodeURIComponent(selectedBatchItem.imageUrl)}&filename=${safeFileName}.png`;
+                    link.download = `${safeFileName}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  className="gap-3 py-2.5 cursor-pointer"
+                >
+                  <Download className="w-4 h-4 text-muted-foreground" />
+                  <div className="flex flex-col">
+                    <span className="text-[13px] font-medium">Original Background</span>
+                    <span className="text-[11px] text-muted-foreground">White background · PNG</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleBatchDownloadTransparent}
+                  disabled={isBatchRemovingBg}
+                  className="gap-3 py-2.5 cursor-pointer"
+                >
+                  <Eraser className="w-4 h-4 text-muted-foreground" />
+                  <div className="flex flex-col">
+                    <span className="text-[13px] font-medium">Transparent Background</span>
+                    <span className="text-[11px] text-muted-foreground">No background · PNG</span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </SheetContent>
       </Sheet>
