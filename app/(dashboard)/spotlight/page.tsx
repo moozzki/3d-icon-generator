@@ -105,7 +105,7 @@ export default function SpotlightPage() {
   );
 
   const filteredLibrary = completedGenerations.filter((item) =>
-    (item.userPrompt || item.prompt).toLowerCase().includes(searchQuery.toLowerCase())
+    (item.userPrompt || item.prompt || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleCopyPrompt = (text: string) => {

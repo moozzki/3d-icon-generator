@@ -568,11 +568,11 @@ export default function StudioPage() {
                 prev.map((item) =>
                   item.jobId === jobId
                     ? {
-                        ...item,
-                        status: "completed",
-                        imageUrl: pollData.resultImageUrl,
-                        baseImageUrl: pollData.baseImageUrl,
-                      }
+                      ...item,
+                      status: "completed",
+                      imageUrl: pollData.resultImageUrl,
+                      baseImageUrl: pollData.baseImageUrl,
+                    }
                     : item
                 )
               );
@@ -589,10 +589,10 @@ export default function StudioPage() {
                 prev.map((item) =>
                   item.jobId === jobId
                     ? {
-                        ...item,
-                        status: "failed",
-                        failReason: pollData.failReason ?? "Generation failed",
-                      }
+                      ...item,
+                      status: "failed",
+                      failReason: pollData.failReason ?? "Generation failed",
+                    }
                     : item
                 )
               );
@@ -1038,7 +1038,7 @@ export default function StudioPage() {
                     Your icon set will appear here
                   </p>
                   <p className="text-xs text-muted-foreground/40 text-center max-w-[220px]">
-                    Enter a style prompt + item names below, then press Generate Batch
+                    Enter item names below, then press Generate Batch
                   </p>
                 </motion.div>
               )}
