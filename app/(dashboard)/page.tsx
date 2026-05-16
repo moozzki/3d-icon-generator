@@ -7,6 +7,7 @@ import { usePostHog } from 'posthog-js/react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { UploadReferenceTrigger, UploadReferencePreview } from "@/components/Studio/UploadReference";
+import { StyleGridPopover } from "@/components/Studio/StyleGridPopover";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -89,22 +90,22 @@ import { ShareCard } from "@/components/share-card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const POSITIONS = [
-  "Isometric",
-  "Front Facing",
-  "Back Facing",
-  "Side Facing",
-  "Three Quarter",
-  "Top Down",
-  "Dimetric",
+  { id: "Isometric", label: "Isometric", icon: "📦", previewUrl: "https://cdn.useaudora.com/assets/audora-isometric-position.png" },
+  { id: "Front Facing", label: "Front Facing", icon: "🔲", previewUrl: "https://cdn.useaudora.com/assets/audora-front-facing-position.png" },
+  { id: "Back Facing", label: "Back Facing", icon: "🔙", previewUrl: "https://cdn.useaudora.com/assets/audora-back-facing-position.png" },
+  { id: "Side Facing", label: "Side Facing", icon: "↔️", previewUrl: "https://cdn.useaudora.com/assets/audora-side-facing-position.png" },
+  { id: "Three Quarter", label: "Three Quarter", icon: "🎲", previewUrl: "https://cdn.useaudora.com/assets/audora-three-quarter-position.png" },
+  { id: "Top Down", label: "Top Down", icon: "⬇️", previewUrl: "https://cdn.useaudora.com/assets/audora-top-down-position.png" },
+  // { id: "Dimetric",      label: "Dimetric",      icon: "📐", previewUrl: null },
 ];
 
 const STYLES = [
-  { id: "plastic", label: "Plastic", icon: "🫧" },
-  { id: "clay", label: "Clay", icon: "🏺" },
-  { id: "glass", label: "Glass", icon: "🧊" },
-  { id: "plush", label: "Plushy", icon: "🧸" },
-  { id: "toy_block", label: "Toy Block", icon: "🧱" },
-  { id: "metallic", label: "Metallic", icon: "⚙️" },
+  { id: "plastic", label: "Plastic", icon: "🫧", previewUrl: "https://cdn.useaudora.com/assets/pizza-glasses-icon.png" },
+  { id: "clay", label: "Clay", icon: "🏺", previewUrl: "https://cdn.useaudora.com/assets/audora-clay-style.png" },
+  { id: "glass", label: "Glass", icon: "🧊", previewUrl: "https://cdn.useaudora.com/assets/plane%203d%20icon.png" },
+  { id: "plush", label: "Plushy", icon: "🧸", previewUrl: "https://cdn.useaudora.com/assets/audora-plushy-style.png" },
+  { id: "toy_block", label: "Toy Block", icon: "🧱", previewUrl: "https://cdn.useaudora.com/assets/audora-toy-block-style.png" },
+  { id: "metallic", label: "Metallic", icon: "⚙️", previewUrl: "https://cdn.useaudora.com/assets/audora-metallic-style.png" },
 ];
 
 const QUALITIES = ["2K", "4K"];
@@ -1407,75 +1408,39 @@ export default function StudioPage() {
                         )}
 
                         {/* Style popover */}
-                        <Popover open={isStyleOpen} onOpenChange={setIsStyleOpen}>
-                          <PopoverTrigger asChild>
-                            <button className="h-8 text-[11px] sm:text-xs flex items-center gap-1 border border-border/50 bg-muted/40 hover:bg-muted/60 transition-colors shrink-0 px-2 sm:px-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                              <span className="truncate max-w-[70px] sm:max-w-none">
-                                {STYLES.find(s => s.id === style)?.icon} {STYLES.find(s => s.id === style)?.label}
-                              </span>
-                              <ChevronDown className="h-3 w-3 opacity-50" />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[min(14rem,calc(100vw-2rem))] p-2 rounded-xl" align="start" sideOffset={8} avoidCollisions collisionPadding={12}>
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
-                              Style
-                            </p>
-                            <div className="grid grid-cols-2 gap-1">
-                              {STYLES.map((s) => (
-                                <button
-                                  key={s.id}
-                                  onClick={() => {
-                                    setStyle(s.id);
-                                    setIsStyleOpen(false);
-                                  }}
-                                  className={cn(
-                                    "text-xs text-left px-2.5 py-1.5 rounded-md transition-colors focus:outline-none flex items-center gap-2",
-                                    style === s.id
-                                      ? "bg-primary/10 text-primary font-medium"
-                                      : "text-foreground hover:bg-muted"
-                                  )}
-                                >
-                                  <span>{s.icon}</span>
-                                  <span>{s.label}</span>
-                                </button>
-                              ))}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
+                        <StyleGridPopover
+                          items={STYLES}
+                          value={style}
+                          onChange={setStyle}
+                          open={isStyleOpen}
+                          onOpenChange={setIsStyleOpen}
+                        >
+                          <button className="h-8 text-[11px] sm:text-xs flex items-center gap-1 border border-border/50 bg-muted/40 hover:bg-muted/60 transition-colors shrink-0 px-2 sm:px-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                            <span className="truncate max-w-[70px] sm:max-w-none">
+                              {STYLES.find(s => s.id === style)?.icon} {STYLES.find(s => s.id === style)?.label}
+                            </span>
+                            <ChevronDown className="h-3 w-3 opacity-50" />
+                          </button>
+                        </StyleGridPopover>
 
                         {/* Camera angle popover */}
-                        <Popover open={isPositionOpen} onOpenChange={setIsPositionOpen}>
-                          <PopoverTrigger asChild>
-                            <button className="h-8 text-[11px] sm:text-xs flex items-center gap-1 border border-border/50 bg-muted/40 hover:bg-muted/60 transition-colors shrink-0 px-2 sm:px-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                              <span className="truncate max-w-[70px] sm:max-w-none">{position}</span>
-                              <ChevronDown className="h-3 w-3 opacity-50" />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[min(14rem,calc(100vw-2rem))] p-2 rounded-xl" align="start" sideOffset={8} avoidCollisions collisionPadding={12}>
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 px-2 pt-1 pb-2">
-                              Camera Angle
-                            </p>
-                            <div className="grid grid-cols-2 gap-1">
-                              {POSITIONS.map((pos) => (
-                                <button
-                                  key={pos}
-                                  onClick={() => {
-                                    setPosition(pos);
-                                    setIsPositionOpen(false);
-                                  }}
-                                  className={cn(
-                                    "text-xs text-left px-2.5 py-1.5 rounded-md transition-colors focus:outline-none",
-                                    position === pos
-                                      ? "bg-primary/10 text-primary font-medium"
-                                      : "text-foreground hover:bg-muted"
-                                  )}
-                                >
-                                  {pos}
-                                </button>
-                              ))}
-                            </div>
-                          </PopoverContent>
-                        </Popover>
+                        <StyleGridPopover
+                          items={POSITIONS}
+                          value={position}
+                          onChange={setPosition}
+                          open={isPositionOpen}
+                          onOpenChange={setIsPositionOpen}
+                          heading="Camera Angle"
+                          hoverLabel="Use Angle"
+                          columns={3}
+                        >
+                          <button className="h-8 text-[11px] sm:text-xs flex items-center gap-1 border border-border/50 bg-muted/40 hover:bg-muted/60 transition-colors shrink-0 px-2 sm:px-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                            <span className="truncate max-w-[70px] sm:max-w-none">
+                              {POSITIONS.find(p => p.id === position)?.label ?? position}
+                            </span>
+                            <ChevronDown className="h-3 w-3 opacity-50" />
+                          </button>
+                        </StyleGridPopover>
 
                         {/* Quality popover */}
                         <Popover open={isQualityOpen} onOpenChange={setIsQualityOpen}>
