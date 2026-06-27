@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { UploadReferenceTrigger, UploadReferencePreview } from "@/components/Studio/UploadReference";
 import { StyleGridPopover } from "@/components/Studio/StyleGridPopover";
+import { PromptTips } from "@/components/Studio/PromptTips";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
@@ -1347,6 +1348,12 @@ export default function StudioPage() {
                         Batch
                       </button>
                     </div>
+
+                    {/* ── Pro Tips: prompt ideas for beginners ── */}
+                    <PromptTips
+                      visible={!isBatchMode && !prompt && !referenceImage}
+                      onSelect={(tip) => setPrompt(tip)}
+                    />
 
                     {/* Textarea row — in batch mode, this IS the item list input */}
                     <div className={cn("px-3 sm:px-4 pb-1 sm:pb-2 pt-2 relative")}>
