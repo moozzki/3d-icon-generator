@@ -61,17 +61,27 @@ This document outlines the end-to-end user journey within the Audora platform, f
 
 ---
 
-## 5. Pricing & Payments (Pakasir Integration)
-**Goal:** Seamlessly top-up credits when balance is low.
+## 5. Pricing & Payments (Pakasir & Polar.sh Integration)
+**Goal:** Seamlessly top-up credits when balance is low using localized currency channels.
 
-1.  **Pricing Section:** User selects a credit package (Starter, Creator, Studio).
-2.  **Checkout:**
-    - User clicks "Buy Now".
-    - System creates a `pending` transaction in the database.
-    - Redirects user to **Pakasir Payment Gateway** (QRIS/Bank Transfer).
-3.  **Fulfillment:**
-    - Once payment is successful, Pakasir sends a **Webhook** to `/api/webhooks/pakasir`.
-    - System updates transaction status to `paid` and adds credits to the user's account.
+1.  **Pricing Section:** User selects a package (Starter, Creator, Studio) from the Pricing/Checkout interface.
+2.  **Dynamic Routing Check:**
+    - **Domestic (Indonesia):** Users checkout in IDR via **Pakasir** (QRIS & Bank Transfers).
+    - **Global (Rest of World):** Users checkout in USD via **Polar.sh** (Credit Card & Apple Pay).
+3.  **Packages & Pricing Details:**
+    - **IDR Packages (Pakasir):**
+      - **Starter:** Rp 30.000 for 10 Credits
+      - **Creator:** Rp 75.000 for 30 Credits
+      - **Studio:** Rp 150.000 for 75 Credits
+    - **USD Packages (Polar.sh):**
+      - **Starter:** $5.00 for 25 Credits
+      - **Creator:** $10.00 for 60 Credits
+      - **Studio:** $25.00 for 175 Credits
+4.  **Checkout & Fulfillment:**
+    - User clicks "Buy Now" and the system initiates a `pending` transaction.
+    - User is redirected to either the Pakasir payment portal or the Polar.sh hosted checkout screen.
+    - On success, the corresponding payment gateway triggers a webhook to either `/api/webhooks/pakasir` or `/api/webhooks/polar`.
+    - The webhook updates transaction status to `paid` and adds credits to the user's balance.
 
 ---
 
