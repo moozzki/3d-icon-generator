@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
+import { headers } from "next/headers";
 
 export async function GET(req: NextRequest) {
   const callbackUrl = req.nextUrl.searchParams.get("callbackUrl") ?? "https://useaudora.com";
@@ -10,7 +11,7 @@ export async function GET(req: NextRequest) {
 
   // Sign out server-side — this deletes the session from DB and returns response headers
   const signOutRes = await auth.api.signOut({
-    headers: req.headers,
+    headers: await headers(),
     returnHeaders: true,
   });
 
@@ -26,12 +27,40 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Also append an explicit deletion cookie for .useaudora.com just in case
+  // Also append explicit deletion cookies for .useaudora.com just in case.
+  // We clear both secure and non-secure, with/without prefixes, and both token/cache cookies.
+  const isProd = process.env.NODE_ENV === "production";
+  const domain = isProd ? ".useaudora.com" : undefined;
+
+  // 1. Non-secure cookies (dev)
   redirectRes.cookies.set("better-auth.session_token", "", {
     maxAge: 0,
-    domain: ".useaudora.com",
+    domain,
     path: "/",
   });
+  redirectRes.cookies.set("better-auth.session_data", "", {
+    maxAge: 0,
+    domain,
+    path: "/",
+  });
+
+  // 2. Secure cookies (prod)
+  if (isProd) {
+    redirectRes.cookies.set("__Secure-better-auth.session_token", "", {
+      maxAge: 0,
+      domain,
+      path: "/",
+      secure: true,
+      sameSite: "lax",
+    });
+    redirectRes.cookies.set("__Secure-better-auth.session_data", "", {
+      maxAge: 0,
+      domain,
+      path: "/",
+      secure: true,
+      sameSite: "lax",
+    });
+  }
 
   return redirectRes;
 }
