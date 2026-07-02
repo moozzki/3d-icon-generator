@@ -33,7 +33,7 @@ import {
   SheetTrigger,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Wand2, Images, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare, Receipt, Globe, Headset } from "lucide-react";
+import { Wand2, Images, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare, Receipt, Globe, Headset, Home } from "lucide-react";
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 import { AuthLoadingOverlay } from "@/components/auth-loading-overlay";
 import { PricingDialog } from "@/components/pricing/pricing-dialog";
@@ -368,6 +368,17 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
 
                 {/* Menu items */}
                 <DropdownMenuGroup className="p-1.5 section-group">
+                  <DropdownMenuItem asChild>
+                    <a
+                      href={process.env.NODE_ENV === "production" ? "https://useaudora.com" : "http://localhost:3001"}
+                      onClick={() => isMobile && setMobileMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer group/item"
+                    >
+                      <Home className="h-4 w-4 group-hover/item:scale-110 transition-transform duration-200" />
+                      Home
+                    </a>
+                  </DropdownMenuItem>
+
                   <DropdownMenuItem asChild>
                     <Link
                       href="/account"
