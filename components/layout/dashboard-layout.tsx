@@ -37,6 +37,7 @@ import { Wand2, Images, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, Log
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 import { AuthLoadingOverlay } from "@/components/auth-loading-overlay";
 import { PricingDialog } from "@/components/pricing/pricing-dialog";
+import { SidebarCollections } from "@/components/collections/sidebar-collections";
 
 export function DashboardLayout({ children, country }: { children: ReactNode; country?: string }) {
   const pathname = usePathname();
@@ -219,6 +220,12 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
 
             return <div key={item.href}>{linkContent}</div>;
           })}
+
+          <SidebarCollections
+            isCollapsed={isCollapsed}
+            isMobile={isMobile}
+            onItemClick={() => isMobile && setMobileMenuOpen(false)}
+          />
         </nav>
 
         {/* Support & Feedback Trigger */}

@@ -163,3 +163,34 @@ export const animations = pgTable("animations", {
 
 export type Animation = typeof animations.$inferSelect;
 export type NewAnimation = typeof animations.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Custom Collections & Folder Management
+// ---------------------------------------------------------------------------
+
+export const collections = pgTable("collections", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const collectionItems = pgTable("collection_items", {
+  id: serial("id").primaryKey(),
+  collectionId: text("collection_id")
+    .references(() => collections.id, { onDelete: "cascade" })
+    .notNull(),
+  generationId: integer("generation_id")
+    .references(() => generations.id, { onDelete: "cascade" })
+    .notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Collection = typeof collections.$inferSelect;
+export type NewCollection = typeof collections.$inferInsert;
+export type CollectionItem = typeof collectionItems.$inferSelect;
+export type NewCollectionItem = typeof collectionItems.$inferInsert;
+

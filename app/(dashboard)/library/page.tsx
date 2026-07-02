@@ -42,12 +42,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, ImageIcon, Download, Wand2, MoreVertical, Trash2, Eraser, Loader2, ZoomIn, ChevronDown, Globe, Lock, Share2, X, Copy, Video, Play, Package2 } from "lucide-react";
+import { Search, ImageIcon, Download, Wand2, MoreVertical, Trash2, Eraser, Loader2, ZoomIn, ChevronDown, Globe, Lock, Share2, X, Copy, Video, Play, Package2, Folder } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { ShareCard } from "@/components/share-card";
 import { useSession } from "@/lib/auth-client";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { AddToCollectionDialog } from "@/components/collections/add-to-collection-dialog";
 
 interface Generation {
   id: number;
@@ -132,6 +133,7 @@ export default function LibraryPage() {
   
   const [visibilityTarget, setVisibilityTarget] = useState<Generation | null>(null);
   const [isUpdatingVisibility, setIsUpdatingVisibility] = useState(false);
+  const [addToCollectionTarget, setAddToCollectionTarget] = useState<Generation | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -599,6 +601,15 @@ export default function LibraryPage() {
                                 )}
                                 Share to IG Story
                               </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-full justify-start gap-2 text-xs"
+                                onClick={() => setAddToCollectionTarget(item)}
+                              >
+                                <Folder className="h-3.5 w-3.5 text-foreground/80" />
+                                Add to Collection
+                              </Button>
                               <ButtonGroupSeparator orientation="horizontal" />
                               <Button variant="ghost" size="sm" className="h-8 w-full justify-start gap-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteTarget(item)}>
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -866,6 +877,15 @@ export default function LibraryPage() {
                   </Button>
                   <Button
                     size="icon"
+                    variant="secondary"
+                    className="h-10 w-10 flex-shrink-0 rounded-xl"
+                    onClick={() => setAddToCollectionTarget(selectedImage)}
+                    title="Add to Collection"
+                  >
+                    <Folder className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
                     variant="ghost"
                     className="h-10 w-10 text-destructive hover:bg-destructive/10 hover:text-destructive flex-shrink-0 rounded-xl"
                     onClick={() => {
@@ -1100,6 +1120,12 @@ export default function LibraryPage() {
           />
         )}
       </div>
+
+      <AddToCollectionDialog
+        open={!!addToCollectionTarget}
+        onOpenChange={(open) => !open && setAddToCollectionTarget(null)}
+        generationId={addToCollectionTarget?.id || null}
+      />
     </>
   );
 }
