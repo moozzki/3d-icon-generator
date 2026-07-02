@@ -475,7 +475,13 @@ export default function CollectionDetailPage({
                       {/* Hover text */}
                       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 pointer-events-none z-[1]">
                         <p className="text-xs text-white/90 font-medium line-clamp-2 mb-1">
-                          {item.userPrompt || item.prompt}
+                          {item.referenceImage && !item.userPrompt ? (
+                            <span className="flex items-center gap-1.5 italic opacity-80">
+                              <ImageIcon className="w-3 h-3" /> Icon from reference image
+                            </span>
+                          ) : (
+                            item.userPrompt || item.prompt
+                          )}
                         </p>
                         <span className="text-[10px] text-white/70">
                           {mounted ? formatRelativeDate(item.createdAt) : ""}
@@ -560,7 +566,15 @@ export default function CollectionDetailPage({
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground/70 mb-1">Prompt</p>
-                    <p className="text-sm font-medium text-foreground">{selectedImage.userPrompt || selectedImage.prompt}</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {selectedImage.referenceImage && !selectedImage.userPrompt ? (
+                        <span className="flex items-center gap-1.5 italic opacity-80">
+                          <ImageIcon className="w-4 h-4" /> Icon from reference image
+                        </span>
+                      ) : (
+                        selectedImage.userPrompt || selectedImage.prompt
+                      )}
+                    </p>
                   </div>
                 </div>
 
