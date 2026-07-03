@@ -877,16 +877,16 @@ export default function StudioDetailPage() {
                       referenceUrl={referenceImage}
                       isRefineMode={isRefineMode}
                       onClear={() => {
-                        // If we're in refine mode, the reference IS the previously
-                        // generated icon — removing it means the user is cancelling
-                        // the refine. Clear the canvas too so state is unambiguous.
+                        // If we're in refine mode, removing the reference icon means cancelling refine.
+                        // Redirect to main dashboard route (/) so URL and studio state are clean.
                         if (isRefineMode) {
                           setResultImage(null);
                           setLastJobId(null);
                           setLastQuality(null);
-                          // Strip ?action=refine from the URL so a page refresh
-                          // doesn't re-trigger the refine initialization.
-                          router.replace(`/${jobId}`, { scroll: false });
+                          setReferenceImage(null);
+                          setIsRefineMode(false);
+                          router.replace("/", { scroll: false });
+                          return;
                         }
                         setReferenceImage(null);
                         setIsRefineMode(false);

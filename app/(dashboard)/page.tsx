@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
@@ -156,6 +157,7 @@ function getCreditCost(aiModel: AiModelId, quality: string): number {
 
 
 export default function StudioPage() {
+  const router = useRouter();
   const posthog = usePostHog();
   const [isGenerating, setIsGenerating] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
@@ -1281,14 +1283,18 @@ export default function StudioPage() {
                       referenceUrl={referenceImage}
                       isRefineMode={isRefineMode}
                       onClear={() => {
-                        // If we're in refine mode, the reference IS the previously
-                        // generated icon — removing it means the user is cancelling
-                        // the refine. Clear the canvas too so state is unambiguous.
+                        // If we're in refine mode, removing the reference icon means cancelling refine.
+                        // Redirect to main dashboard route (/) and reset state.
                         if (isRefineMode) {
                           setResultImage(null);
                           setBaseImage(null);
                           setCurrentJobId(null);
                           setCurrentJobQuality(null);
+                          setReferenceImage(null);
+                          setIsRefineMode(false);
+                          setKeepMultiplePeople(false);
+                          router.replace("/", { scroll: false });
+                          return;
                         }
                         setReferenceImage(null);
                         setIsRefineMode(false);
@@ -1319,35 +1325,34 @@ export default function StudioPage() {
                       </div>
                     )}
 
-                    {/* ── Single | Batch mode toggle pill ── */}
-                    <div className={cn(
-                      "flex items-center gap-0 mx-3 sm:mx-4 rounded-full border border-border/50 bg-muted/30 p-0.5 w-fit",
-                      referenceImage ? "mt-1" : "mt-7 sm:mt-8"
-                    )}>
-                      <button
-                        onClick={() => { setIsBatchMode(false); setBatchItems([]); }}
-                        className={cn(
-                          "h-6 px-3 rounded-full text-[11px] font-semibold transition-all",
-                          !isBatchMode
-                            ? "bg-background shadow-sm text-foreground"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        Single
-                      </button>
-                      <button
-                        onClick={() => { setIsBatchMode(true); setResultImage(null); }}
-                        className={cn(
-                          "h-6 px-3 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1",
-                          isBatchMode
-                            ? "bg-background shadow-sm text-foreground"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        <Layers className="w-3 h-3" />
-                        Batch
-                      </button>
-                    </div>
+                    {/* ── Single | Batch mode toggle pill (hidden when reference image is uploaded) ── */}
+                    {!referenceImage && (
+                      <div className="flex items-center gap-0 mx-3 sm:mx-4 mt-7 sm:mt-8 rounded-full border border-border/50 bg-muted/30 p-0.5 w-fit">
+                        <button
+                          onClick={() => { setIsBatchMode(false); setBatchItems([]); }}
+                          className={cn(
+                            "h-6 px-3 rounded-full text-[11px] font-semibold transition-all",
+                            !isBatchMode
+                              ? "bg-background shadow-sm text-foreground"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          Single
+                        </button>
+                        <button
+                          onClick={() => { setIsBatchMode(true); setResultImage(null); }}
+                          className={cn(
+                            "h-6 px-3 rounded-full text-[11px] font-semibold transition-all flex items-center gap-1",
+                            isBatchMode
+                              ? "bg-background shadow-sm text-foreground"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          <Layers className="w-3 h-3" />
+                          Batch
+                        </button>
+                      </div>
+                    )}
 
                     {/* ── Pro Tips: prompt ideas for beginners ── */}
                     <PromptTips
@@ -1410,6 +1415,9 @@ export default function StudioPage() {
                             onReferenceChanged={(url) => {
                               setReferenceImage(url);
                               setIsRefineMode(false);
+                              if (url) {
+                                setIsBatchMode(false);
+                              }
                             }}
                           />
                         )}
