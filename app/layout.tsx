@@ -22,6 +22,10 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Audora",
   },
+  icons: {
+    icon: "/assets/audora-square-logo-192.png",
+    apple: "/assets/audora-square-logo-192.png",
+  },
 };
 
 export default function RootLayout({
