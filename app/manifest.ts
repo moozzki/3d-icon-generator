@@ -18,25 +18,13 @@ export default function manifest(): MetadataRoute.Manifest {
         src: '/assets/audora-square-logo-192.png',
         sizes: '192x192',
         type: 'image/png',
-        purpose: 'any',
-      },
-      {
-        src: '/assets/audora-square-logo-192.png',
-        sizes: '192x192',
-        type: 'image/png',
-        purpose: 'maskable',
+        purpose: 'any maskable' as any,
       },
       {
         src: '/assets/audora-square-logo-512.png',
         sizes: '512x512',
         type: 'image/png',
-        purpose: 'any',
-      },
-      {
-        src: '/assets/audora-square-logo-512.png',
-        sizes: '512x512',
-        type: 'image/png',
-        purpose: 'maskable',
+        purpose: 'any maskable' as any,
       },
     ],
   }

@@ -51,7 +51,7 @@ export default function RootLayout({
                   });
                   if ('serviceWorker' in navigator) {
                     var registerSW = function() {
-                      navigator.serviceWorker.register('/sw.js').catch(function() {});
+                      navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function() {});
                     };
                     if (document.readyState === 'complete' || document.readyState === 'interactive') {
                       registerSW();

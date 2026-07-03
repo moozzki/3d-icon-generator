@@ -9,6 +9,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   // Pass-through fetch handler for Chrome PWA & WebAPK compliance
   if (event.request.method !== 'GET') return;
+  if (!event.request.url.startsWith('http')) return;
+
   event.respondWith(
     fetch(event.request).catch(() => {
       return caches.match(event.request);
