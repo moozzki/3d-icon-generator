@@ -11,12 +11,20 @@ export default function manifest(): MetadataRoute.Manifest {
     display: 'standalone',
     background_color: '#ffffff',
     theme_color: '#000000',
+    prefer_related_applications: false,
+    categories: ['graphics', 'productivity', 'utilities'],
     icons: [
       {
         src: '/assets/audora-square-logo-192.png',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
+      },
+      {
+        src: '/assets/audora-square-logo-192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'maskable',
       },
       {
         src: '/assets/audora-square-logo-512.png',

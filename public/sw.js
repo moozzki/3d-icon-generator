@@ -7,5 +7,11 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Service worker fetch handler for PWA installability compliance
+  // Pass-through fetch handler for Chrome PWA & WebAPK compliance
+  if (event.request.method !== 'GET') return;
+  event.respondWith(
+    fetch(event.request).catch(() => {
+      return caches.match(event.request);
+    })
+  );
 });
