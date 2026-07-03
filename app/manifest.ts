@@ -13,16 +13,22 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#000000',
     icons: [
       {
-        src: '/assets/audora-square-logo-192.jpg',
+        src: '/assets/audora-square-logo-192.png',
         sizes: '192x192',
-        type: 'image/jpeg',
+        type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/assets/audora-square-logo-512.jpg',
+        src: '/assets/audora-square-logo-512.png',
         sizes: '512x512',
-        type: 'image/jpeg',
+        type: 'image/png',
         purpose: 'any',
+      },
+      {
+        src: '/assets/audora-square-logo-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
       },
     ],
   }

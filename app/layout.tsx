@@ -16,6 +16,7 @@ export const metadata: Metadata = {
     template: "%s | AI 3D Isometric Icon Generator | Audora",
     default: "Dashboard | AI 3D Isometric Icon Generator | Audora",
   },
+  manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -34,6 +35,32 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn("h-full", "antialiased", spaceGrotesk.variable, inter.variable)}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                if (typeof window !== 'undefined') {
+                  window.addEventListener('beforeinstallprompt', function(e) {
+                    e.preventDefault();
+                    window.__deferredPrompt = e;
+                  });
+                  if ('serviceWorker' in navigator) {
+                    var registerSW = function() {
+                      navigator.serviceWorker.register('/sw.js').catch(function() {});
+                    };
+                    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                      registerSW();
+                    } else {
+                      window.addEventListener('load', registerSW);
+                    }
+                  }
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
         className="font-sans min-h-full flex flex-col bg-background text-foreground"
         suppressHydrationWarning

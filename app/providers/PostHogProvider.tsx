@@ -11,12 +11,14 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     if(typeof window === 'undefined' || !process.env.NEXT_PUBLIC_POSTHOG_KEY) {
       return ;
     }
-    posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY as string, {
-      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
-      ui_host: 'https://us.i.posthog.com',
-      person_profiles: 'identified_only',
-      capture_pageview: false 
-    })
+    if (!posthog.__loaded) {
+      posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY as string, {
+        api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com',
+        ui_host: 'https://us.i.posthog.com',
+        person_profiles: 'identified_only',
+        capture_pageview: false 
+      })
+    }
   }, [])
 
   return (

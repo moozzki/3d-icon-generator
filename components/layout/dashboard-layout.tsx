@@ -158,10 +158,12 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
   }, []);
 
   const handleInstallClick = async () => {
-    if (deferredPrompt) {
+    const activePrompt = deferredPrompt || (typeof window !== "undefined" ? (window as any).__deferredPrompt : null);
+
+    if (activePrompt) {
       try {
-        await deferredPrompt.prompt();
-        const choice = await deferredPrompt.userChoice;
+        await activePrompt.prompt();
+        const choice = await activePrompt.userChoice;
         if (choice?.outcome === "accepted") {
           toast.success("App installed successfully!");
           setIsStandalone(true);
@@ -196,11 +198,12 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
     { name: "Spotlight", href: "/spotlight", icon: Globe },
   ];
 
-  const sidebarWidth = collapsed ? "w-[60px]" : "w-[220px]";
-  const mainOffset = collapsed ? "md:pl-[60px]" : "md:pl-[220px]";
+  const isEffectiveCollapsed = mounted ? collapsed : false;
+  const sidebarWidth = isEffectiveCollapsed ? "w-[60px]" : "w-[220px]";
+  const mainOffset = isEffectiveCollapsed ? "md:pl-[60px]" : "md:pl-[220px]";
 
   const renderSidebarContent = (isMobile = false) => {
-    const isCollapsed = !isMobile && collapsed;
+    const isCollapsed = !isMobile && isEffectiveCollapsed;
     return (
       <div className="flex flex-col h-full bg-card/50">
         {/* Logo */}
@@ -370,17 +373,15 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
           ) : session?.user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                {isCollapsed ? (
-                  <button className="hover:opacity-80 transition-opacity focus:outline-none">
+                <button type="button" className={cn("text-left group focus:outline-none focus:ring-0", isCollapsed ? "hover:opacity-80 transition-opacity" : "w-full")}>
+                  {isCollapsed ? (
                     <Avatar className="h-8 w-8 shrink-0">
                       <AvatarImage src={session.user.image || ""} />
                       <AvatarFallback className="text-[10px] uppercase">
                         {session.user.name?.substring(0, 2) || "U"}
                       </AvatarFallback>
                     </Avatar>
-                  </button>
-                ) : (
-                  <button className="w-full text-left group focus:outline-none focus:ring-0">
+                  ) : (
                     <div className="flex items-center gap-2.5 hover:bg-muted/60 p-2 -mx-2 rounded-lg transition-colors border border-transparent hover:border-border/40">
                       <Avatar className="h-8 w-8 shrink-0">
                         <AvatarImage src={session.user.image || ""} />
@@ -394,8 +395,8 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
                       </div>
                       <ChevronsUpDown className="h-3.5 w-3.5 text-muted-foreground/60 group-hover:text-foreground shrink-0 transition-colors" />
                     </div>
-                  </button>
-                )}
+                  )}
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 side={isCollapsed ? "right" : "top"}
