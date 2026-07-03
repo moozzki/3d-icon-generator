@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Audora - AI 3D Isometric Icon Generator',
+    name: 'Audora',
     short_name: 'Audora',
     description: 'Generate high-quality 3D isometric icons in seconds for your landing pages, apps, and Figma projects',
     start_url: '/',

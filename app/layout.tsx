@@ -13,8 +13,8 @@ import { PostHogProvider } from "./providers/PostHogProvider";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | AI 3D Isometric Icon Generator | Audora",
-    default: "Dashboard | AI 3D Isometric Icon Generator | Audora",
+    template: "%s | Audora",
+    default: "Audora - AI 3D Isometric Icon Generator | Dashboard",
   },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
