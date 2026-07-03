@@ -20,6 +20,8 @@ import {
   FolderMinus,
   Package2,
   X,
+  Copy,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -35,13 +37,23 @@ import {
   DialogTitle,
   DialogDescription,
   DialogClose,
+  DialogHeader,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   ButtonGroup,
   ButtonGroupSeparator,
 } from "@/components/ui/button-group";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { RenameCollectionDialog } from "@/components/collections/rename-collection-dialog";
 import { DeleteCollectionDialog } from "@/components/collections/delete-collection-dialog";
+import { AddToCollectionDialog } from "@/components/collections/add-to-collection-dialog";
 
 interface Generation {
   id: number;
@@ -123,11 +135,42 @@ export default function CollectionDetailPage({
   const [removingBgJobId, setRemovingBgJobId] = useState<string | null>(null);
   const [exportingPackJobId, setExportingPackJobId] = useState<string | null>(null);
   const [removingGenerationId, setRemovingGenerationId] = useState<number | null>(null);
+  const [addToCollectionTarget, setAddToCollectionTarget] = useState<Generation | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Generation | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleCopyPrompt = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Prompt copied to clipboard!");
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/library/${deleteTarget.jobId}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        toast.success("Image deleted successfully");
+        queryClient.invalidateQueries({ queryKey: ["collection", collectionId] });
+        queryClient.invalidateQueries({ queryKey: ["collections"] });
+        queryClient.invalidateQueries({ queryKey: ["library"] });
+      } else {
+        toast.error("Failed to delete image");
+      }
+    } catch {
+      toast.error("Failed to delete image");
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+    }
+  };
 
   const { data, isLoading, isError } = useQuery<CollectionDetailResponse>({
     queryKey: ["collection", collectionId],
@@ -539,6 +582,7 @@ export default function CollectionDetailPage({
           </DialogDescription>
           {selectedImage && (
             <div className="grid grid-cols-1 md:grid-cols-5 min-h-0">
+              {/* Left: Image Preview */}
               <div className="flex items-center justify-center bg-muted/10 p-6 border-b md:border-b-0 md:border-r border-border/20 md:col-span-3">
                 <div className="relative w-full aspect-square md:max-h-[75vh] rounded-xl overflow-hidden shadow-lg bg-background border border-border/20">
                   {selectedImage.resultImageUrl && (
@@ -554,7 +598,9 @@ export default function CollectionDetailPage({
                 </div>
               </div>
 
+              {/* Right: Info + Actions */}
               <div className="flex flex-col justify-between p-6 gap-6 md:col-span-2">
+                {/* Prompt + Badges */}
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="secondary" className="text-xs h-6 px-2.5 bg-secondary/80 font-semibold">
@@ -563,10 +609,25 @@ export default function CollectionDetailPage({
                     <Badge variant="secondary" className="text-xs h-6 px-2.5 bg-secondary/80 font-semibold">
                       {selectedImage.quality}
                     </Badge>
+                    {mounted && (
+                      <Badge variant="outline" className="text-xs h-6 px-2.5 text-muted-foreground">
+                        {formatRelativeDate(selectedImage.createdAt)}
+                      </Badge>
+                    )}
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground/70 mb-1">Prompt</p>
-                    <p className="text-sm font-medium text-foreground">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground/70">Prompt</p>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                        onClick={() => handleCopyPrompt(selectedImage.userPrompt || selectedImage.prompt)}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                    <p className="text-base font-medium leading-relaxed text-foreground/90 max-h-[40vh] overflow-y-auto pr-2">
                       {selectedImage.referenceImage && !selectedImage.userPrompt ? (
                         <span className="flex items-center gap-1.5 italic opacity-80">
                           <ImageIcon className="w-4 h-4" /> Icon from reference image
@@ -578,20 +639,74 @@ export default function CollectionDetailPage({
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Button asChild className="w-full rounded-xl gap-2">
+                {/* Actions */}
+                <div className="flex flex-row gap-2 pt-4 border-t border-border/40 mt-auto items-center">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="outline" className="flex-1 font-semibold rounded-xl h-10 shadow-sm text-xs gap-2" disabled={removingBgJobId === selectedImage.jobId}>
+                        {removingBgJobId === selectedImage.jobId ? (
+                          <><Loader2 className="w-4 h-4 animate-spin" /> Removing Background...</>
+                        ) : (
+                          <><Download className="w-4 h-4" /> Download Image <ChevronDown className="w-3 h-3 opacity-60 ml-auto" /></>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-[200px] sm:w-[240px] rounded-xl">
+                      <DropdownMenuItem onClick={() => handleExportPack(selectedImage)} disabled={exportingPackJobId === selectedImage.jobId} className="gap-3 py-2.5 cursor-pointer">
+                        {exportingPackJobId === selectedImage.jobId ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                        ) : (
+                          <Package2 className="w-4 h-4 text-muted-foreground" />
+                        )}
+                        <div className="flex flex-col">
+                          <span className="text-[13px] font-medium">Export App Icons (.zip)</span>
+                          <span className="text-[11px] text-muted-foreground">iOS, Android, & Web bundle</span>
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleDownload(selectedImage)} className="gap-3 py-2.5 cursor-pointer">
+                        <Download className="w-4 h-4 text-muted-foreground" />
+                        <div className="flex flex-col">
+                          <span className="text-[13px] font-medium">Original Background</span>
+                          <span className="text-[11px] text-muted-foreground">White background · PNG</span>
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleDownloadTransparent(selectedImage)} disabled={removingBgJobId === selectedImage.jobId} className="gap-3 py-2.5 cursor-pointer">
+                        <Eraser className="w-4 h-4 text-muted-foreground" />
+                        <div className="flex flex-col">
+                          <span className="text-[13px] font-medium">Transparent Background</span>
+                          <span className="text-[11px] text-muted-foreground">No background · PNG</span>
+                        </div>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <Button asChild size="icon" variant="secondary" className="h-10 w-10 flex-shrink-0 rounded-xl" title="Refine">
                     <Link href={`/${selectedImage.jobId}?action=refine`}>
                       <Wand2 className="h-4 w-4" />
-                      Refine in Studio
                     </Link>
                   </Button>
                   <Button
-                    variant="outline"
-                    className="w-full rounded-xl gap-2"
-                    onClick={() => handleDownload(selectedImage)}
+                    size="icon"
+                    variant="secondary"
+                    className="h-10 w-10 flex-shrink-0 rounded-xl"
+                    onClick={() => setAddToCollectionTarget(selectedImage)}
+                    title="Add to Collection"
                   >
-                    <Download className="h-4 w-4" />
-                    Download Original
+                    <Folder className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-10 w-10 text-destructive hover:bg-destructive/10 hover:text-destructive flex-shrink-0 rounded-xl"
+                    onClick={() => {
+                      setDeleteTarget(selectedImage);
+                      setSelectedImage(null);
+                    }}
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -599,6 +714,70 @@ export default function CollectionDetailPage({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-lg">
+              Delete this icon?
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              This will permanently delete the 3D asset and remove it from your library. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteTarget?.resultImageUrl && (
+            <div className="flex justify-center py-2">
+              <Image
+                src={deleteTarget.resultImageUrl}
+                alt="Icon to delete"
+                width={96}
+                height={96}
+                className="rounded-xl object-cover border border-border/40 shadow-sm opacity-70"
+                unoptimized
+              />
+            </div>
+          )}
+
+          <DialogFooter className="flex gap-2 sm:gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="flex-1"
+              onClick={() => setDeleteTarget(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="flex-1 gap-1.5"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete Permanently
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AddToCollectionDialog
+        open={!!addToCollectionTarget}
+        onOpenChange={(open) => !open && setAddToCollectionTarget(null)}
+        generationId={addToCollectionTarget?.id || null}
+      />
 
       {/* Dialogs */}
       {collection && (
