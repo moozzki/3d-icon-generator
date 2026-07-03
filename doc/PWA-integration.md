@@ -101,7 +101,7 @@ export const metadata = {
 
 ### 📄 Step 3: Update User Dropdown Menu Component
 
-Locate the existing profile dropdown component (referenced in `image_6090bd.png`). Convert it to a client component (`'use client'`) if it isn't already, and inject the state machinery below:
+Locate the existing profile dropdown component. Convert it to a client component (`'use client'`) if it isn't already, and inject the state machinery below:
 
 ```tsx
 'use client'

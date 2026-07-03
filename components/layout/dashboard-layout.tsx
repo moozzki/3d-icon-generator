@@ -33,11 +33,12 @@ import {
   SheetTrigger,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Wand2, Images, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare, Receipt, Globe, Headset, Home } from "lucide-react";
+import { Wand2, Images, Zap, Coins, Infinity, PanelLeftClose, PanelLeftOpen, LogOut, Menu, Settings, AlertTriangle, X, ChevronsUpDown, Sun, Moon, Laptop, MessageSquare, Receipt, Globe, Headset, Home, Download } from "lucide-react";
 import { FeedbackDialog } from "@/components/feedback/feedback-dialog";
 import { AuthLoadingOverlay } from "@/components/auth-loading-overlay";
 import { PricingDialog } from "@/components/pricing/pricing-dialog";
 import { SidebarCollections } from "@/components/collections/sidebar-collections";
+import { toast } from "sonner";
 
 export function DashboardLayout({ children, country }: { children: ReactNode; country?: string }) {
   const pathname = usePathname();
@@ -75,6 +76,8 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isPricingOpen, setIsPricingOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
@@ -118,6 +121,74 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
     window.addEventListener("credits-updated", fetchCredits);
     return () => window.removeEventListener("credits-updated", fetchCredits);
   }, [session, isAdmin]);
+
+  useEffect(() => {
+    // Check if app is already running as a standalone PWA
+    if (typeof window !== "undefined") {
+      const standalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        (navigator as any).standalone === true;
+      setIsStandalone(standalone);
+    }
+
+    // Check if beforeinstallprompt was already captured before component mount
+    if (typeof window !== "undefined" && (window as any).__deferredPrompt) {
+      setDeferredPrompt((window as any).__deferredPrompt);
+    }
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      (window as any).__deferredPrompt = e;
+      setDeferredPrompt(e);
+    };
+
+    const handleAppInstalled = () => {
+      (window as any).__deferredPrompt = null;
+      setDeferredPrompt(null);
+      setIsStandalone(true);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener("appinstalled", handleAppInstalled);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+      window.removeEventListener("appinstalled", handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      try {
+        await deferredPrompt.prompt();
+        const choice = await deferredPrompt.userChoice;
+        if (choice?.outcome === "accepted") {
+          toast.success("App installed successfully!");
+          setIsStandalone(true);
+        }
+      } catch (err: any) {
+        // Safely ignore AbortError / prompt cancellation to prevent runtime error crashes
+        if (err?.name !== "AbortError") {
+          console.warn("PWA install error:", err);
+        }
+      } finally {
+        (window as any).__deferredPrompt = null;
+        setDeferredPrompt(null);
+      }
+    } else {
+      // Fallback instruction toast if native prompt is not active yet
+      const isIOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+      if (isIOS) {
+        toast.info("To install on iOS: tap Share in Safari, then select 'Add to Home Screen'.", {
+          duration: 6000,
+        });
+      } else {
+        toast.info("To install Audora: click the Install icon (⊕) in your browser address bar or browser menu.", {
+          duration: 6000,
+        });
+      }
+    }
+  };
 
   const navItems: { name: string; href: string; icon: any; disabled?: boolean; tooltip?: string; }[] = [
     { name: "Studio", href: "/", icon: Wand2 },
@@ -407,6 +478,16 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
                       Transactions
                     </Link>
                   </DropdownMenuItem>
+
+                  {!isStandalone && (
+                    <DropdownMenuItem
+                      onClick={handleInstallClick}
+                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 dark:text-amber-400 dark:hover:text-amber-300 dark:hover:bg-amber-500/10 transition-colors cursor-pointer group/item"
+                    >
+                      <Download className="h-4 w-4 group-hover/item:translate-y-0.5 transition-transform duration-200" />
+                      <span>Install App</span>
+                    </DropdownMenuItem>
+                  )}
 
                   <DropdownMenuSeparator className="-mx-1.5 my-1.5" />
 

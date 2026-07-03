@@ -16,6 +16,11 @@ export const metadata: Metadata = {
     template: "%s | AI 3D Isometric Icon Generator | Audora",
     default: "Dashboard | AI 3D Isometric Icon Generator | Audora",
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Audora",
+  },
 };
 
 export default function RootLayout({
