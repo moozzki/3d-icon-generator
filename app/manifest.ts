@@ -15,7 +15,7 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ['graphics', 'productivity', 'utilities'],
     icons: [
       {
-        src: '/assets/audora-square-logo-192.png',
+        src: '/assets/audora-square-logo-with-bg-192.png',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any maskable' as any,
