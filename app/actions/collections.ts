@@ -16,6 +16,42 @@ const renameCollectionSchema = z.object({
   name: z.string().min(1, "Collection name cannot be empty").max(255),
 });
 
+async function getUniqueCollectionName(userId: string, targetName: string, excludeId?: string): Promise<string> {
+  const existingCollections = await db
+    .select({ id: collections.id, name: collections.name })
+    .from(collections)
+    .where(eq(collections.userId, userId));
+
+  const existingNames = new Set(
+    existingCollections
+      .filter((col) => !excludeId || col.id !== excludeId)
+      .map((col) => col.name.trim().toLowerCase())
+  );
+
+  const trimmed = targetName.trim();
+  if (!existingNames.has(trimmed.toLowerCase())) {
+    return trimmed;
+  }
+
+  // Check if targetName already ends with " (N)"
+  const match = trimmed.match(/^(.*?)\s+\((\d+)\)$/);
+  let baseName = trimmed;
+  let counter = 1;
+
+  if (match) {
+    baseName = match[1];
+    counter = parseInt(match[2], 10);
+  }
+
+  let candidate = `${baseName} (${counter})`;
+  while (existingNames.has(candidate.toLowerCase())) {
+    counter++;
+    candidate = `${baseName} (${counter})`;
+  }
+
+  return candidate;
+}
+
 export async function createCollection(name: string) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -26,12 +62,13 @@ export async function createCollection(name: string) {
   }
 
   const validated = createCollectionSchema.parse({ name: name.trim() });
+  const uniqueName = await getUniqueCollectionName(session.user.id, validated.name);
 
   const [newCollection] = await db
     .insert(collections)
     .values({
       userId: session.user.id,
-      name: validated.name,
+      name: uniqueName,
     })
     .returning();
 
@@ -60,10 +97,12 @@ export async function renameCollection(id: string, name: string) {
     throw new Error("Collection not found or access denied");
   }
 
+  const uniqueName = await getUniqueCollectionName(session.user.id, validated.name, validated.id);
+
   const [updatedCollection] = await db
     .update(collections)
     .set({
-      name: validated.name,
+      name: uniqueName,
       updatedAt: new Date(),
     })
     .where(and(eq(collections.id, validated.id), eq(collections.userId, session.user.id)))
