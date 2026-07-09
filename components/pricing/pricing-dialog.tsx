@@ -16,7 +16,6 @@ interface Package {
   credits: number;
   price: string;
   originalPrice?: string;
-  perCredit: string;
   packageId: string;
   ctaText: string;
   featured: boolean;
@@ -31,7 +30,6 @@ const packagesIDR: Package[] = [
     description: "Perfect for hobbyists",
     credits: 10,
     price: "Rp 30.000",
-    perCredit: "Rp 3.000 / credit",
     packageId: "starter_idr",
     ctaText: "Buy Starter",
     featured: false,
@@ -43,7 +41,6 @@ const packagesIDR: Package[] = [
     credits: 30,
     price: "Rp 75.000",
     originalPrice: "Rp 90.000",
-    perCredit: "Rp 2.500 / credit",
     packageId: "creator_idr",
     ctaText: "Buy Creator",
     featured: true,
@@ -56,7 +53,6 @@ const packagesIDR: Package[] = [
     credits: 75,
     price: "Rp 150.000",
     originalPrice: "Rp 225.000",
-    perCredit: "Rp 2.000 / credit",
     packageId: "studio_idr",
     ctaText: "Buy Studio",
     featured: false,
@@ -72,7 +68,6 @@ const packagesUSD: Package[] = [
     description: "Perfect for hobbyists",
     credits: 25,
     price: "$5.00",
-    perCredit: "$0.20 / credit",
     packageId: "starter_usd",
     ctaText: "Buy Starter",
     featured: false,
@@ -84,7 +79,6 @@ const packagesUSD: Package[] = [
     credits: 60,
     price: "$10.00",
     originalPrice: "$12.00",
-    perCredit: "$0.16 / credit",
     packageId: "creator_usd",
     ctaText: "Buy Creator",
     featured: true,
@@ -97,7 +91,6 @@ const packagesUSD: Package[] = [
     credits: 175,
     price: "$25.00",
     originalPrice: "$35.00",
-    perCredit: "$0.14 / credit",
     packageId: "studio_usd",
     ctaText: "Buy Studio",
     featured: false,
@@ -186,7 +179,6 @@ export function PricingDialog({
                         <span className="text-xs text-muted-foreground/60 line-through">{pkg.originalPrice}</span>
                       )}
                     </div>
-                    <p className="text-[10px] text-primary font-medium mt-0.5">{pkg.perCredit}</p>
                   </div>
 
                   {/* Features */}
@@ -247,7 +239,6 @@ export function PricingDialog({
                         <span className="text-xs text-muted-foreground/60 line-through">{pkg.originalPrice}</span>
                       )}
                     </div>
-                    <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{pkg.perCredit}</p>
                   </div>
 
                   {/* Features */}
