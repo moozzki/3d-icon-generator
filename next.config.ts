@@ -15,10 +15,6 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "cdn.useaudora.com",
-      },
-      {
-        protocol: "https",
         hostname: "cdn.zupericon.com",
       },
       {

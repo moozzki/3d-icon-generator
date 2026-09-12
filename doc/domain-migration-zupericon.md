@@ -1,8 +1,9 @@
 # Plan Final v3: Migrasi `useaudora.com` & `app.useaudora.com` → `zupericon.com` & `app.zupericon.com`
 
-**Tanggal update:** 11 September 2026
-**Status:** Final, siap eksekusi (belum dieksekusi)
+**Tanggal update:** 12 September 2026
+**Status:** Berjalan — Fase 0-6 & 8 selesai (Fase 7 = rencana rollback, tidak terpakai). Pending: test transaksi Polar & Pakasir (menunggu verified KYC), Search Console (Fase 5.8), verifikasi Inngest dari domain baru, switch email `noreply@zupericon.com` + rename file download (Part B), dan Part B rebrand (menunggu upload logo baru).
 **Ruang lingkup:** Repo app (`3d-icon-generator`) + repo landing (`audora-web`)
+**Sisa pending:** `doc/domain-migration-pending-tasks.md`
 
 ---
 
@@ -18,7 +19,7 @@
 | Coupling backend → landing | **Diputus total** (hapus CORS `/api/auth`, trusted origin landing, cross-subdomain cookie) |
 | Pakasir (payment IDR) | Buat project baru slug `zupericon`; dukung dual-secret saat transisi |
 | Rebrand Zupericon | **Part B, dieksekusi setelah migrasi stabil** (aset sudah siap); mencakup app **dan** landing |
-| CDN | Tambah `cdn.zupericon.com` untuk aset baru; **`cdn.useaudora.com` tetap hidup** (URL lama di DB) |
+| CDN | **Semua file (baru & lama) pindah ke `cdn.zupericon.com`**; `cdn.useaudora.com` tidak dipakai lagi — URL lama di DB dimigrasi via `scripts/migrate-cdn-domain.ts` |
 
 ### Kenapa aman tanpa cross-subdomain
 
@@ -38,12 +39,11 @@ Cookie host-only per domain: user di `app.useaudora.com` punya sesi sendiri, use
 |---|---|---|
 | Landing page | `useaudora.com` (Vercel) | `zupericon.com` + `www` — `useaudora.com` tetap dilayani |
 | App/dashboard | `app.useaudora.com` (Vercel) | `app.zupericon.com` — `app.useaudora.com` tetap dilayani |
-| CDN baru | — | `cdn.zupericon.com` (R2 custom domain, bucket `audora-icon-storage`) |
-| CDN lama | `cdn.useaudora.com` | Tetap hidup (URL lama di DB + aset landing) |
+| CDN | `cdn.useaudora.com` | **`cdn.zupericon.com`** — satu-satunya host aset & hasil generate; URL lama di DB dimigrasi (Fase 8) |
 | Auth | Cookie `.useaudora.com` | Host-only per domain, tanpa cross-subdomain |
 | Email app | `noreply@useaudora.com` | `noreply@zupericon.com` (verify Resend; brand diganti di Part B) |
 
-**Prinsip: zero-downtime + rollback mudah.** Semua domain lama tetap hidup; `cdn.useaudora.com` tidak pernah dimatikan.
+**Prinsip: zero-downtime + rollback mudah.** Domain lama tetap hidup sampai cutover; setelah Fase 8, `cdn.useaudora.com` tidak lagi dipakai (URL DB dimigrasi ke `cdn.zupericon.com`).
 
 ---
 
@@ -53,7 +53,7 @@ Cookie host-only per domain: user di `app.useaudora.com` punya sesi sendiri, use
 2. Kumpulkan akses dashboard: Cloudflare, Vercel (2 project), registrar, Polar, Pakasir, Resend, Google Cloud Console, GitHub OAuth, Inngest, Sanity, Turnstile, Neon.
 3. Backup: export env production (app & landing) dari Vercel, snapshot Neon, catat `POLAR_WEBHOOK_SECRET`, `PAKASIR_WEBHOOK_SECRET`, `PAKASIR_SLUG`, product ID Polar.
 4. Aset rebrand Zupericon standby untuk Part B.
-5. Pastikan domain `useaudora.com` tetap diperpanjang (dibutuhkan `cdn.useaudora.com`).
+5. Pastikan domain `useaudora.com` tetap diperpanjang (dibutuhkan untuk 301 redirect Fase 8).
 
 ---
 
@@ -65,7 +65,7 @@ Cookie host-only per domain: user di `app.useaudora.com` punya sesi sendiri, use
    - `app` → `CNAME cname.vercel-dns.com` — app
    - `cdn` → otomatis dibuat saat add R2 custom domain
    - Rekomendasi DNS-only (grey cloud); kalau diproxy set SSL **Full (strict)**.
-2. **R2**: add custom domain `cdn.zupericon.com` ke bucket `audora-icon-storage`. **Jangan hapus `cdn.useaudora.com`.**
+2. **R2**: add custom domain `cdn.zupericon.com` ke bucket `audora-icon-storage`. (`cdn.useaudora.com` saat itu dipertahankan; sejak Fase 8 tidak dipakai lagi — lihat Fase 8.)
 3. **R2 CORS**: tambah `https://app.zupericon.com`, `https://zupericon.com`, `https://www.zupericon.com` (pertahankan origin lama; dibutuhkan untuk presigned upload dari browser).
 4. **Email Routing**: aktifkan `support@` / `rizky@zupericon.com` (skip jika pakai Google Workspace — cukup tambah user).
 5. **Resend**: add domain `zupericon.com` → record DKIM/SPF/DMARC di Cloudflare → **Verify sebelum kirim email produksi**.
@@ -73,7 +73,7 @@ Cookie host-only per domain: user di `app.useaudora.com` punya sesi sendiri, use
 7. **Sanity**: tambah CORS origin `https://zupericon.com`, `https://www.zupericon.com`.
 8. **Search Console**: add properti `zupericon.com` + submit sitemap baru.
 
-Zone `useaudora.com` tetap ada di Cloudflare (untuk redirect Fase 8 + `cdn.useaudora.com`).
+Zone `useaudora.com` tetap ada di Cloudflare (untuk redirect Fase 8).
 
 ---
 
@@ -109,15 +109,15 @@ PAKASIR_WEBHOOK_SECRET_OLD=<lama>
 | `lib/auth.ts` | 111-119 | `trustedOrigins`: `BETTER_AUTH_URL`, `https://app.useaudora.com`, `http://localhost:3000`, `https://*.vercel.app`; hapus origin landing (`useaudora.com`, `app.useaudora.com` sebagai landing origin, `www.useaudora.com`) |
 | `lib/auth.ts` | 121-128 | **Hapus blok `advanced.crossSubDomainCookies`** (cookie jadi host-only) |
 | `next.config.ts` | 38-52 | **Hapus blok `headers()` CORS** (landing tidak memanggil `/api/auth` cross-origin lagi) |
-| `next.config.ts` | 18 | `images.remotePatterns` tambah `cdn.zupericon.com` (pertahankan `cdn.useaudora.com`) |
+| `next.config.ts` | 18 | `images.remotePatterns` → `cdn.zupericon.com` (Fase 8: `cdn.useaudora.com` dihapus) |
 | `app/api/sign-out/route.ts` | 6-10 | Default callback → `https://app.zupericon.com/sign-in`; regex izinkan `app.zupericon.com` **dan** `app.useaudora.com` + localhost |
 | `app/api/sign-out/route.ts` | 22, 30-33 | Cookie deletion tanpa atribut `domain` (host-only); hapus referensi `.useaudora.com` |
 | `lib/r2.ts` | 41 | URL CDN → `cdn.zupericon.com` (saran: jadikan env `R2_PUBLIC_URL` agar migrasi berikutnya tinggal ganti env) |
 | `lib/inngest/functions.ts` | 374, 447, 746, 782 | 4 URL CDN → `cdn.zupericon.com` |
 | `app/api/upload/route.ts` | 56 | `fileUrl` → `cdn.zupericon.com` |
 | `app/api/remove-bg/route.ts` | 97 | `permanentUrl` → `cdn.zupericon.com` |
-| `app/api/download/route.ts` | 9-14 | Allowlist SSRF: tambah `cdn.zupericon.com`, pertahankan `cdn.useaudora.com` |
-| `app/api/export-pack/route.ts` | 11-14 | Sama — tambah host baru, pertahankan lama |
+| `app/api/download/route.ts` | 9-14 | Allowlist SSRF: `cdn.zupericon.com` saja (Fase 8: host lama dihapus) |
+| `app/api/export-pack/route.ts` | 11-14 | Sama — hanya `cdn.zupericon.com` (Fase 8: host lama dihapus) |
 | `app/api/webhooks/pakasir/route.ts` | 6, 22-26 | Terima `PAKASIR_WEBHOOK_SECRET` **atau** `PAKASIR_WEBHOOK_SECRET_OLD` selama transisi |
 
 ### Tidak berubah di fase migrasi (link marketing tetap ke landing)
@@ -143,7 +143,7 @@ Tujuan: pindah domain, putus session check ke app, arahkan semua CTA ke domain a
 | `components/landing/navbar.tsx` | 9-10, 26 | Hapus import + `authClient.useSession()` |
 | `components/landing/navbar.tsx` | 17-22, 64-78 | `redirectToSignIn` → `https://app.zupericon.com/sign-in`; tombol Sign In **selalu tampil** |
 | `components/landing/navbar.tsx` | 88-112, 154-164 | Hapus cabang session mobile; tombol "Sign In to Dashboard" selalu tampil |
-| `next.config.ts` | 12 | `images.remotePatterns` → `cdn.zupericon.com` (pertahankan `cdn.useaudora.com`) |
+| `next.config.ts` | 12 | `images.remotePatterns` → `cdn.zupericon.com` (Fase 8: `cdn.useaudora.com` dihapus) |
 | `app/layout.tsx` | 31, 38, 49 | Metadata URL + OG image → `zupericon.com` / `cdn.zupericon.com` |
 | `app/pricing/page.tsx` | 14, 18 | Metadata + OG image |
 | `app/blog/page.tsx` | 15 | Metadata URL |
@@ -173,42 +173,56 @@ Tujuan: pindah domain, putus session check ke app, arahkan semua CTA ke domain a
 
 ## Fase 5 — Dashboard Pihak Ketiga
 
-1. **Google Cloud Console** (OAuth): tambah Authorized JavaScript origin `https://app.zupericon.com` + redirect URI `https://app.zupericon.com/api/auth/callback/google`. **Pertahankan yang lama** (`app.useaudora.com`) karena app lama masih dipakai login.
-2. **GitHub OAuth App**: tambah callback `https://app.zupericon.com/api/auth/callback/github` (pertahankan lama).
-3. **Pakasir (project baru)**:
-   - Buat project slug `zupericon` → generate API key + webhook secret baru.
-   - Webhook URL: `https://app.zupericon.com/api/webhooks/pakasir?secret=<secret-baru>`.
-   - Env: `PAKASIR_SLUG=zupericon`, `PAKASIR_API_KEY=<baru>`, `PAKASIR_WEBHOOK_SECRET=<baru>`, `PAKASIR_WEBHOOK_SECRET_OLD=<lama>`.
-   - Project lama (webhook → `app.useaudora.com`, secret lama) tetap hidup min. 1 jam setelah cutover sampai transaksi pending selesai.
-4. **Polar**: **pindahkan (replace) URL endpoint** webhook ke `https://app.zupericon.com/api/webhooks/polar` (event `order.paid`). Jangan aktifkan 2 endpoint sekaligus — race double-credit (dua webhook masuk bersamaan sama-sama lolos guard `paymentStatus === "paid"`, lihat Risiko). Test dengan test webhook sebelum menghapus URL lama. Success URL otomatis ikut `NEXT_PUBLIC_APP_URL`.
-5. **Inngest**: update Serve URL → `https://app.zupericon.com/api/inngest` → re-sync → verifikasi function terdaftar. (`INNGEST_EVENT_KEY`/`SIGNING_KEY` tidak berubah; event dari domain lama tetap diproses karena dikirim ke Inngest, bukan lewat serve URL.)
-6. **Turnstile**: tambah hostname `zupericon.com` + `www` (Fase 1).
-7. **Sanity**: tambah CORS origin domain baru (Fase 1).
-8. **Search Console**: add properti `zupericon.com`, submit sitemap (Fase 1).
+**Status per 12 Sep 2026:** hampir selesai — semua konfigurasi beres; pending: test transaksi Polar & Pakasir (menunggu verified KYC) + Search Console.
+
+1. [x] **Google Cloud Console** (OAuth): tambah Authorized JavaScript origin `https://app.zupericon.com` + redirect URI `https://app.zupericon.com/api/auth/callback/google`. **Pertahankan yang lama** (`app.useaudora.com`) karena app lama masih dipakai login.
+2. [x] **GitHub OAuth App**: tambah callback `https://app.zupericon.com/api/auth/callback/github` (pertahankan lama).
+3. [x] **Pakasir (project baru)**:
+   - [x] Buat project slug `zupericon` → generate API key + webhook secret baru.
+   - [x] Webhook URL: `https://app.zupericon.com/api/webhooks/pakasir?secret=<secret-baru>`.
+   - [x] Env: `PAKASIR_SLUG=zupericon`, `PAKASIR_API_KEY=<baru>`, `PAKASIR_WEBHOOK_SECRET=<baru>`, `PAKASIR_WEBHOOK_SECRET_OLD=<lama>`.
+   - [x] Project lama (webhook → `app.useaudora.com`, secret lama) tetap hidup min. 1 jam setelah cutover sampai transaksi pending selesai.
+   - [ ] Test transaksi kecil (QRIS/VA) → webhook → kredit bertambah. **Pending: menunggu verified KYC.**
+4. [x] **Polar**: **pindahkan (replace) URL endpoint** webhook ke `https://app.zupericon.com/api/webhooks/polar` (event `order.paid`). Jangan aktifkan 2 endpoint sekaligus — race double-credit (dua webhook masuk bersamaan sama-sama lolos guard `paymentStatus === "paid"`, lihat Risiko). Test dengan test webhook sebelum menghapus URL lama. Success URL otomatis ikut `NEXT_PUBLIC_APP_URL`.
+   - [ ] Test order → webhook `order.paid` → kredit bertambah (pastikan hanya 1 endpoint aktif). **Pending: menunggu verified KYC.**
+5. [x] **Inngest**: update Serve URL → `https://app.zupericon.com/api/inngest` → re-sync → verifikasi function terdaftar. (`INNGEST_EVENT_KEY`/`SIGNING_KEY` tidak berubah; event dari domain lama tetap diproses karena dikirim ke Inngest, bukan lewat serve URL.)
+6. [x] **Turnstile**: tambah hostname `zupericon.com` + `www` (Fase 1).
+7. [x] **Sanity**: tambah CORS origin domain baru (Fase 1).
+8. [ ] **Search Console**: add properti `zupericon.com`, submit sitemap (Fase 1). **Belum dikerjakan.**
+
+**Pending lain:** Part B (rebrand app + landing) menunggu upload logo baru dll.
+
+Detail checklist: `doc/domain-migration-fase5-checklist.md`.
 
 ---
 
 ## Fase 6 — Cutover & Smoke Test (estimasi 1-2 jam)
 
-1. `cdn.zupericon.com` live (fetch aset lama dari bucket) → OK.
-2. Resend domain verified + email test → OK.
-3. Deploy app (kode + env baru) → add domain `app.zupericon.com` → verifikasi HTTPS/TLS.
-4. Deploy landing (kode decoupling + domain baru) → verifikasi `zupericon.com` dan `useaudora.com` sama-sama jalan.
-5. Update webhook: Polar (replace) → Pakasir (project baru) → Inngest.
+**Status per 12 Sep 2026:** selesai — kecuali checkout Polar & Pakasir (menunggu verified KYC), verifikasi Inngest function dari domain baru, dan email dari `noreply@zupericon.com` (switch sender baru dilakukan di **Part B**).
+
+1. [x] `cdn.zupericon.com` live (fetch aset lama dari bucket) → OK.
+2. [x] Resend domain verified + email test → OK. (Sender app masih `noreply@useaudora.com` — switch di Part B.)
+3. [x] Deploy app (kode + env baru) → add domain `app.zupericon.com` → verifikasi HTTPS/TLS.
+4. [x] Deploy landing (kode decoupling + domain baru) → verifikasi `zupericon.com` dan `useaudora.com` sama-sama jalan.
+5. [x] Update webhook: Polar (replace) → Pakasir (project baru) → Inngest.
 6. **Smoke test**:
-   - Landing `zupericon.com` load, sitemap/robots mengarah ke `zupericon.com`, waitlist + testimonials jalan.
-   - Landing `useaudora.com` tetap normal (canonical tetap ke `zupericon.com`).
-   - Tombol Sign In landing selalu tampil → `https://app.zupericon.com/sign-in` (tidak ada session check).
-   - Login Google, GitHub, magic link di `app.zupericon.com` → cookie host-only ter-set.
-   - Login lama di `app.useaudora.com` masih jalan (cookie `.useaudora.com` existing).
-   - Checkout Pakasir (1 transaksi test kecil di project baru) → QRIS/VA → webhook → kredit bertambah; webhook project lama masih valid untuk transaksi pending.
-   - Checkout Polar (test order) → webhook `order.paid` → kredit bertambah (pastikan hanya 1 endpoint aktif).
-   - Upload reference image (presigned PUT R2 — cek CORS) → generate → URL CDN baru 200.
-   - Download, export pack, invoice PDF, share card, PWA.
-   - Inngest function jalan dari domain baru.
-   - Email dari `noreply@zupericon.com` lolos SPF/DKIM.
-   - `cdn.useaudora.com/<asset-lama>` masih 200; `cdn.zupericon.com/<asset-lama>` juga 200.
-7. Monitor 24-48 jam: Vercel logs, Inngest, Resend, Polar, Pakasir.
+   - [x] Landing `zupericon.com` load, sitemap/robots mengarah ke `zupericon.com`, waitlist + testimonials jalan.
+   - [x] Landing `useaudora.com` tetap normal (canonical tetap ke `zupericon.com`).
+   - [x] Tombol Sign In landing selalu tampil → `https://app.zupericon.com/sign-in` (tidak ada session check).
+   - [x] Login Google, GitHub, magic link di `app.zupericon.com` → cookie host-only ter-set.
+   - [x] Login lama di `app.useaudora.com` masih jalan (cookie `.useaudora.com` existing).
+   - [ ] Checkout Pakasir (1 transaksi test kecil di project baru) → QRIS/VA → webhook → kredit bertambah; webhook project lama masih valid untuk transaksi pending. **Pending: menunggu verified KYC (lihat Fase 5).**
+   - [ ] Checkout Polar (test order) → webhook `order.paid` → kredit bertambah (pastikan hanya 1 endpoint aktif). **Pending: menunggu verified KYC (lihat Fase 5).**
+   - [x] Upload reference image (presigned PUT R2 — cek CORS) → generate → URL CDN baru 200.
+   - [x] Download, export pack, invoice PDF, share card, PWA — fungsi OK. **Nama file `audora-*` masih belum di-rename → Part B.**
+   - [ ] Inngest function jalan dari domain baru. **Belum diverifikasi.**
+   - [ ] Email dari `noreply@zupericon.com` lolos SPF/DKIM. **Pending: sender masih `noreply@useaudora.com` — switch di Part B (`lib/resend.ts:15` + invoice).**
+   - [x] `cdn.useaudora.com/<asset-lama>` masih 200; `cdn.zupericon.com/<asset-lama>` juga 200.
+7. [x] Monitor 24-48 jam: Vercel logs, Inngest, Resend, Polar, Pakasir.
+
+Detail checklist: `doc/domain-migration-fase6-checklist.md`.
+
+**Catatan:** rename file download (`audora-*.png`, `audora-icon-pack-*`, `audora-batch-icons-*.zip`) dan ganti sender email ke `noreply@zupericon.com` **bukan** scope Fase 6 — keduanya masuk **Part B (rebrand)**.
 
 ---
 
@@ -223,18 +237,27 @@ Tujuan: pindah domain, putus session check ke app, arahkan semua CTA ke domain a
 
 ## Fase 8 — Post-Cutover (H+7 s/d H+30)
 
-1. Pasang **301 redirect** `useaudora.com` → `zupericon.com` dan `app.useaudora.com` → `app.zupericon.com` (Vercel domain redirect atau Cloudflare Rules).
-2. Hapus webhook lama (Polar URL lama, Pakasir project lama setelah semua transaksi selesai) + `PAKASIR_WEBHOOK_SECRET_OLD`.
-3. Hapus OAuth redirect URI lama setelah dipastikan tidak ada traffic.
-4. **`cdn.useaudora.com` jangan dimatikan** (URL permanen di kolom DB) — pastikan domain `useaudora.com` tetap diperpanjang. Opsional nanti: migrasi massal URL DB baru matikan — tidak disarankan.
-5. Update dokumentasi internal.
-6. Lanjut ke Part B.
+**Status per 12 Sep 2026:** selesai — termasuk perubahan kebijakan CDN: semua file storage/generate pindah ke `cdn.zupericon.com` (tidak lagi pakai `cdn.useaudora.com`).
+
+1. [x] Pasang **301 redirect** `useaudora.com` → `zupericon.com` dan `app.useaudora.com` → `app.zupericon.com` (Vercel domain redirect atau Cloudflare Rules).
+2. [x] Hapus webhook lama (Polar URL lama, Pakasir project lama setelah semua transaksi selesai) + `PAKASIR_WEBHOOK_SECRET_OLD`.
+3. [x] Hapus OAuth redirect URI lama setelah dipastikan tidak ada traffic.
+4. [x] **CDN** — ganti semua referensi `cdn.useaudora.com` → `cdn.zupericon.com`:
+   - [x] App: allowlist SSRF (`download`, `export-pack`), `next.config.ts` remotePatterns, preview aset UI dashboard (`page.tsx`, `[jobId]/page.tsx`)
+   - [x] Landing: `next.config.ts` remotePatterns
+   - [x] Script migrasi URL lama di DB: `scripts/migrate-cdn-domain.ts` (`npm run db:migrate-cdn`)
+   - [x] Migrasi URL DB di production dijalankan (`npm run db:migrate-cdn`) — **508 baris di-update, 0 referensi `cdn.useaudora.com` tersisa**; spot-check 3 aset lama → 200
+   Catatan: `cdn.useaudora.com` boleh dibiarkan hidup sampai migrasi DB selesai; setelah itu tidak dipakai lagi.
+5. [x] Update dokumentasi internal.
+6. [x] Lanjut ke Part B (menunggu upload logo baru dll).
+
+Detail checklist: `doc/domain-migration-fase8-checklist.md`.
 
 ---
 
 ## Part B — Rebrand Zupericon (setelah migrasi stabil)
 
-**Aset sudah siap.** Dieksekusi terpisah; canonical/sitemap tetap ke `zupericon.com`.
+**Aset:** menunggu upload logo baru dll sebelum eksekusi. Dieksekusi terpisah; canonical/sitemap tetap ke `zupericon.com`.
 
 ### App (`D:\3d-icon-generator`)
 
@@ -251,8 +274,14 @@ Tujuan: pindah domain, putus session check ke app, arahkan semua CTA ke domain a
 | `app/checkout/page.tsx` | 37-38, 149, 154 | Metadata + brand |
 | `app/sign-in/page.tsx` | 95, 105, 226 | Alt logo + copy + terms |
 | `app/(dashboard)/page.tsx` | 872, 1598, 1998-1999 | Share text + disclaimer |
+| `app/(dashboard)/page.tsx` | 655, 677, 735, 757, 792 | Rename nama file download `audora-*` → `zupericon-*` (`audora-batch-icons-*.zip`, `audora-icon-pack-*`, `audora-*-transparent.png`) |
 | `app/(dashboard)/[jobId]/page.tsx` | 595-596, 1079, 1314-1315 | Share text + disclaimer |
+| `app/(dashboard)/[jobId]/page.tsx` | 450, 472, 508 | Rename nama file download `audora-*` → `zupericon-*` |
 | `app/(dashboard)/library/page.tsx` | 362-363, 1007-1008 | Share text |
+| `app/(dashboard)/library/page.tsx` | 194, 224, 248 | Rename nama file download `audora-*` → `zupericon-*` |
+| `app/(dashboard)/collections/[id]/page.tsx` | 220, 249, 272 | Rename nama file download `audora-*` → `zupericon-*` |
+| `app/(dashboard)/spotlight/page.tsx` | 120 | Rename nama file download `audora-*` → `zupericon-*` |
+| `app/api/export-pack/route.ts` | 53 | Default filename `audora-icon-pack` → `zupericon-icon-pack` |
 | `app/(dashboard)/support/page.tsx` | 24, 29 | Email support |
 | `app/actions/feedback.ts` | 35 | `adminEmail` → `rizky@zupericon.com` |
 | `components/layout/dashboard-layout.tsx` | 188, 217-239, 452, 637 | Copy install prompt + brand sidebar + link landing & email |
@@ -316,7 +345,7 @@ NEXT_PUBLIC_SITE_URL=https://zupericon.com
 | Polar double-webhook saat 2 endpoint aktif | Satu endpoint aktif (replace URL), atau hardening idempotency (conditional update) sebelum overlap |
 | Transaksi Pakasir pending saat ganti secret | Dual-secret support + cutover saat traffic rendah |
 | Webhook terlewat saat update dashboard | Endpoint lama & baru hidup bersamaan; cek log 24 jam |
-| Aset lama rusak | `cdn.useaudora.com` tetap hidup; allowlist download menerima kedua host |
+| Aset lama rusak | URL lama di DB dimigrasi ke `cdn.zupericon.com` via `npm run db:migrate-cdn`; jalankan migrasi sebelum/saat deploy kode allowlist baru |
 | Email masuk spam | Verify SPF/DKIM/DMARC sebelum kirim produksi |
 | Turnstile/Sanity/CORS lupa diupdate | Masuk checklist Fase 1/5 |
 | NS propagasi lama | Mulai Fase 0 paling awal (1-24 jam) |

@@ -92,22 +92,22 @@ import { ShareCard } from "@/components/share-card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const POSITIONS = [
-  { id: "Isometric", label: "Isometric", icon: "📦", previewUrl: "https://cdn.useaudora.com/assets/audora-isometric-position.png" },
-  { id: "Front Facing", label: "Front Facing", icon: "🔲", previewUrl: "https://cdn.useaudora.com/assets/audora-front-facing-position.png" },
-  { id: "Back Facing", label: "Back Facing", icon: "🔙", previewUrl: "https://cdn.useaudora.com/assets/audora-back-facing-position.png" },
-  { id: "Side Facing", label: "Side Facing", icon: "↔️", previewUrl: "https://cdn.useaudora.com/assets/audora-side-facing-position.png" },
-  { id: "Three Quarter", label: "Three Quarter", icon: "🎲", previewUrl: "https://cdn.useaudora.com/assets/audora-three-quarter-position.png" },
-  { id: "Top Down", label: "Top Down", icon: "⬇️", previewUrl: "https://cdn.useaudora.com/assets/audora-top-down-position.png" },
+  { id: "Isometric", label: "Isometric", icon: "📦", previewUrl: "https://cdn.zupericon.com/assets/audora-isometric-position.png" },
+  { id: "Front Facing", label: "Front Facing", icon: "🔲", previewUrl: "https://cdn.zupericon.com/assets/audora-front-facing-position.png" },
+  { id: "Back Facing", label: "Back Facing", icon: "🔙", previewUrl: "https://cdn.zupericon.com/assets/audora-back-facing-position.png" },
+  { id: "Side Facing", label: "Side Facing", icon: "↔️", previewUrl: "https://cdn.zupericon.com/assets/audora-side-facing-position.png" },
+  { id: "Three Quarter", label: "Three Quarter", icon: "🎲", previewUrl: "https://cdn.zupericon.com/assets/audora-three-quarter-position.png" },
+  { id: "Top Down", label: "Top Down", icon: "⬇️", previewUrl: "https://cdn.zupericon.com/assets/audora-top-down-position.png" },
   // { id: "Dimetric",      label: "Dimetric",      icon: "📐", previewUrl: null },
 ];
 
 const STYLES = [
-  { id: "plastic", label: "Plastic", icon: "🫧", previewUrl: "https://cdn.useaudora.com/assets/pizza-glasses-icon.png" },
-  { id: "clay", label: "Clay", icon: "🏺", previewUrl: "https://cdn.useaudora.com/assets/audora-clay-style.png" },
-  { id: "glass", label: "Glass", icon: "🧊", previewUrl: "https://cdn.useaudora.com/assets/plane%203d%20icon.png" },
-  { id: "plush", label: "Plushy", icon: "🧸", previewUrl: "https://cdn.useaudora.com/assets/audora-plushy-style.png" },
-  { id: "toy_block", label: "Toy Block", icon: "🧱", previewUrl: "https://cdn.useaudora.com/assets/audora-toy-block-style.png" },
-  { id: "metallic", label: "Metallic", icon: "⚙️", previewUrl: "https://cdn.useaudora.com/assets/audora-metallic-style.png" },
+  { id: "plastic", label: "Plastic", icon: "🫧", previewUrl: "https://cdn.zupericon.com/assets/pizza-glasses-icon.png" },
+  { id: "clay", label: "Clay", icon: "🏺", previewUrl: "https://cdn.zupericon.com/assets/audora-clay-style.png" },
+  { id: "glass", label: "Glass", icon: "🧊", previewUrl: "https://cdn.zupericon.com/assets/plane%203d%20icon.png" },
+  { id: "plush", label: "Plushy", icon: "🧸", previewUrl: "https://cdn.zupericon.com/assets/audora-plushy-style.png" },
+  { id: "toy_block", label: "Toy Block", icon: "🧱", previewUrl: "https://cdn.zupericon.com/assets/audora-toy-block-style.png" },
+  { id: "metallic", label: "Metallic", icon: "⚙️", previewUrl: "https://cdn.zupericon.com/assets/audora-metallic-style.png" },
 ];
 
 const QUALITIES = ["2K", "4K"];

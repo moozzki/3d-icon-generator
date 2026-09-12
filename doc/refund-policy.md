@@ -24,7 +24,7 @@ Refunds to the original payment method may only be considered in the following c
 ## 4. Contact Us
 If you encounter any issues with your purchase or believe you are eligible for a refund under the specific exceptions listed above, please contact our support team.
 
-- **Email:** support@useaudora.com
+- **Email:** support@zupericon.com
 - **Details Needed:** Transaction ID, account email, and a description of the issue.
 - **Support Hours:** 8 AM - 4 PM WIB
 

@@ -10,7 +10,6 @@ import sharp from "sharp";
 // ---------------------------------------------------------------------------
 const ALLOWED_ORIGINS = new Set([
   "cdn.zupericon.com",
-  "cdn.useaudora.com",
   "fal.media",
   "v3.fal.media",
   "storage.googleapis.com",

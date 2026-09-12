@@ -43,7 +43,7 @@
 - [x] `PAKASIR_WEBHOOK_SECRET=<baru>`
 - [x] `PAKASIR_WEBHOOK_SECRET_OLD=<lama>`
 - [x] `R2_PUBLIC_URL=https://cdn.zupericon.com` (opsional — kode sudah fallback ke nilai ini)
-- [ ] Redeploy wajib (variabel `NEXT_PUBLIC_*` bersifat build-time)
+- [x] Redeploy wajib (variabel `NEXT_PUBLIC_*` bersifat build-time) — dilakukan di Fase 6
 
 ## E. Tidak Berubah di Fase Ini (tetap sampai Part B)
 
@@ -57,7 +57,7 @@
 
 - [x] `npm run lint` — tanpa error baru
 - [x] `npx tsc --noEmit` — lolos
-- [ ] Smoke test di Fase 6 (bukan scope Fase 3)
+- [x] Smoke test di Fase 6 (bukan scope Fase 3) — selesai selain item KYC/Inngest/email (lihat `doc/domain-migration-pending-tasks.md`)
 
 ---
 
@@ -69,3 +69,4 @@
 4. **Ordering imports**: `getPublicUrl` diekspor dari `lib/r2.ts` (baris 29) dan dipakai di 3 file: `lib/inngest/functions.ts`, `app/api/upload/route.ts`, `app/api/remove-bg/route.ts`. `uploadToR2()` sekarang juga mengembalikan `getPublicUrl(key)`.
 5. **Verifikasi**: `npm run lint` tidak memunculkan error baru (29 error yang ada semuanya pre-existing di file di luar scope Fase 3); `npx tsc --noEmit` lolos tanpa error.
 6. **Urutan deploy**: perubahan ini aman di-deploy sebelum `cdn.zupericon.com` aktif — aset baru akan memakai URL `cdn.zupericon.com` yang baru hidup setelah Fase 1 (R2 custom domain). Pastikan Fase 1 selesai sebelum generate di production.
+7. **Superseded di Fase 8**: referensi `cdn.useaudora.com` yang awalnya dipertahankan (allowlist, remotePatterns, preview UI) sudah **dihapus** — semua pindah ke `cdn.zupericon.com` + migrasi URL lama di DB via `npm run db:migrate-cdn`. Lihat `doc/domain-migration-fase8-checklist.md`.
