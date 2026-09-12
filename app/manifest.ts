@@ -15,16 +15,22 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ['graphics', 'productivity', 'utilities'],
     icons: [
       {
-        src: '/assets/audora-square-logo-withbg-192.png',
+        src: '/assets/zupericon-logo-square-192.png',
         sizes: '192x192',
         type: 'image/png',
-        purpose: 'any maskable' as any,
+        purpose: 'any',
       },
       {
-        src: '/assets/audora-square-logo-512.png',
+        src: '/assets/zupericon-logo-square-512.png',
         sizes: '512x512',
         type: 'image/png',
-        purpose: 'any maskable' as any,
+        purpose: 'any',
+      },
+      {
+        src: '/assets/zupericon-logo-square-withbg-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
       },
     ],
   }

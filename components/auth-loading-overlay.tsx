@@ -12,7 +12,7 @@ export function AuthLoadingOverlay({ message = "Loading...", isVisible }: AuthLo
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
       <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-300">
         <Image
-          src="/assets/audora-square-logo.png"
+          src="/assets/zupericon-logo-square-192.png"
           alt="Audora Logo"
           width={80}
           height={80}

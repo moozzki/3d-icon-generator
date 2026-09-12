@@ -213,7 +213,7 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
               <TooltipTrigger asChild>
                 <Link href="/" onClick={() => isMobile && setMobileMenuOpen(false)} className="flex items-center justify-center group">
                   <Image
-                    src="/assets/audora-square-logo.png"
+                    src="/assets/zupericon-logo-square-192.png"
                     alt="Audora Logo"
                     width={28}
                     height={28}
@@ -229,7 +229,7 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
           ) : (
             <Link href="/" onClick={() => isMobile && setMobileMenuOpen(false)} className="flex items-center gap-2 group">
               <Image
-                src="/assets/audora-square-logo.png"
+                src="/assets/zupericon-logo-square-192.png"
                 alt="Audora Logo"
                 width={28}
                 height={28}

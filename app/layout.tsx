@@ -23,8 +23,8 @@ export const metadata: Metadata = {
     title: "Audora",
   },
   icons: {
-    icon: "/assets/audora-square-logo-192.png",
-    apple: "/assets/audora-square-logo-192.png",
+    icon: "/assets/zupericon-logo-square-192.png",
+    apple: "/assets/zupericon-logo-square-withbg-180.png",
   },
 };
 

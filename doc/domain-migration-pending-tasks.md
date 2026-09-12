@@ -34,8 +34,9 @@ Menunggu **verified KYC** — test end-to-end tidak bisa divalidasi sebelum ini 
 Detail baris per file ada di `doc/domain-migration-zupericon.md` → **Part B**. Ringkasan:
 
 ### 4a. Aset
-- [ ] Upload aset/logo Zupericon baru (app `public/assets/`, landing `public/assets/logos/`, CDN bila perlu)
-- [ ] Ganti semua referensi `audora-*.png` → aset baru: `app/manifest.ts`, `app/layout.tsx`, magic link email (`lib/auth.ts`), `components/share-card.tsx`, `components/layout/dashboard-layout.tsx`, `app/checkout/page.tsx`, `app/sign-in/page.tsx`, `components/auth-loading-overlay.tsx`
+- [x] Upload aset/logo Zupericon baru — master `public/assets/zupericon-logo-square.png` (598x698, transparent); landing `public/assets/logos/` menyusul
+  - Turunan digenerate via sharp: `zupericon-logo-square-192.png`, `zupericon-logo-square-512.png`, `zupericon-logo-square-withbg-180.png` (apple), `zupericon-logo-square-withbg-512.png` (maskable), `app/favicon.ico` (32x32 PNG-in-ICO)
+- [x] Ganti semua referensi `audora-*.png` → aset baru: `app/manifest.ts`, `app/layout.tsx`, magic link email (`lib/auth.ts`), `components/share-card.tsx`, `components/layout/dashboard-layout.tsx`, `app/checkout/page.tsx`, `app/sign-in/page.tsx`, `components/auth-loading-overlay.tsx`; file `audora-*.png` lama sudah dihapus dari `public/assets/`
 
 ### 4b. Email & Invoice
 - [ ] `lib/resend.ts:15` — `from`: `Zupericon <noreply@zupericon.com>` (domain Resend `zupericon.com` sudah verified)

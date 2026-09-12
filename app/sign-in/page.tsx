@@ -91,7 +91,7 @@ function SignInForm() {
             className="flex justify-center mb-1 transition-opacity hover:opacity-80"
           >
             <Image
-              src="/assets/audora-square-logo.png"
+              src="/assets/zupericon-logo-square-192.png"
               alt="Audora"
               width={44}
               height={44}

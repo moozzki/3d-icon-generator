@@ -145,7 +145,7 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
           <div className="mt-8 pt-6 border-t border-border/50">
             <div className="flex items-center gap-2 mb-2">
               <Image
-                src="/assets/audora-square-logo.png"
+                src="/assets/zupericon-logo-square-192.png"
                 alt="Audora"
                 width={20}
                 height={20}
