@@ -185,7 +185,7 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
           duration: 6000,
         });
       } else {
-        toast.info("To install Audora: click the Install icon (⊕) in your browser address bar or browser menu.", {
+        toast.info("To install Zupericon: click the Install icon (⊕) in your browser address bar or browser menu.", {
           duration: 6000,
         });
       }
@@ -214,7 +214,7 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
                 <Link href="/" onClick={() => isMobile && setMobileMenuOpen(false)} className="flex items-center justify-center group">
                   <Image
                     src="/assets/zupericon-logo-square-192.png"
-                    alt="Audora Logo"
+                    alt="Zupericon Logo"
                     width={28}
                     height={28}
                     className="w-7 h-7 object-contain group-hover:opacity-80 transition-opacity shrink-0"
@@ -223,20 +223,20 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
                 </Link>
               </TooltipTrigger>
               <TooltipContent side="right" sideOffset={8}>
-                Audora
+                Zupericon
               </TooltipContent>
             </Tooltip>
           ) : (
             <Link href="/" onClick={() => isMobile && setMobileMenuOpen(false)} className="flex items-center gap-2 group">
               <Image
                 src="/assets/zupericon-logo-square-192.png"
-                alt="Audora Logo"
+                alt="Zupericon Logo"
                 width={28}
                 height={28}
                 className="w-7 h-7 object-contain group-hover:opacity-80 transition-opacity shrink-0"
                 priority
               />
-              <span className={cn("font-heading text-lg font-bold tracking-tight whitespace-nowrap transition-opacity duration-200", isCollapsed ? "opacity-0" : "opacity-100")}>Audora</span>
+              <span className={cn("font-heading text-lg font-bold tracking-tight whitespace-nowrap transition-opacity duration-200", isCollapsed ? "opacity-0" : "opacity-100")}>Zupericon</span>
             </Link>
           )}
         </div>
@@ -449,7 +449,7 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
                 <DropdownMenuGroup className="p-1.5 section-group">
                   <DropdownMenuItem asChild>
                     <a
-                      href={process.env.NODE_ENV === "production" ? "https://useaudora.com" : "http://localhost:3001"}
+                      href={process.env.NODE_ENV === "production" ? "https://zupericon.com" : "http://localhost:3001"}
                       onClick={() => isMobile && setMobileMenuOpen(false)}
                       className="flex items-center gap-2.5 px-2.5 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer group/item"
                     >
@@ -634,7 +634,7 @@ export function DashboardLayout({ children, country }: { children: ReactNode; co
                     </button>
                     {" "}or contact{" "}
                     <a
-                      href="mailto:support@useaudora.com"
+                      href="mailto:support@zupericon.com"
                       className="underline underline-offset-2 font-semibold text-amber-400 hover:text-amber-300 transition-colors"
                     >
                       Support

@@ -191,7 +191,7 @@ export default function LibraryPage() {
     if (!item.resultImageUrl) return;
     try {
       posthog.capture('asset_downloaded', { file_type: 'png' });
-      const filename = `audora-${item.quality.toLowerCase()}-${item.jobId}.png`;
+      const filename = `zupericon-${item.quality.toLowerCase()}-${item.jobId}.png`;
       const downloadUrl = `/api/download?url=${encodeURIComponent(item.resultImageUrl)}&filename=${filename}`;
 
       const link = document.createElement("a");
@@ -221,7 +221,7 @@ export default function LibraryPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to remove background");
 
-      const filename = `audora-${item.quality.toLowerCase()}-${item.jobId}-transparent.png`;
+      const filename = `zupericon-${item.quality.toLowerCase()}-${item.jobId}-transparent.png`;
       const downloadUrl = `/api/download?url=${encodeURIComponent(data.url)}&filename=${filename}`;
 
       const link = document.createElement("a");
@@ -245,7 +245,7 @@ export default function LibraryPage() {
     if (!sourceUrl || !item.jobId) return;
     setExportingPackJobId(item.jobId);
     try {
-      const filename = `audora-icon-pack-${item.jobId}`;
+      const filename = `zupericon-icon-pack-${item.jobId}`;
       const exportUrl = `/api/export-pack?url=${encodeURIComponent(sourceUrl)}&filename=${encodeURIComponent(filename)}`;
       const res = await fetch(exportUrl);
       if (!res.ok) throw new Error("Failed to generate icon pack");
@@ -354,19 +354,19 @@ export default function LibraryPage() {
       });
 
       const blob = await (await fetch(shareDataUrl)).blob();
-      shareFile = new File([blob], `audora-story-${item.jobId}.jpg`, { type: "image/jpeg" });
+      shareFile = new File([blob], `zupericon-story-${item.jobId}.jpg`, { type: "image/jpeg" });
 
       if (navigator.canShare && navigator.canShare({ files: [shareFile] })) {
         await navigator.share({
           files: [shareFile],
-          title: "Crafted on Audora",
-          text: "Check out this 3D icon I made on Audora!",
+          title: "Crafted on Zupericon",
+          text: "Check out this 3D icon I made on Zupericon!",
         });
         toast.success("Shared successfully!");
       } else {
         const link = document.createElement("a");
         link.href = shareDataUrl;
-        link.download = `audora-story-${item.jobId}.jpg`;
+        link.download = `zupericon-story-${item.jobId}.jpg`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -382,7 +382,7 @@ export default function LibraryPage() {
         } else if (shareDataUrl) {
            const link = document.createElement("a");
            link.href = shareDataUrl;
-           link.download = `audora-story-${item.jobId}.jpg`;
+           link.download = `zupericon-story-${item.jobId}.jpg`;
            link.click();
            toast.success("Story card downloaded!");
         }
@@ -1004,8 +1004,8 @@ export default function LibraryPage() {
                 if (shareFallbackFile && navigator.canShare && navigator.canShare({ files: [shareFallbackFile] })) {
                   navigator.share({
                     files: [shareFallbackFile],
-                    title: "Crafted on Audora",
-                    text: "Check out this 3D icon I made on Audora!",
+                    title: "Crafted on Zupericon",
+                    text: "Check out this 3D icon I made on Zupericon!",
                   }).then(() => {
                     toast.success("Shared successfully!");
                     setShareFallbackFile(null);
@@ -1081,8 +1081,8 @@ export default function LibraryPage() {
                     onClick={() => {
                       if (!selectedVideo.resultVideoUrl) return;
                       const link = document.createElement("a");
-                      link.href = `/api/download?url=${encodeURIComponent(selectedVideo.resultVideoUrl)}&filename=audora-animation-${selectedVideo.jobId}.mp4`;
-                      link.download = `audora-animation-${selectedVideo.jobId}.mp4`;
+                      link.href = `/api/download?url=${encodeURIComponent(selectedVideo.resultVideoUrl)}&filename=zupericon-animation-${selectedVideo.jobId}.mp4`;
+                      link.download = `zupericon-animation-${selectedVideo.jobId}.mp4`;
                       document.body.appendChild(link);
                       link.click();
                       document.body.removeChild(link);

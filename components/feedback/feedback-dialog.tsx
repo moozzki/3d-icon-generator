@@ -53,7 +53,7 @@ export function FeedbackDialog({ children, open, onOpenChange, ...props }: Feedb
         content,
         suggestions: suggestions || undefined,
       });
-      toast.success("Thank you! Your feedback helps us build a better Audora.");
+      toast.success("Thank you! Your feedback helps us build a better Zupericon.");
       setIsOpen(false);
       // Reset form
       setRating(0);
@@ -80,7 +80,7 @@ export function FeedbackDialog({ children, open, onOpenChange, ...props }: Feedb
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-xl font-bold tracking-tight">Share Your Feedback</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground/80">
-              Your feedback directly shapes Audora&apos;s future.
+              Your feedback directly shapes Zupericon&apos;s future.
             </DialogDescription>
           </DialogHeader>
 
@@ -122,7 +122,7 @@ export function FeedbackDialog({ children, open, onOpenChange, ...props }: Feedb
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="content" className="text-xs font-semibold text-foreground/90">What do you think of Audora? <span className="text-destructive">*</span></Label>
+              <Label htmlFor="content" className="text-xs font-semibold text-foreground/90">What do you think of Zupericon? <span className="text-destructive">*</span></Label>
               <Textarea
                 id="content"
                 placeholder="Tell us what you like or could be better..."

@@ -18,7 +18,7 @@ const ALL_VALID_PACKAGES = new Set<string>([
   ...VALID_PACKAGES_USD,
 ]);
 
-const PRICING_PAGE = "https://useaudora.com/pricing";
+const PRICING_PAGE = "https://zupericon.com/pricing";
 
 function swapCurrency(packageId: ValidPackage): ValidPackage {
   if (packageId.endsWith("_idr")) {
@@ -34,8 +34,8 @@ interface CheckoutPageProps {
 }
 
 export const metadata = {
-  title: "Checkout — Audora",
-  description: "Complete your Audora credit purchase.",
+  title: "Checkout — Zupericon",
+  description: "Complete your Zupericon credit purchase.",
 };
 
 export default async function CheckoutPage({ searchParams }: CheckoutPageProps) {
@@ -146,12 +146,12 @@ export default async function CheckoutPage({ searchParams }: CheckoutPageProps) 
             <div className="flex items-center gap-2 mb-2">
               <Image
                 src="/assets/zupericon-logo-square-192.png"
-                alt="Audora"
+                alt="Zupericon"
                 width={20}
                 height={20}
                 className="w-5 h-5 object-contain opacity-70 filter grayscale"
               />
-              <span className="text-sm font-medium text-muted-foreground">Audora</span>
+              <span className="text-sm font-medium text-muted-foreground">Zupericon</span>
             </div>
             <p className="text-xs text-muted-foreground/60 max-w-[250px]">
               By proceeding, you agree to our Terms of Service and Privacy Policy. All transactions are securely processed.

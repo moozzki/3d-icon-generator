@@ -12,7 +12,7 @@ export async function sendEmail({
   html: string;
 }) {
   const { data, error } = await resend.emails.send({
-    from: "Audora <noreply@useaudora.com>",
+    from: "Zupericon <noreply@zupericon.com>",
     to: [to],
     subject,
     html,

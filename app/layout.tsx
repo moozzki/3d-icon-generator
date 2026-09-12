@@ -13,14 +13,14 @@ import { PostHogProvider } from "./providers/PostHogProvider";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | Audora",
-    default: "Audora - AI 3D Isometric Icon Generator | Dashboard",
+    template: "%s | Zupericon",
+    default: "Zupericon - AI 3D Isometric Icon Generator | Dashboard",
   },
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Audora",
+    title: "Zupericon",
   },
   icons: {
     icon: "/assets/zupericon-logo-square-192.png",

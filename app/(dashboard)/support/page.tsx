@@ -21,12 +21,12 @@ export default function SupportPage() {
           <div className="relative z-10 space-y-2">
             <h3 className="font-heading text-xl font-bold">Email Us</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Drop us a line anytime. We try our best to respond as quickly as possible. You can email directly at support@useaudora.com
+              Drop us a line anytime. We try our best to respond as quickly as possible. You can email directly at support@zupericon.com
             </p>
           </div>
 
           <a
-            href="mailto:support@useaudora.com"
+            href="mailto:support@zupericon.com"
             className="relative z-10 mt-auto inline-flex items-center justify-center rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors gap-2 w-full sm:w-auto shadow-sm hover:shadow-primary/25"
           >
             <Headset className="h-4 w-4" />

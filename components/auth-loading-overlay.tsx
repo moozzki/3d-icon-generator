@@ -13,7 +13,7 @@ export function AuthLoadingOverlay({ message = "Loading...", isVisible }: AuthLo
       <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-300">
         <Image
           src="/assets/zupericon-logo-square-192.png"
-          alt="Audora Logo"
+          alt="Zupericon Logo"
           width={80}
           height={80}
           className="w-20 h-20 object-contain animate-pulse"

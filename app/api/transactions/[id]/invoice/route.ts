@@ -10,7 +10,7 @@ import { IDR_PACKAGES, packageDisplayName, IdrPackageId } from "@/lib/pakasir/pa
 import { formatInvoiceId } from "@/lib/utils";
 
 // ── Package name resolver ──────────────────────────────────────────────────
-// Maps stored creditAmount + provider back to the human-readable Audora plan name.
+// Maps stored creditAmount + provider back to the human-readable Zupericon plan name.
 function resolvePackageName(creditAmount: number, paymentProvider: string): string {
   if (paymentProvider === "pakasir") {
     // Reverse-lookup the packageId whose credit count matches
@@ -115,14 +115,14 @@ export async function GET(
     const COL2 = PAGE_W - MARGIN;
 
     // ── Brand header bar ────────────────────────────────────────────────
-    doc.setFillColor(73, 73, 255); // Audora brand purple
+    doc.setFillColor(73, 73, 255); // Zupericon brand purple
     doc.rect(0, 0, PAGE_W, 72, "F");
 
     // Brand name
     doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
     doc.setTextColor(255, 255, 255);
-    doc.text("Audora", MARGIN, 44);
+    doc.text("Zupericon", MARGIN, 44);
 
     // Tagline
     doc.setFont("helvetica", "normal");
@@ -273,13 +273,13 @@ export async function GET(
     doc.setFontSize(8);
     doc.setTextColor(140, 140, 155);
     doc.text(
-      "Thank you for using Audora! Questions? Contact us at support@useaudora.com",
+      "Thank you for using Zupericon! Questions? Contact us at support@zupericon.com",
       PAGE_W / 2,
       PAGE_H - 30,
       { align: "center" }
     );
     doc.text(
-      "© Audora · useaudora.com",
+      "© Zupericon · zupericon.com",
       PAGE_W / 2,
       PAGE_H - 16,
       { align: "center" }

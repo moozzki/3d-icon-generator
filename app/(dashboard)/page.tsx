@@ -652,7 +652,7 @@ export default function StudioPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `audora-batch-icons-${Date.now()}.zip`;
+      link.download = `zupericon-batch-icons-${Date.now()}.zip`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -674,7 +674,7 @@ export default function StudioPage() {
     setIsBatchExportingPack(true);
     try {
       const safeFileName = selectedBatchItem.itemName.replace(/[^a-z0-9_\-]/gi, "_").toLowerCase();
-      const filename = `audora-icon-pack-${safeFileName}`;
+      const filename = `zupericon-icon-pack-${safeFileName}`;
       const exportUrl = `/api/export-pack?url=${encodeURIComponent(selectedBatchItem.imageUrl)}&filename=${encodeURIComponent(filename)}`;
       const res = await fetch(exportUrl);
       if (!res.ok) throw new Error("Failed to generate icon pack");
@@ -732,7 +732,7 @@ export default function StudioPage() {
     try {
       posthog.capture('asset_downloaded', { file_type: 'png' });
       const q = currentJobQuality || quality;
-      const filename = `audora-${q.toLowerCase()}-${currentJobId || "gen"}.png`;
+      const filename = `zupericon-${q.toLowerCase()}-${currentJobId || "gen"}.png`;
       const downloadUrl = `/api/download?url=${encodeURIComponent(resultImage)}&filename=${filename}`;
 
       const link = document.createElement("a");
@@ -754,7 +754,7 @@ export default function StudioPage() {
     if (!sourceUrl) return;
     setIsExportingPack(true);
     try {
-      const filename = `audora-icon-pack-${currentJobId || "gen"}`;
+      const filename = `zupericon-icon-pack-${currentJobId || "gen"}`;
       const exportUrl = `/api/export-pack?url=${encodeURIComponent(sourceUrl)}&filename=${encodeURIComponent(filename)}`;
       const res = await fetch(exportUrl);
       if (!res.ok) throw new Error("Failed to generate icon pack");
@@ -789,7 +789,7 @@ export default function StudioPage() {
       if (!res.ok) throw new Error(data.error || "Failed to remove background");
 
       const q = currentJobQuality || quality;
-      const filename = `audora-${q.toLowerCase()}-${currentJobId}-transparent.png`;
+      const filename = `zupericon-${q.toLowerCase()}-${currentJobId}-transparent.png`;
       const downloadUrl = `/api/download?url=${encodeURIComponent(data.url)}&filename=${filename}`;
 
       const link = document.createElement("a");
@@ -867,14 +867,14 @@ export default function StudioPage() {
           await new Promise(resolve => setTimeout(resolve, 150));
           shareDataUrl = await toJpeg(shareCardRef.current, { quality: 0.95 });
           const blob = await (await fetch(shareDataUrl)).blob();
-          shareFile = new File([blob], `audora-story-${currentJobId}.jpg`, { type: "image/jpeg" });
+          shareFile = new File([blob], `zupericon-story-${currentJobId}.jpg`, { type: "image/jpeg" });
           if (navigator.canShare && navigator.canShare({ files: [shareFile] })) {
-            await navigator.share({ files: [shareFile], title: "Crafted on Audora", text: "Check out this 3D icon I made on Audora!" });
+            await navigator.share({ files: [shareFile], title: "Crafted on Zupericon", text: "Check out this 3D icon I made on Zupericon!" });
             toast.success("Shared successfully!");
           } else {
             const link = document.createElement("a");
             link.href = shareDataUrl;
-            link.download = `audora-story-${currentJobId}.jpg`;
+            link.download = `zupericon-story-${currentJobId}.jpg`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -887,7 +887,7 @@ export default function StudioPage() {
             else if (shareDataUrl) {
               const link = document.createElement("a");
               link.href = shareDataUrl;
-              link.download = `audora-story-${currentJobId}.jpg`;
+              link.download = `zupericon-story-${currentJobId}.jpg`;
               link.click();
               toast.success("Story card downloaded!");
             }
@@ -1595,7 +1595,7 @@ export default function StudioPage() {
             </AnimatePresence>
           </motion.div>
           <p className="text-[10px] text-muted-foreground/40 text-center mt-3 select-none">
-            Audora is an AI. Generations can sometimes be unexpected.
+            Zupericon is an AI. Generations can sometimes be unexpected.
           </p>
         </div>
       </div>
@@ -1995,8 +1995,8 @@ export default function StudioPage() {
                 if (shareFallbackFile && navigator.canShare && navigator.canShare({ files: [shareFallbackFile] })) {
                   navigator.share({
                     files: [shareFallbackFile],
-                    title: "Crafted on Audora",
-                    text: "Check out this 3D icon I made on Audora!",
+                    title: "Crafted on Zupericon",
+                    text: "Check out this 3D icon I made on Zupericon!",
                   }).then(() => {
                     toast.success("Shared successfully!");
                     setShareFallbackFile(null);

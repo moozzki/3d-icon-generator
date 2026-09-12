@@ -117,7 +117,7 @@ export default function SpotlightPage() {
     if (!item.resultImageUrl) return;
     try {
       posthog.capture('asset_downloaded', { file_type: 'png' });
-      const filename = `audora-${item.quality.toLowerCase()}-${item.jobId}.png`;
+      const filename = `zupericon-${item.quality.toLowerCase()}-${item.jobId}.png`;
       const downloadUrl = `/api/download?url=${encodeURIComponent(item.resultImageUrl)}&filename=${filename}`;
 
       const link = document.createElement("a");

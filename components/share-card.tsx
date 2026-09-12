@@ -119,7 +119,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
                 backdropFilter: "blur(10px)",
               }}
             >
-               {userName || "Crafted on Audora"}
+               {userName || "Crafted on Zupericon"}
             </div>
 
             {/* Information List (Vertical & Separated) */}
@@ -182,7 +182,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
               }}
             >
               <span style={{ fontSize: "56px", fontWeight: 800, letterSpacing: "-1px" }}>
-                Made with Audora
+                Made with Zupericon
               </span>
             </div>
 
@@ -198,7 +198,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/assets/zupericon-logo-square-192.png"
-                alt="Audora"
+                alt="Zupericon"
                 style={{
                   width: "60px",
                   height: "60px",
@@ -214,7 +214,7 @@ export const ShareCard = forwardRef<HTMLDivElement, ShareCardProps>(
                   letterSpacing: "1px",
                 }}
               >
-                useaudora.com
+                zupericon.com
               </span>
             </div>
           </div>

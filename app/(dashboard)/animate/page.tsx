@@ -753,8 +753,8 @@ export default function AnimatePage() {
                 <Button className="flex-1 rounded-xl h-10 font-semibold gap-2"
                   onClick={() => {
                     const link = document.createElement("a");
-                    link.href = `/api/download?url=${encodeURIComponent(resultVideoUrl)}&filename=audora-animation-${currentJobId}.mp4`;
-                    link.download = `audora-animation-${currentJobId}.mp4`;
+                    link.href = `/api/download?url=${encodeURIComponent(resultVideoUrl)}&filename=zupericon-animation-${currentJobId}.mp4`;
+                    link.download = `zupericon-animation-${currentJobId}.mp4`;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);

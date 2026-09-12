@@ -217,7 +217,7 @@ export default function CollectionDetailPage({
   const handleDownload = async (item: Generation) => {
     if (!item.resultImageUrl) return;
     try {
-      const filename = `audora-${item.quality.toLowerCase()}-${item.jobId}.png`;
+      const filename = `zupericon-${item.quality.toLowerCase()}-${item.jobId}.png`;
       const downloadUrl = `/api/download?url=${encodeURIComponent(item.resultImageUrl)}&filename=${filename}`;
 
       const link = document.createElement("a");
@@ -246,7 +246,7 @@ export default function CollectionDetailPage({
       const resData = await res.json();
       if (!res.ok) throw new Error(resData.error || "Failed to remove background");
 
-      const filename = `audora-${item.quality.toLowerCase()}-${item.jobId}-transparent.png`;
+      const filename = `zupericon-${item.quality.toLowerCase()}-${item.jobId}-transparent.png`;
       const downloadUrl = `/api/download?url=${encodeURIComponent(resData.url)}&filename=${filename}`;
 
       const link = document.createElement("a");
@@ -269,7 +269,7 @@ export default function CollectionDetailPage({
     if (!sourceUrl || !item.jobId) return;
     setExportingPackJobId(item.jobId);
     try {
-      const filename = `audora-icon-pack-${item.jobId}`;
+      const filename = `zupericon-icon-pack-${item.jobId}`;
       const exportUrl = `/api/export-pack?url=${encodeURIComponent(sourceUrl)}&filename=${encodeURIComponent(filename)}`;
       const res = await fetch(exportUrl);
       if (!res.ok) throw new Error("Failed to generate icon pack");

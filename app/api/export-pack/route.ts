@@ -49,7 +49,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const imageUrl = searchParams.get("url");
-  const filenameParam = searchParams.get("filename") || "audora-icon-pack";
+  const filenameParam = searchParams.get("filename") || "zupericon-icon-pack";
 
   if (!imageUrl) {
     return NextResponse.json({ error: "Missing image URL" }, { status: 400 });

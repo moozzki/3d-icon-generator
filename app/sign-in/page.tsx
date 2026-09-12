@@ -87,12 +87,12 @@ function SignInForm() {
         <CardHeader className="space-y-3 text-center pb-2">
           {/* Logo */}
           <Link 
-            href={process.env.NODE_ENV === "development" ? "http://localhost:3001" : "https://useaudora.com"} 
+            href={process.env.NODE_ENV === "development" ? "http://localhost:3001" : "https://zupericon.com"} 
             className="flex justify-center mb-1 transition-opacity hover:opacity-80"
           >
             <Image
               src="/assets/zupericon-logo-square-192.png"
-              alt="Audora"
+              alt="Zupericon"
               width={44}
               height={44}
               className="w-11 h-11 object-contain"
@@ -102,7 +102,7 @@ function SignInForm() {
 
           <div>
             <CardTitle className="text-2xl font-bold font-heading">
-              Sign in to Audora
+              Sign in to Zupericon
             </CardTitle>
             <CardDescription className="mt-1.5 text-sm">
               Let&apos;s make some 3D magic.
@@ -223,7 +223,7 @@ function SignInForm() {
 
               {/* ── Footer note ──────────────────────────────────── */}
               <p className="text-center text-[11px] text-muted-foreground/50 pt-1">
-                By signing in, you agree to Audora&apos;s terms of service.
+                By signing in, you agree to Zupericon&apos;s terms of service.
               </p>
             </>
           ) : (

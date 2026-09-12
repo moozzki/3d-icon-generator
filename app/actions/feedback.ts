@@ -32,7 +32,7 @@ export async function submitFeedback(values: z.infer<typeof feedbackSchema>) {
   });
 
   // Send email notification to admin
-  const adminEmail = "rizky@useaudora.com";
+  const adminEmail = "support@zupericon.com";
   const { user } = session;
   const stars = "⭐".repeat(validated.rating);
 

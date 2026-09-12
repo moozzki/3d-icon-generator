@@ -447,7 +447,7 @@ export default function StudioDetailPage() {
       posthog.capture('asset_downloaded', { file_type: 'png' });
       const q = lastQuality || generation?.quality || quality;
       const id = lastJobId || jobId;
-      const filename = `audora-${q.toLowerCase()}-${id}.png`;
+      const filename = `zupericon-${q.toLowerCase()}-${id}.png`;
       const downloadUrl = `/api/download?url=${encodeURIComponent(resultImage)}&filename=${filename}`;
 
       const link = document.createElement("a");
@@ -469,7 +469,7 @@ export default function StudioDetailPage() {
     if (!sourceUrl) return;
     setIsExportingPack(true);
     try {
-      const filename = `audora-icon-pack-${lastJobId || jobId}`;
+      const filename = `zupericon-icon-pack-${lastJobId || jobId}`;
       const exportUrl = `/api/export-pack?url=${encodeURIComponent(sourceUrl)}&filename=${encodeURIComponent(filename)}`;
       const res = await fetch(exportUrl);
       if (!res.ok) throw new Error("Failed to generate icon pack");
@@ -505,7 +505,7 @@ export default function StudioDetailPage() {
       if (!res.ok) throw new Error(data.error || "Failed to remove background");
 
       const q = lastQuality || generation?.quality || quality;
-      const filename = `audora-${q.toLowerCase()}-${id}-transparent.png`;
+      const filename = `zupericon-${q.toLowerCase()}-${id}-transparent.png`;
       const downloadUrl = `/api/download?url=${encodeURIComponent(data.url)}&filename=${filename}`;
 
       const link = document.createElement("a");
@@ -587,19 +587,19 @@ export default function StudioDetailPage() {
           shareDataUrl = await toJpeg(shareCardRef.current, { quality: 0.95 });
 
           const blob = await (await fetch(shareDataUrl)).blob();
-          shareFile = new File([blob], `audora-story-${generation.jobId}.jpg`, { type: 'image/jpeg' });
+          shareFile = new File([blob], `zupericon-story-${generation.jobId}.jpg`, { type: 'image/jpeg' });
 
           if (navigator.canShare && navigator.canShare({ files: [shareFile] })) {
             await navigator.share({
               files: [shareFile],
-              title: 'Crafted on Audora',
-              text: 'Check out this 3D icon I made on Audora!',
+              title: 'Crafted on Zupericon',
+              text: 'Check out this 3D icon I made on Zupericon!',
             });
             toast.success("Shared successfully!");
           } else {
             const link = document.createElement("a");
             link.href = shareDataUrl;
-            link.download = `audora-story-${generation.jobId}.jpg`;
+            link.download = `zupericon-story-${generation.jobId}.jpg`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -614,7 +614,7 @@ export default function StudioDetailPage() {
             } else if (shareDataUrl) {
               const link = document.createElement("a");
               link.href = shareDataUrl;
-              link.download = `audora-story-${generation.jobId}.jpg`;
+              link.download = `zupericon-story-${generation.jobId}.jpg`;
               link.click();
               toast.success("Story card downloaded!");
             }
@@ -1076,7 +1076,7 @@ export default function StudioDetailPage() {
             </AnimatePresence>
           </motion.div>
           <p className="text-[10px] text-muted-foreground/40 text-center mt-3 select-none">
-            Audora is an AI. Generations can sometimes be unexpected.
+            Zupericon is an AI. Generations can sometimes be unexpected.
           </p>
         </div>
       </div>
@@ -1311,8 +1311,8 @@ export default function StudioDetailPage() {
                 if (shareFallbackFile && navigator.canShare && navigator.canShare({ files: [shareFallbackFile] })) {
                   navigator.share({
                     files: [shareFallbackFile],
-                    title: "Crafted on Audora",
-                    text: "Check out this 3D icon I made on Audora!",
+                    title: "Crafted on Zupericon",
+                    text: "Check out this 3D icon I made on Zupericon!",
                   }).then(() => {
                     toast.success("Shared successfully!");
                     setShareFallbackFile(null);
