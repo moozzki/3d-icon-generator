@@ -9,6 +9,7 @@ import sharp from "sharp";
 // Trusted origins — same list as /api/download
 // ---------------------------------------------------------------------------
 const ALLOWED_ORIGINS = new Set([
+  "cdn.zupericon.com",
   "cdn.useaudora.com",
   "fal.media",
   "v3.fal.media",

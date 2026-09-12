@@ -26,6 +26,12 @@ export async function getDownloadPresignedUrl(key: string) {
   return getSignedUrl(r2Client, command, { expiresIn: 3600 });
 }
 
+export const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || "https://cdn.zupericon.com";
+
+export function getPublicUrl(key: string) {
+  return `${R2_PUBLIC_URL}/${key}`;
+}
+
 export async function uploadToR2(key: string, body: Buffer | Uint8Array | Blob | string, contentType: string) {
   const command = new PutObjectCommand({
     Bucket: process.env.R2_BUCKET_NAME || "dummy_bucket",
@@ -36,9 +42,8 @@ export async function uploadToR2(key: string, body: Buffer | Uint8Array | Blob |
   
   await r2Client.send(command);
   
-  // Return the public URL or presigned URL. 
-  // Assuming public URL structure based on a custom domain, or fallback to presigned download URL.
-  return `https://cdn.useaudora.com/${key}`;
+  // Public URL is served through the CDN custom domain (configurable via R2_PUBLIC_URL).
+  return getPublicUrl(key);
 }
 
 export async function deleteFromR2(key: string) {

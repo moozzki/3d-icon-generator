@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { generations } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
-import { uploadToR2 } from "@/lib/r2";
+import { uploadToR2, getPublicUrl } from "@/lib/r2";
 import { fal } from "@fal-ai/client";
 
 // Configure fal client with server-side credentials
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
 
     const objectKey = `generations/${userId}/transparent-${jobId}.png`;
     await uploadToR2(objectKey, buffer, "image/png");
-    const permanentUrl = `https://cdn.useaudora.com/${objectKey}`;
+    const permanentUrl = getPublicUrl(objectKey);
 
     // 6. Update DB with the cached transparent URL
     await db

@@ -4,6 +4,7 @@ import { transactions, userCredits } from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
 
 const PAKASIR_WEBHOOK_SECRET = process.env.PAKASIR_WEBHOOK_SECRET;
+const PAKASIR_WEBHOOK_SECRET_OLD = process.env.PAKASIR_WEBHOOK_SECRET_OLD;
 
 // Pakasir webhook body shape
 interface PakasirWebhookBody {
@@ -19,9 +20,14 @@ export async function POST(req: NextRequest) {
   try {
     // ── 1. Secret token validation ─────────────────────────────────────────
     // The webhook URL registered in Pakasir dashboard must include ?secret=xxx
-    // e.g. https://app.useaudora.com/api/webhooks/pakasir?secret=audora_sec_9f8e7d6c5b
+    // e.g. https://app.zupericon.com/api/webhooks/pakasir?secret=zupericon_sec_xxx
+    // During the domain migration, the previous project's secret
+    // (PAKASIR_WEBHOOK_SECRET_OLD) is also accepted for pending transactions.
     const incomingSecret = req.nextUrl.searchParams.get("secret");
-    if (!PAKASIR_WEBHOOK_SECRET || incomingSecret !== PAKASIR_WEBHOOK_SECRET) {
+    const isValidSecret =
+      (!!PAKASIR_WEBHOOK_SECRET && incomingSecret === PAKASIR_WEBHOOK_SECRET) ||
+      (!!PAKASIR_WEBHOOK_SECRET_OLD && incomingSecret === PAKASIR_WEBHOOK_SECRET_OLD);
+    if (!incomingSecret || !isValidSecret) {
       console.warn("[webhook/pakasir] Invalid or missing secret token.");
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

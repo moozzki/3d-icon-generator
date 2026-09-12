@@ -108,22 +108,12 @@ export const auth = betterAuth({
   basePath: "/api/auth",
   secret: process.env.BETTER_AUTH_SECRET,
 
+  // Host-only cookies per domain — no cross-subdomain auth.
   trustedOrigins: [
     ...(process.env.BETTER_AUTH_URL ? [process.env.BETTER_AUTH_URL] : []),
     "https://*.vercel.app",
     "http://localhost:3000",
     "http://localhost:3001",
-    "https://useaudora.com",
-    "https://app.useaudora.com",
-    "https://www.useaudora.com"
+    "https://app.useaudora.com"
   ],
-
-  // Advanced settings for Cross-Subdomain authentication in Production
-  advanced: {
-    crossSubDomainCookies: {
-      enabled: true,
-      // Only enforce the custom domain in production so localhost doesn't break
-      domain: process.env.NODE_ENV === "production" ? ".useaudora.com" : undefined,
-    }
-  }
 });

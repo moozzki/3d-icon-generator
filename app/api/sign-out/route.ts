@@ -3,11 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 
 export async function GET(req: NextRequest) {
-  const callbackUrl = req.nextUrl.searchParams.get("callbackUrl") ?? "https://useaudora.com";
+  const callbackUrl =
+    req.nextUrl.searchParams.get("callbackUrl") ?? "https://app.zupericon.com/sign-in";
 
-  // Validate callbackUrl — only allow useaudora.com domains or localhost (for development)
-  const isAllowed = /^https?:\/\/([\w-]+\.)?useaudora\.com(\/.*)?$/.test(callbackUrl) || callbackUrl.startsWith("http://localhost:");
-  const safeUrl = isAllowed ? callbackUrl : "https://useaudora.com";
+  // Validate callbackUrl — only allow app.zupericon.com, app.useaudora.com, or localhost (for development)
+  const isAllowed =
+    /^https?:\/\/app\.zupericon\.com(\/.*)?$/.test(callbackUrl) ||
+    /^https?:\/\/app\.useaudora\.com(\/.*)?$/.test(callbackUrl) ||
+    callbackUrl.startsWith("http://localhost:");
+  const safeUrl = isAllowed ? callbackUrl : "https://app.zupericon.com/sign-in";
 
   // Sign out server-side — this deletes the session from DB and returns response headers
   const signOutRes = await auth.api.signOut({
@@ -19,7 +23,7 @@ export async function GET(req: NextRequest) {
   const redirectRes = NextResponse.redirect(safeUrl, { status: 302 });
 
   // Forward the Set-Cookie headers from better-auth so the
-  // session cookie is cleared in the browser on the .useaudora.com domain
+  // session cookie is cleared in the browser (host-only per domain)
   if (signOutRes.headers) {
     const cookies = signOutRes.headers.getSetCookie();
     for (const cookie of cookies) {
@@ -27,20 +31,18 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Also append explicit deletion cookies for .useaudora.com just in case.
+  // Also append explicit deletion cookies just in case.
+  // Cookies are host-only (no `domain` attribute) — auth no longer uses cross-subdomain cookies.
   // We clear both secure and non-secure, with/without prefixes, and both token/cache cookies.
   const isProd = process.env.NODE_ENV === "production";
-  const domain = isProd ? ".useaudora.com" : undefined;
 
   // 1. Non-secure cookies (dev)
   redirectRes.cookies.set("better-auth.session_token", "", {
     maxAge: 0,
-    domain,
     path: "/",
   });
   redirectRes.cookies.set("better-auth.session_data", "", {
     maxAge: 0,
-    domain,
     path: "/",
   });
 
@@ -48,14 +50,12 @@ export async function GET(req: NextRequest) {
   if (isProd) {
     redirectRes.cookies.set("__Secure-better-auth.session_token", "", {
       maxAge: 0,
-      domain,
       path: "/",
       secure: true,
       sameSite: "lax",
     });
     redirectRes.cookies.set("__Secure-better-auth.session_data", "", {
       maxAge: 0,
-      domain,
       path: "/",
       secure: true,
       sameSite: "lax",

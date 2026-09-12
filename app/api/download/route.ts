@@ -7,6 +7,7 @@ import { headers } from "next/headers";
 // Add new CDN hosts here as needed — never allow arbitrary URLs.
 // ---------------------------------------------------------------------------
 const ALLOWED_ORIGINS = new Set([
+  "cdn.zupericon.com",
   "cdn.useaudora.com",
   "fal.media",
   "v3.fal.media",

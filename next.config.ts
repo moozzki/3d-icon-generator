@@ -19,6 +19,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "cdn.zupericon.com",
+      },
+      {
+        protocol: "https",
         hostname: "fal.run",
       },
       {
@@ -34,21 +38,6 @@ const nextConfig: NextConfig = {
         hostname: "avatars.githubusercontent.com",
       },
     ],
-  },
-  // 👇 TAMBAHIN FUNGSI HEADERS INI 👇
-  async headers() {
-    return [
-      {
-        // Terapin izin ini khusus buat jalur API Auth
-        source: "/api/auth/:path*",
-        headers: [
-          { key: "Access-Control-Allow-Credentials", value: "true" }, // Wajib true biar cookie bisa nyeberang
-          { key: "Access-Control-Allow-Origin", value: "https://useaudora.com" }, // Ngasih izin cuma buat Landing Page lu
-          { key: "Access-Control-Allow-Methods", value: "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
-          { key: "Access-Control-Allow-Headers", value: "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" },
-        ],
-      },
-    ];
   },
   async rewrites() {
     return [

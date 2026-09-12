@@ -3,7 +3,7 @@ import { NonRetriableError } from "inngest";
 import { db } from "../db";
 import { generations, userCredits, animations } from "../db/schema";
 import { eq, sql } from "drizzle-orm";
-import { uploadToR2 } from "../r2";
+import { uploadToR2, getPublicUrl } from "../r2";
 import sharp from "sharp";
 
 // ---------------------------------------------------------------------------
@@ -371,7 +371,7 @@ export const iconGenerate = inngest.createFunction(
 
         const objectKey = `generations/${userId}/base-${jobId}.png`;
         await uploadToR2(objectKey, buffer, "image/png");
-        return `https://cdn.useaudora.com/${objectKey}`;
+        return getPublicUrl(objectKey);
       });
 
       // Step 3: SeedVR Upscale
@@ -444,7 +444,7 @@ async function finalizeJob({
 
   // 3. Upload to Cloudflare R2
   await uploadToR2(objectKey, buffer, contentType);
-  const cdnUrl = `https://cdn.useaudora.com/${objectKey}`;
+  const cdnUrl = getPublicUrl(objectKey);
 
   // 3. Finalize DB — mark completed + set permanent URL
   //    Note: credits were already deducted upfront at the API layer
@@ -743,7 +743,7 @@ export const animationGenerate = inngest.createFunction(
       // Upload to R2 in temp-uploads/ path
       const objectKey = `temp-uploads/${userId}/anim-canvas-${jobId}.png`;
       await uploadToR2(objectKey, canvas, "image/png");
-      return `https://cdn.useaudora.com/${objectKey}`;
+      return getPublicUrl(objectKey);
     });
 
     // Step 3: Generate video using Veo 3.1 Lite (durable polling)
@@ -779,7 +779,7 @@ export const animationGenerate = inngest.createFunction(
       // Upload to R2
       const objectKey = `animations/${userId}/${jobId}.mp4`;
       await uploadToR2(objectKey, videoBuffer, "video/mp4");
-      const finalUrl = `https://cdn.useaudora.com/${objectKey}`;
+      const finalUrl = getPublicUrl(objectKey);
 
       // Update DB — mark as completed
       await db

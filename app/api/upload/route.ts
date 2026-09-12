@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { getUploadPresignedUrl } from "@/lib/r2";
+import { getUploadPresignedUrl, getPublicUrl } from "@/lib/r2";
 
 // Only allow image uploads — no executables, HTML, SVG, etc.
 const ALLOWED_CONTENT_TYPES = new Set([
@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       uploadUrl,
       objectKey,
-      fileUrl: `https://cdn.useaudora.com/${objectKey}`
+      fileUrl: getPublicUrl(objectKey)
     });
   } catch (err) {
     console.error("Upload error:", err);
