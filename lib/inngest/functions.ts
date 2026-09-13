@@ -15,7 +15,7 @@ type IconGenerateEvent = {
     jobId: string;
     userId: string;
     prompt: string;
-    aiModel: "flux-2-pro";
+    aiModel: "flux-2-pro" | "nano-banana-2";
     resolution: "2K" | "4K";
     referenceImage?: string | null;
     creditCost: number;
@@ -219,19 +219,109 @@ async function falPostQueueInngest(
   });
 }
 
+// ---------------------------------------------------------------------------
+// Shared pipeline helpers — used by both flux-2-pro & nano-banana-2 branches
+// ---------------------------------------------------------------------------
+
+/**
+ * Downloads a reference image from R2 and encodes it as a base64 data URI.
+ * Fal.ai explicitly supports data URI file inputs, which avoids any CDN
+ * accessibility issues that arise when Fal.ai tries to fetch from our CDN.
+ */
+async function prepareReferenceDataUri(referenceImage: string): Promise<string> {
+  const refRes = await fetch(referenceImage);
+  if (!refRes.ok) throw new Error(`Failed to download reference image from CDN: ${refRes.status}`);
+  const refBuffer = await refRes.arrayBuffer();
+  const contentType = refRes.headers.get("content-type") || "image/png";
+  const base64 = Buffer.from(refBuffer).toString("base64");
+  return `data:${contentType};base64,${base64}`;
+}
+
+/**
+ * Upscales a 1K base image with SeedVR2.
+ * Factor 2 → 2K (2048²), factor 4 → 4K (4096²).
+ */
+async function upscaleWithSeedVR(
+  baseImageUrl: string,
+  resolution: "2K" | "4K"
+): Promise<string> {
+  const upscaleFactor = resolution === "4K" ? 4 : 2;
+  const json = await falPost("fal-ai/seedvr/upscale/image", {
+    image_url: baseImageUrl,
+    upscale_mode: "factor",
+    upscale_factor: upscaleFactor,
+    output_format: "png",
+    safety_tolerance: "5",
+    enable_safety_checker: false,
+  });
+  const url = json.image?.url ?? json.images?.[0]?.url ?? json.url;
+  if (!url) throw new Error("SeedVR returned no image URL");
+  return url as string;
+}
+
+/**
+ * Shared tail of every generation pipeline:
+ *   1. Persist the 1K base image to R2 (required for Refine + icon packs).
+ *   2. SeedVR2 upscale to the requested resolution.
+ *   3. Persist the final image to R2 and finalize the DB row.
+ */
+async function runUpscaleAndFinalize({
+  step,
+  jobId,
+  userId,
+  baseUrl,
+  resolution,
+  pipeline,
+}: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  step: any;
+  jobId: string;
+  userId: string;
+  baseUrl: string;
+  resolution: "2K" | "4K";
+  pipeline: "flux-2-pro" | "nano-banana-2";
+}): Promise<{
+  jobId: string;
+  url: string;
+  pipeline: "flux-2-pro" | "nano-banana-2";
+  resolution: "2K" | "4K";
+}> {
+  // Step 2: Upload Base 1K to R2
+  const baseR2Url = await step.run("upload-base-r2", async () => {
+    const res = await fetch(baseUrl);
+    if (!res.ok) throw new Error("Failed to download base image from Fal.ai");
+    const inputBuffer = Buffer.from(await res.arrayBuffer());
+
+    const sharpInstance = sharp(inputBuffer).png({ compressionLevel: 9, quality: 100 });
+    const buffer = await sharpInstance.toBuffer();
+
+    const objectKey = `generations/${userId}/base-${jobId}.png`;
+    await uploadToR2(objectKey, buffer, "image/png");
+    return getPublicUrl(objectKey);
+  });
+
+  // Step 3: SeedVR Upscale
+  const upscaledUrl = await step.run("upscale-seedvr", async () =>
+    upscaleWithSeedVR(baseR2Url, resolution)
+  );
+
+  // Step 4: Upload final to R2 & Finalize DB
+  const r2Url = await step.run("upload-to-r2-and-finalize", async () =>
+    finalizeJob({ jobId, userId, imageUrl: upscaledUrl, baseImageUrl: baseR2Url, resolution })
+  );
+
+  return { jobId, url: r2Url, pipeline, resolution };
+}
 
 // ---------------------------------------------------------------------------
 // Inngest Function
 // ---------------------------------------------------------------------------
 
 // ============================================================================
-// NOTE on Fal.ai Recraft Crisp Upscaler:
-//   - API only accepts `image_url` — there is NO configurable `scale` param.
-//   - Crisp is a confirmed 2x multiplier: 1024×1024 input → 2048×2048 output.
-//   - Strategy for flux-2-pro:
-//       • Base generation: always at 1024×1024 (cheapest Flux cost ~$0.040)
-//       • To get 2K output: 1x SeedVR call (1K→2K), total ~$0.044
-//       • To get 4K output: 1x SeedVR call (1K→4K),              ~$0.048
+// NOTE on the shared SeedVR2 upscaler (fal-ai/seedvr/upscale/image):
+//   - Every pipeline generates a 1K base (the cheapest tier per model) and
+//     lets SeedVR2 do a single factor-2 (2K) or factor-4 (4K) upscale.
+//   - SeedVR2 costs ~$0.001 per megapixel: 2K ≈ 4.19MP, 4K ≈ 16.78MP.
 // ============================================================================
 
 export const iconGenerate = inngest.createFunction(
@@ -307,24 +397,15 @@ export const iconGenerate = inngest.createFunction(
     // Branch A: flux-2-pro
     //
     //   Cost-optimized pipeline — always generate at 1K base, then upscale.
-    //   Because Crisp inherently outputs 4096px (4K) from a 1024px input, we:
-    //   - 4K path: Return the 4096px Crisp output as-is
-    //   - 2K path: Downscale the 4096px Crisp output to exactly 2048px (Sharp)
+    //   - T2I: fal-ai/flux-2-pro @ 1024×1024
+    //   - Reference/refine: fal-ai/flux-2-pro/edit @ square_hd (1024×1024)
     // -------------------------------------------------------------------------
     if (aiModel === "flux-2-pro") {
       // Step 1: Generate base image at 1K
       let baseUrl: string;
       if (referenceImage) {
         const body = await step.run("prepare-ref-image", async () => {
-          // Download the reference image from R2 and encode it as a base64 data URI.
-          // Fal.ai explicitly supports data URI file inputs, which avoids any CDN
-          // accessibility issues that arise when Fal.ai tries to fetch from our CDN.
-          const refRes = await fetch(referenceImage);
-          if (!refRes.ok) throw new Error(`Failed to download reference image from CDN: ${refRes.status}`);
-          const refBuffer = await refRes.arrayBuffer();
-          const contentType = refRes.headers.get("content-type") || "image/png";
-          const base64 = Buffer.from(refBuffer).toString("base64");
-          const dataUri = `data:${contentType};base64,${base64}`;
+          const dataUri = await prepareReferenceDataUri(referenceImage);
 
           return {
             prompt,
@@ -360,45 +441,74 @@ export const iconGenerate = inngest.createFunction(
         });
       }
 
-      // Step 2: Upload Base 1K to R2
-      const baseR2Url = await step.run("upload-base-r2", async () => {
-        const res = await fetch(baseUrl);
-        if (!res.ok) throw new Error("Failed to download base image from Fal.ai");
-        const inputBuffer = Buffer.from(await res.arrayBuffer());
-
-        const sharpInstance = sharp(inputBuffer).png({ compressionLevel: 9, quality: 100 });
-        const buffer = await sharpInstance.toBuffer();
-
-        const objectKey = `generations/${userId}/base-${jobId}.png`;
-        await uploadToR2(objectKey, buffer, "image/png");
-        return getPublicUrl(objectKey);
+      return runUpscaleAndFinalize({
+        step,
+        jobId,
+        userId,
+        baseUrl,
+        resolution,
+        pipeline: "flux-2-pro",
       });
-
-      // Step 3: SeedVR Upscale
-      const upscaledUrl = await step.run("upscale-seedvr", async () => {
-        const upscaleFactor = resolution === "4K" ? 4 : 2;
-        const json = await falPost("fal-ai/seedvr/upscale/image", {
-          image_url: baseR2Url,
-          upscale_mode: "factor",
-          upscale_factor: upscaleFactor,
-          output_format: "png",
-          safety_tolerance: "5",
-          enable_safety_checker: false,
-        });
-        const url = json.image?.url ?? json.images?.[0]?.url ?? json.url;
-        if (!url) throw new Error("SeedVR returned no image URL");
-        return url as string;
-      });
-
-      // Step 4: Upload final to R2 & Finalize DB
-      const r2Url = await step.run("upload-to-r2-and-finalize", async () =>
-        finalizeJob({ jobId, userId, imageUrl: upscaledUrl, baseImageUrl: baseR2Url, resolution })
-      );
-
-      return { jobId, url: r2Url, pipeline: "flux-2-pro", resolution };
     }
 
-    throw new Error(`Unknown aiModel: ${aiModel}`);
+    // -------------------------------------------------------------------------
+    // Branch B: nano-banana-2
+    //
+    //   Mirrors Branch A — generate a cheap 1K base, then SeedVR upscale.
+    //   - T2I: fal-ai/nano-banana-2 (resolution "1K")
+    //   - Reference/refine: fal-ai/nano-banana-2/edit (image_urls data URI)
+    // -------------------------------------------------------------------------
+    if (aiModel === "nano-banana-2") {
+      // Step 1: Generate base image at 1K
+      let baseUrl: string;
+      if (referenceImage) {
+        const body = await step.run("prepare-ref-image", async () => {
+          const dataUri = await prepareReferenceDataUri(referenceImage);
+
+          return {
+            prompt,
+            image_urls: [dataUri],
+            resolution: "1K",
+            aspect_ratio: "1:1",
+            output_format: "png",
+            safety_tolerance: "5",
+            ...(seed != null ? { seed } : {}),
+          };
+        });
+
+        // Use standard durable execution to poll the Fal queue, avoiding Vercel timeouts.
+        const json = await falPostQueueInngest(step, "nano-edit", "fal-ai/nano-banana-2/edit", body);
+        baseUrl = (json.images?.[0]?.url ?? json.image?.url ?? json.url) as string;
+        if (!baseUrl) throw new NonRetriableError("nano-banana-2/edit returned no image URL");
+      } else {
+        baseUrl = await step.run("generate-base-nano-1k", async () => {
+          const payload: Record<string, unknown> = {
+            prompt,
+            resolution: "1K",
+            aspect_ratio: "1:1",
+            output_format: "png",
+            safety_tolerance: "5",
+            // Same seed strategy as flux — keeps a batch visually consistent.
+            ...(seed != null ? { seed } : {}),
+          };
+          const json = await falPost("fal-ai/nano-banana-2", payload);
+          const url = json.images?.[0]?.url ?? json.image?.url ?? json.url;
+          if (!url) throw new Error("nano-banana-2 returned no image URL");
+          return url as string;
+        });
+      }
+
+      return runUpscaleAndFinalize({
+        step,
+        jobId,
+        userId,
+        baseUrl,
+        resolution,
+        pipeline: "nano-banana-2",
+      });
+    }
+
+    throw new NonRetriableError(`Unknown aiModel: ${aiModel}`);
   }
 );
 

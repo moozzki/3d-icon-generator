@@ -9,6 +9,7 @@ import { usePostHog } from 'posthog-js/react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { UploadReferenceTrigger, UploadReferencePreview } from "@/components/Studio/UploadReference";
+import { AiModelDropdown } from "@/components/Studio/AiModelDropdown";
 import { StyleGridPopover } from "@/components/Studio/StyleGridPopover";
 import {
   Popover,
@@ -86,6 +87,7 @@ import {
   ColorPickerFormat,
 } from "@/components/kibo-ui/color-picker";
 import { useSession } from "@/lib/auth-client";
+import { getCreditCost, type AiModelId } from "@/lib/ai-models";
 
 const POSITIONS = [
   { id: "Isometric", label: "Isometric", icon: "📦", previewUrl: "https://cdn.zupericon.com/assets/audora-isometric-position.png" },
@@ -107,33 +109,6 @@ const STYLES = [
 ];
 
 const QUALITIES = ["2K", "4K"];
-
-const AI_MODELS = [
-  {
-    id: "flux-2-pro",
-    label: "Flux 2 Pro",
-    badge: "Fast",
-    description: "Sharp details, fast generation. Best for most icons.",
-    costs: { "2K": 1, "4K": 2 },
-  },
-  {
-    id: "nano-banana-2",
-    label: "Nano Banana 2",
-    badge: "Hi-Res",
-    description: "Native 2K output, premium quality. Slower.",
-    costs: { "2K": 2, "4K": 3 },
-  },
-] as const;
-
-type AiModelId = (typeof AI_MODELS)[number]["id"];
-
-
-
-function getCreditCost(aiModel: AiModelId, quality: string): number {
-  const model = AI_MODELS.find((m) => m.id === aiModel);
-  if (!model) return 1;
-  return model.costs[quality as "2K" | "4K"] ?? 1;
-}
 
 export default function StudioDetailPage() {
   const posthog = usePostHog();
@@ -185,7 +160,7 @@ export default function StudioDetailPage() {
     setColor(null);
     setColorPickerKey((k) => k + 1);
   };
-  const [aiModel] = useState<AiModelId>("flux-2-pro");
+  const [aiModel, setAiModel] = useState<AiModelId>("flux-2-pro");
   const [copied, setCopied] = useState(false);
   const [isRemovingBg, setIsRemovingBg] = useState(false);
   const [isExportingPack, setIsExportingPack] = useState(false);
@@ -912,6 +887,13 @@ export default function StudioDetailPage() {
                     {/* Controls row */}
                     <div className="flex items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 pb-3 pt-1">
                       <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 flex-1 pr-2">
+
+                        {/* AI model picker */}
+                        <AiModelDropdown
+                          value={aiModel}
+                          onChange={setAiModel}
+                          disabled={isGenerating}
+                        />
 
                         {/* Style popover */}
                         <StyleGridPopover

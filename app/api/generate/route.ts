@@ -19,18 +19,19 @@ import {
 
 // ---------------------------------------------------------------------------
 // Credit cost matrix
-//   flux-2-pro  + 2K = 1 Credit
-//   flux-2-pro  + 4K = 2 Credits
+//   flux-2-pro    + 2K = 1 Credit  | 4K = 2 Credits
+//   nano-banana-2 + 2K = 3 Credits | 4K = 4 Credits
 // ---------------------------------------------------------------------------
 
-type AiModel = "flux-2-pro";
+type AiModel = "flux-2-pro" | "nano-banana-2";
 type Quality = "2K" | "4K";
 
 const CREDIT_COST_MATRIX: Record<AiModel, Record<Quality, number>> = {
   "flux-2-pro": { "2K": 1, "4K": 2 },
+  "nano-banana-2": { "2K": 3, "4K": 4 },
 };
 
-const VALID_AI_MODELS: AiModel[] = ["flux-2-pro"];
+const VALID_AI_MODELS: AiModel[] = ["flux-2-pro", "nano-banana-2"];
 const VALID_QUALITIES: Quality[] = ["2K", "4K"];
 
 // ---------------------------------------------------------------------------

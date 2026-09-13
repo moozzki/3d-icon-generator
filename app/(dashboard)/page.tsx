@@ -8,6 +8,7 @@ import { usePostHog } from 'posthog-js/react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { UploadReferenceTrigger, UploadReferencePreview } from "@/components/Studio/UploadReference";
+import { AiModelDropdown } from "@/components/Studio/AiModelDropdown";
 import { StyleGridPopover } from "@/components/Studio/StyleGridPopover";
 import { PromptTips } from "@/components/Studio/PromptTips";
 import { Switch } from "@/components/ui/switch";
@@ -90,6 +91,7 @@ import {
 } from "@/components/kibo-ui/color-picker";
 import { ShareCard } from "@/components/share-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getCreditCost, type AiModelId } from "@/lib/ai-models";
 
 const POSITIONS = [
   { id: "Isometric", label: "Isometric", icon: "📦", previewUrl: "https://cdn.zupericon.com/assets/audora-isometric-position.png" },
@@ -112,25 +114,6 @@ const STYLES = [
 
 const QUALITIES = ["2K", "4K"];
 
-const AI_MODELS = [
-  {
-    id: "flux-2-pro",
-    label: "Flux 2 Pro",
-    badge: "Fast",
-    description: "Sharp details, fast generation. Best for most icons.",
-    costs: { "2K": 1, "4K": 2 },
-  },
-  {
-    id: "nano-banana-2",
-    label: "Nano Banana 2",
-    badge: "Hi-Res",
-    description: "Native 2K output, premium quality. Slower.",
-    costs: { "2K": 2, "4K": 3 },
-  },
-] as const;
-
-type AiModelId = (typeof AI_MODELS)[number]["id"];
-
 // ---------------------------------------------------------------------------
 // Batch generation constants & types
 // ---------------------------------------------------------------------------
@@ -148,13 +131,6 @@ type BatchItem = {
   baseImageUrl: string | null;
   failReason: string | null;
 };
-
-function getCreditCost(aiModel: AiModelId, quality: string): number {
-  const model = AI_MODELS.find((m) => m.id === aiModel);
-  if (!model) return 1;
-  return model.costs[quality as "2K" | "4K"] ?? 1;
-}
-
 
 export default function StudioPage() {
   const router = useRouter();
@@ -181,7 +157,7 @@ export default function StudioPage() {
   };
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [currentJobQuality, setCurrentJobQuality] = useState<string | null>(null);
-  const [aiModel] = useState<AiModelId>("flux-2-pro");
+  const [aiModel, setAiModel] = useState<AiModelId>("flux-2-pro");
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [isRefineMode, setIsRefineMode] = useState(false);
   const [keepMultiplePeople, setKeepMultiplePeople] = useState(false);
@@ -1421,6 +1397,13 @@ export default function StudioPage() {
                             }}
                           />
                         )}
+
+                        {/* AI model picker */}
+                        <AiModelDropdown
+                          value={aiModel}
+                          onChange={setAiModel}
+                          disabled={isGenerating || isBatchGenerating}
+                        />
 
                         {/* Style popover */}
                         <StyleGridPopover

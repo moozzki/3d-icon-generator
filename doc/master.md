@@ -13,8 +13,8 @@ Audora is a premium SaaS platform designed for developers, designers, and market
 - **Authentication**: [Better Auth](https://better-auth.com/) (Password-less: Magic Link & Social)
 - **Background Jobs**: [Inngest](https://www.inngest.com/)
 - **AI Provider**: [Fal.ai](https://fal.ai/)
-  - **Image Models**: Flux 2 Pro (High Fidelity), Nano Banana 2 (Hi-Res native 2K/4K output)
-  - **Editing**: Flux 2 Pro Edit (Refinement & iterative edits)
+  - **Image Models**: Flux 2 Pro (Fast & Sharp), Nano Banana 2 (premium quality via SeedVR2 1K→2K/4K upscale)
+  - **Editing**: Flux 2 Pro Edit & Nano Banana 2 Edit (Refinement & iterative edits)
   - **Upscaler**: SeedVR2
   - **Background Removal**: Background Isolation (BiRefNet v2)
   - **Video Models**: Veo 3.1 Lite (Image-to-Video looping animation)
@@ -33,7 +33,7 @@ Audora is a premium SaaS platform designed for developers, designers, and market
 ### 1. Canvas Workspace & Advanced Studio UX
 - **Dynamic Helper Console**: Prompt input field containing a built-in Pro Tips / Prompt Helper helper (accessible via a `Lightbulb` icon) to suggest stylized modifiers.
 - **Unconstrained Canvas**: Responsive work area featuring viewport panning (Spacebar + mouse click/drag) and smooth zooming (Ctrl + mouse scroll or standard hotkeys: `Ctrl +/-` and `Shift + 1` to fit).
-- **Flexible Parameters**: Left sidebar panel allowing selection of Camera Position (Isometric, Front Facing, Side, Top Down), Style Presets (Plastic, Clay, Glass, Plushy, Toy Block, Metallic), Resolution (2K, 4K), and custom HEX background colors.
+- **Flexible Parameters**: Toolbar controls allowing selection of AI Model (Flux 2 Pro, Nano Banana 2), Camera Position (Isometric, Front Facing, Side, Top Down), Style Presets (Plastic, Clay, Glass, Plushy, Toy Block, Metallic), Resolution (2K, 4K), and custom HEX background colors.
 - **Reference Image Upload**: Supports drag-and-drop reference files. Automatically resizes client-side to 1024x1024 before uploading to Cloudflare R2 storage to minimize ingestion lag.
 - **Refine Mode**: Allows selective modification on top of previous generation outputs using a layered base canvas structure.
 
@@ -85,8 +85,8 @@ Audora operates on an exact credit-deduction schema supporting multi-currency pa
   - **2K Resolution**: 1 Credit
   - **4K Resolution**: 2 Credits
 - **Nano Banana 2**:
-  - **2K Resolution**: 2 Credits
-  - **4K Resolution**: 3 Credits
+  - **2K Resolution**: 3 Credits
+  - **4K Resolution**: 4 Credits
 - **Animation (Veo 3.1 Lite)**:
   - **720p Output**: 2 Credits
   - **1080p Output**: 3 Credits
