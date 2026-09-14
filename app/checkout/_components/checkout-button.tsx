@@ -458,7 +458,10 @@ export function InHouseCheckout({ packageId, userEmail }: InHouseCheckoutProps) 
   if (step.kind === "success") {
     // Auto-redirect to main route
     if (typeof window !== "undefined") {
-      setTimeout(() => router.push("/"), 2000);
+      setTimeout(
+        () => router.push(`/?payment=success&credits=${pkg.credits}`),
+        2000
+      );
     }
     return (
       <div className="flex flex-col items-center gap-5 w-full text-center py-4">

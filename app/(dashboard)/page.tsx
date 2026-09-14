@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
@@ -134,6 +134,7 @@ type BatchItem = {
 
 export default function StudioPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const posthog = usePostHog();
   const [isGenerating, setIsGenerating] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
@@ -299,6 +300,26 @@ export default function StudioPage() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  // Show a confirmation toast when redirected back after a successful payment
+  useEffect(() => {
+    if (searchParams.get("payment") !== "success") return;
+
+    const credits = searchParams.get("credits");
+    toast.success("Payment successful!", {
+      description: credits
+        ? `${credits} credits have been added to your account.`
+        : "Your credits have been added to your account.",
+      duration: 8000,
+    });
+
+    // Refresh the credits badge and clean the URL so a refresh doesn't re-trigger the toast
+    window.dispatchEvent(new Event("credits-updated"));
+    const url = new URL(window.location.href);
+    url.searchParams.delete("payment");
+    url.searchParams.delete("credits");
+    window.history.replaceState({}, "", url.toString());
+  }, [searchParams]);
 
   const handleGenerate = async () => {
     if (!prompt.trim() && !referenceImage) return;
